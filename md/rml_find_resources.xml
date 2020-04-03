@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mdscript name="RML_Find_Resources" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="md.xsd">
+  <cues>
+    
+
+    <!--
+    $feedbackvalue:
+    Mission Errors <=-100
+    
+    -106: Space is not of class space
+    -105: ResourceYieldList should have same size as ResourceList!
+    -104: $ResourceYieldList is not of type list
+    -103: Provided list $ResourceList was empty
+    -102: $ResourceList is not of type list
+    -101: EndSignalCue or MissionCue not defined
+    -100: Undefined failure. Defaulted to -100
+    
+    Player Fails
+    -1: 
+    
+    Player Success
+    1: Player found a resource-->
+
+    <library name="FindResources">
+      <params>
+        <param name="EndSignalCue"/>
+        <param name="MissionCue"/>
+        <param name="StartStep" default="1" comment="Briefing step to start the mission on"/>
+        <param name="UpdateBriefing" default="true" comment="Update the briefing objective step when the objective is updated"/>
+
+        <param name="Space"/>
+        <param name="ResourceList"/>
+        <param name="ResourceYieldList"/>
+        <param name="Text_Ticker_Insufficient"     comment=""/>
+        <param name="Text_Ticker_Sufficient"       comment=""/>
+
+        <!--Result variables-->
+        <param name="ResultTable" default="null" comment="Result keys:
+               $ware = Sub-table with keys $Sector and $Offset, denoting where the resource probe was when it found this resource"/>
+
+        <param name="DebugChance" default="0"/>
+      </params>
+      <actions>
+        <set_value name="$feedbackvalue" exact="0"/>
+        <create_list name="$ErrorList"/>
+
+        <do_if value="not $EndSignalCue or not $MissionCue">
+          <append_to_list name="$ErrorList" exact="-101"/>
+        </do_if>
+
+        <do_elseif value="$ResourceList">
+          <do_if value="typeof $ResourceList != datatype.list">
+            <append_to_list name="$ErrorList" exact="-102"/>
+          </do_if>
+          <do_elseif value="$ResourceList.count == 0">
+            <append_to_list name="$ErrorList" exact="-103"/>
+          </do_elseif>
+        </do_elseif>
+
+        <do_elseif value="$ResourceYieldList">
+          <do_if value="typeof $ResourceYieldList != datatype.list">
+            <append_to_list name="$ErrorList" exact="-104"/>
+          </do_if>
+          <do_elseif value="$ResourceYieldList.count != $ResourceList.count">
+            <append_to_list name="$ErrorList" exact="-105"/>
+          </do_elseif>
+        </do_elseif>
+
+        <do_if value="not $Space.isclass.space">
+          <append_to_list name="$ErrorList" exact="-106"/>
+        </do_if>
+
+      </actions>
+      <cues>
+
+        <cue name="Signal_Cleanup" onfail="cancel">
+          <conditions>
+            <check_value value="$ErrorList.count" min="1"/>
+          </conditions>
+          <actions>
+            <signal_cue cue="Cleanup"/>
+          </actions>
+        </cue>
+
+        <cue name="StartMission" onfail="cancel">
+          <conditions>
+            <check_value value="$ErrorList.count" exact="0"/>
+          </conditions>
+          <actions>
+            <create_list name="$ResourceListDone" exact="$ResourceList.count" comment="create list with same number of entries as other, filled with 0"/>
+            <signal_cue cue="UpdateBriefing"/>
+          </actions>
+          <cues>
+
+            <cue name="DebugFindResources_DeployProbe" instantiate="true">
+              <conditions>
+                <event_cue_signalled/>
+              </conditions>
+              <actions>
+                <add_ammo object="player.ship" macro="macro.eq_arg_resourceprobe_01_macro" amount="1" />
+                <launch_resourceprobe object="player.ship" macro="macro.eq_arg_resourceprobe_01_macro"/>
+              </actions>
+            </cue>
+
+            <cue name="CheckMissionStatus" instantiate="true">
+              <conditions>
+                <!-- TODO: Owen, Roger - This only checks when probes are launched, so if you placed probes beforehand, it doesn't work! -->
+                <event_resourceprobe_launched space="$Space"/>
+              </conditions>
+              <delay exact="3s" comment="wait a bit, to simular probe gathering data"/>
+              <actions>
+                <debug_text text="event.name + ' ' + event.object + ' ' + event.param + ' ' + event.param2" chance="$DebugChance"/>
+
+                <set_value name="$Probe" exact="event.param2"/>
+                <do_all exact="$ResourceList.count" counter="$i">
+                  <set_value name="$ware" exact="$ResourceList.{$i}" />
+                  
+                  <do_if value="$ResourceListDone.{$i} == null" comment="If we haven't found this ware yet">
+                    <debug_text text="'ware: ' + $ware.name + ' currentyield: ' + $Probe.currentyield.{$ware}.count + ' maxyield: ' + $Probe.maxyield.{$ware}.count + ' checking for minimum of ' + $ResourceYieldList.{$i}" chance="$DebugChance"/>
+                   
+                    <do_if value="$Probe.currentyield.{$ware}.count ge $ResourceYieldList.{$i}">
+                      <set_value name="$ResourceListDone.{$i}" exact="1" comment="passed!"/>
+                      <do_if value="$ResultTable">
+                        <create_position name="$ProbePosition" object="$Probe" space="$Probe.sector"/>
+                        <set_value name="$ResultTable.{$ware}" exact="table[$Sector = $Probe.sector, $Offset = $ProbePosition]"/>
+                      </do_if>
+                      <debug_text text="'ware: ' + $ware.name + ' passed'" chance="$DebugChance"/>
+                      <!--substitute_text text="$Text_Ticker_Sufficient_Tmp" source="$Text_Ticker_Sufficient">
+                        <replace string="'$WARENAME$'"   with="$ware.name"/>
+                      </substitute_text>
+                      <show_notification text="$Text_Ticker_Sufficient_Tmp"/-->
+                    </do_if>
+                    <do_else>
+                      <substitute_text text="$Text_Ticker_Insufficient_Tmp" source="$Text_Ticker_Insufficient">
+                        <replace string="'$WARENAME$'"   with="$ware.name"/>
+                      </substitute_text>
+                      <show_notification text="$Text_Ticker_Insufficient_Tmp"/>
+                    </do_else>
+                  </do_if>
+                  <do_else>
+                    <debug_text text="'ware: ' + $ware.name + ' yield: ' + $Probe.currentyield.{$ware}.count + ' maxyield: ' + $Probe.maxyield.{$ware}.count + ' already passed'" chance="$DebugChance"/>
+                  </do_else>
+                </do_all>
+              
+
+                <!-- Passed check -->
+                <set_value name="$PassedAll" exact="0" />
+                <do_all exact="$ResourceListDone.count" counter="$i">
+                  <do_if value="$ResourceListDone.{$i} != null">
+                    <set_value name="$PassedAll" operation="add"/>
+                  </do_if>
+                </do_all>
+
+                <do_if value="$PassedAll ge $ResourceListDone.count">
+                  <set_value name="$feedbackvalue" exact="1" comment="success"/>
+                  <signal_cue cue="Cleanup"/>
+                </do_if>
+
+                <signal_cue cue="UpdateBriefing"/>
+
+              </actions>
+            </cue>
+          </cues>
+        </cue>
+
+        <cue name="UpdateBriefing" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <!-- First iteration we take the completed objectives, second iteration we take the remaining objectives
+                At the end of the first iteration, we set the 'set_objective' because up to this point we completed them -->
+            <set_value name="$ObjectiveCounter" exact="0" />
+            <set_value name="$ObjectiveStep" exact="0" />
+            <set_value name="$ObjectiveStepText" exact="''" />
+
+            <do_all exact="2" counter="$TwiceCounter">
+              <do_all exact="$ResourceList.count" counter="$warecount">
+                <do_if value="($TwiceCounter == 1 and $ResourceListDone.{$warecount} != 0) or ($TwiceCounter == 2 and $ResourceListDone.{$warecount} == 0)">
+
+                  <!-- Target yield text -->
+                  <set_value name="$YieldDensity" exact="$ResourceYieldList.{$warecount} / (32*32*32)" comment="in 1/km³"/>
+                  <set_value name="$TargetYield" exact="'%.2s'.[$YieldDensity] + ' / ' + readtext.{1001}.{114}"/>
+
+                  <substitute_text text="$ObjectiveText" source="{30132,2}">
+                    <replace string="'$WARENAME$'" with="$ResourceList.{$warecount}.name"/>
+                    <replace string="'$SPACENAME$'" with="$Space.knownname"/>
+                    <replace string="'$YIELD$'" with="$TargetYield"/>
+                  </substitute_text>
+
+                  <do_if value="$TwiceCounter == 2 and not $ObjectiveStep">
+                    <set_value name="$ObjectiveStep" exact="$StartStep + $ObjectiveCounter" />
+                    <set_value name="$ObjectiveStepText" exact="$ObjectiveText" />
+                  </do_if>
+
+                  <do_if value="$UpdateBriefing">
+                    <update_mission cue="$MissionCue">
+                      <briefing>
+                        <objective step="$StartStep + $ObjectiveCounter" action="objective.find" text="$ObjectiveText" object="$Space"/>
+                      </briefing>
+                    </update_mission>
+                  </do_if>
+                  <set_value name="$ObjectiveCounter" operation="add"/>
+                </do_if>
+              </do_all>
+            </do_all>
+
+            <do_if value="$ObjectiveStep">
+              <set_objective cue="$MissionCue" step="$ObjectiveStep" action="objective.find" text="$ObjectiveStepText" object="$Space"/>
+            </do_if>
+            <remove_value name="$ObjectiveText"/>
+          </actions>
+        </cue>
+
+        <cue name="Cleanup">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <!--TODO remove_objective-->
+
+            <do_if value="$feedbackvalue" exact="0">
+              <do_if value="$ErrorList.count" exact="0">
+                <debug_text text="'ERROR: RML_Find_Resources.Cleanup - Feedback value is 0 and no error values were set. Defaulting to -100'"/>
+                <set_value name="$feedbackvalue" exact="-100"/>
+              </do_if>
+              <do_else>
+                <set_value name="$feedbackvalue" exact="$ErrorList.{1}"/>
+
+                <do_if value="md.$RML_Debugging">
+                  <do_all exact="$ErrorList.count" counter="$Counter">
+                    <do_if value="$ErrorList.{$Counter}" exact="-106">
+                      <set_value name="$FeedbackText" exact="'Space is not of class space'"/>
+                    </do_if>
+                    <do_elseif value="$ErrorList.{$Counter}" exact="-105">
+                      <set_value name="$FeedbackText" exact="'Provided list $ResourceYieldList has different size as $ResourceList'"/>
+                    </do_elseif>
+                    <do_elseif value="$ErrorList.{$Counter}" exact="-104">
+                      <set_value name="$FeedbackText" exact="'$ResourceYieldList is not of type list'"/>
+                    </do_elseif>
+                    <do_elseif value="$ErrorList.{$Counter}" exact="-103">
+                      <set_value name="$FeedbackText" exact="'Provided list $ResourceList was empty'"/>
+                    </do_elseif>
+                    <do_elseif value="$ErrorList.{$Counter}" exact="-102">
+                      <set_value name="$FeedbackText" exact="'$ResourceList is not of type list'"/>
+                    </do_elseif>
+                    <do_elseif value="$ErrorList.{$Counter}" exact="-101">
+                      <set_value name="$FeedbackText" exact="'EndSignalCue or MissionCue not defined'"/>
+                    </do_elseif>
+                    <do_elseif value="$ErrorList.{$Counter}" exact="-100">
+                      <set_value name="$FeedbackText" exact="'Undefined failure. Defaulted to -100'"/>
+                    </do_elseif>
+                    <do_else>
+                      <set_value name="$FeedbackText" exact="'Error: Unknown error value'"/>
+                    </do_else>
+
+                    <debug_text text="'Mission Error. Feedback id: ' + $ErrorList.{$Counter} + ' - ' + $FeedbackText" filter="error"/>
+                  </do_all>
+                </do_if>
+              </do_else>
+            </do_if>
+            <do_else>
+
+              <do_if value="$feedbackvalue" exact="1">
+                <set_value name="$FeedbackText" exact="'Player found a resource'"/>
+              </do_if>
+
+              <do_if value="$feedbackvalue" min="1">
+                <debug_text text="'Mission Successful. Feedback id: ' + $feedbackvalue + ' - ' + $FeedbackText"  chance="md.$RML_Debugging * $DebugChance"/>
+              </do_if>
+              <do_elseif value="@$FeedbackText">
+                <set_value name="$EndSignalCue.$EndFeedbackText" exact="$FeedbackText"/>
+                <debug_text text="'Mission Failed. Feedback id: ' + $feedbackvalue + ' - ' + $FeedbackText" chance="md.$RML_Debugging * $DebugChance"/>
+              </do_elseif>
+              <do_else>
+                <debug_text text="'WARNING: Unhandled feedback value ' + $feedbackvalue" chance="$DebugChance"/>
+              </do_else>
+              
+            </do_else>
+
+            <set_value name="$EndSignalCue.$EndFeedbackValue" exact="$feedbackvalue"/>
+            <signal_cue cue="$EndSignalCue"/>
+            <cancel_cue cue="FindResources"/>
+          </actions>
+        </cue>
+      </cues>
+    </library>
+  </cues>
+</mdscript>

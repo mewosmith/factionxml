@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="iso-8859-1" ?>
+<mdscript name="Orders" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="md.xsd">
+  <cues>
+    <cue name="WaitForGameStart">
+      <conditions>
+        <event_cue_signalled cue="md.Setup.Start" />
+      </conditions>
+      <cues>
+
+        <cue name="PlayerTradeOrderAdded" instantiate="true" namespace="this">
+          <conditions>
+            <event_object_signalled object="player.entity" param="'docked_player_trade_added'" />
+          </conditions>
+          <actions>
+            <!-- <debug_text text="'Player gave trade order to %s (%s)'.[event.param2.knownname, event.param2]" /> -->
+            <do_if value="not event.param2.tradecomputer">
+              <do_if value="event.param2.dock">
+                <create_trade_computer object="event.param2" />
+              </do_if>
+              <do_else>
+                <debug_text text="'Attempting to create trade computer on a ship that is not docked'" filter="error" />
+              </do_else>
+            </do_if>
+          </actions>
+        </cue>
+
+        <cue name="PlayerObjectDocked" instantiate="true" namespace="this">
+          <conditions>
+            <event_object_docked group="global.$PlayerControlledGroup" />
+          </conditions>
+          <actions>
+            <do_if value="player.controlled.tradeorders.count and player.controlled.tradeorders.{1}.trade.exchangepartner.{player.controlled} == event.param">
+              <!-- let the trade computer handle it, trade computer will get back to us if there are buildorders here as well -->
+              <signal_objects object="player.entity" param="'docked_player_trade_added'" param2="event.object" />
+            </do_if>
+            <do_elseif value="player.controlled.buildorders.count and player.controlled.buildorders.{1}.build.object == event.param">
+              <!-- only a build order for this object exists, let the shiptrader on the object process it -->
+              <signal_cue_instantly cue="PlayerObjectBuildOrder.static" param="event.object"/>
+            </do_elseif>
+          </actions>
+        </cue>
+
+        <cue name="PlayerObjectBuildOrder" instantiate="true" namespace="this">
+          <conditions>
+            <check_any>
+              <event_cue_signalled />
+              <check_all>
+                <event_object_signalled object="player.entity" param2="'docked_player_process_build'" />
+                <check_value value="event.param.isclass.ship"/>
+              </check_all>
+            </check_any>
+          </conditions>
+          <actions>
+            <set_value name="$debugchance" exact="0"/>
+            <set_value name="$object" exact="event.param"/>
+            <do_if value="$object.exists and $object.buildorders.count">
+              <set_value name="$order" exact="$object.buildorders.{1}"/>
+              <debug_text text="'Trying to move order %1 (%2) to the top of the order queue'.[$order.id, $order]" chance="$debugchance"/>
+              <move_order order="$order" newindex="1" result="$movesuccess"/>
+              <do_if value="$movesuccess">
+                <!-- BEGIN debug info block -->
+                <!--<debug_text text="'debug order queue:'" chance="$debugchance"/>
+              <do_all exact="$object.orders.count" counter="$d">
+                <debug_text text="'%1: %2 (%3)'.[$d, $object.orders.{$d}.id, $object.orders.{$d}]" chance="$debugchance"/>
+              </do_all>-->
+                <!-- END debug info block -->
+                <do_while value="$object.orders.count gt 1 and @$object.orders.{2}.$callerid == $order and ($object.orders.{2}.id == 'DockAt' or $object.orders.{2}.id == 'DockAndWait')">
+                  <debug_text text="'cancel %1 order at index 2'.[$object.orders.{2}.id]" chance="$debugchance"/>
+                  <cancel_order order="$object.orders.{2}"/>
+                </do_while>
+                <!-- now the equip/repair order is at the top of the order queue and the local shiptrader can process it, signal it -->
+                <debug_text text="'ready to process equip order, signalling shiptrader on %1 (%2) to start in 1s'.[$order.build.object.knownname, $order.build.object]" chance="$debugchance"/>
+                <signal_objects object="$order.build.object" param="'equip_request'" delay="1s"/>
+              </do_if>
+              <do_else>
+                <debug_text text="'Failed to move order %1'.[$order]" chance="$debugchance"/>
+              </do_else>
+            </do_if>
+          </actions>
+        </cue>
+      </cues>
+    </cue>
+  </cues>
+</mdscript>

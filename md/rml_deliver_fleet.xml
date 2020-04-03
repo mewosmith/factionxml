@@ -1,0 +1,637 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<mdscript name="RML_Deliver_Fleet" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="md.xsd">
+  <cues>
+
+    <!--
+    This RML is intended for use in Master-Missions. 
+    It handles checking if the player delivered an Fleet of specified ships, to the target-faction.
+    When all ships arrive at the specified location, the client will open a dialog and ask for transfer of ownership
+    
+    $feedbackvalue:
+    -104 $Client parameter left undefined
+    -103 $Faction parameter left undefined
+    -102 $Fleet is incorrectly defined.
+    -101 Cue parameters not defined
+    -100: Undefined failure. Defaulted to -100
+    -1: Player rejected fleet-transfer
+    1: Player transferred control of the fleet -->
+    
+    <!--TODO @Owen allow defining min-shield strength for fleet definition-->
+
+    <library name="DeliverFleet" version="2">
+      <params>
+        <param name="EndSignalCue"/>
+        <param name="MissionCue"/>
+        <param name="StartStep" default="1" comment="Briefing step to start the mission on"/>
+        <param name="UpdateBriefing" default="true" comment="Update the briefing objective step when the objective is updated"/>
+        <param name="DebugChance" default="0" />
+
+        <param name="Text_Objective_Get"              comment="Objective text to get ships"/>
+        <param name="Text_Objective_Transfer"         comment="Objective text to transfer ownership"/>
+        <param name="Text_AcceptTransfer"             comment="Player choice text to initiate transfer"/>
+        <param name="Text_RejectTransfer"             comment="Player choice text to reject transfer"/>
+        <param name="Text_ProgressBar" default="null" comment="Progress bar text for multiple ships"/>
+        <param name="Fleet"                           comment="The specific fleet we are looking for"/>
+        <param name="Transfer"        default="true"  comment="Mission ends with a transfer of ownership to $Faction. Otherwise ends when ships are in position."/>
+        <param name="Faction"         default="null"  comment="The faction to which it needs to be delivered. Required if $Transfer is true"/>
+        <param name="Client"          default="null"  comment="client who wants the fleet. Required if $Transfer is true"/>
+        <param name="TargetSector"                    comment="Sector to which to deliver the fleet"/>
+        <param name="TargetOffset"                    comment="Location to which to deliver the fleet"/>
+        <param name="TargetRadius"    default="5km"   comment="Radius around location in which we need to put the fleet"/>
+        <param name="CriteriaResultCue" default="null" comment="Cue to signal with a table of ships with the result of the most recent processing of 'CheckMissionStatus'"/>
+        <param name="AdditionCheckCue" default="null" comment="Cue to signal instantly to run additional checks on the object. event.param = [namespace, $ship]. Result saved to namespace.$CheckCueResult"/>
+        <param name="ReturnFleetShips" default="false" comment="If true, sets $EndSignalCue.$FleetShips, which in the Success Case is the Fleet which changed ownership on transfer"/>
+      </params>
+      <actions>
+        <set_value name="$feedbackvalue" exact="0"/>
+        <create_list name="$ErrorList"/>
+
+        <do_if value="not $EndSignalCue or not $MissionCue">
+          <append_to_list name="$ErrorList" exact="-101"/>
+        </do_if>
+
+        <do_if value="typeof $Fleet != datatype.list">
+          <append_to_list name="$ErrorList" exact="-102" />
+        </do_if>
+        <do_elseif value="$Fleet.count" max="0">
+          <append_to_list name="$ErrorList" exact="-102" />
+        </do_elseif>
+
+        <do_if value="$Transfer and not $Faction">
+          <append_to_list name="$ErrorList" exact="-103"/>
+        </do_if>
+
+        <do_if value="$Transfer and not $Client">
+          <append_to_list name="$ErrorList" exact="-104"/>
+        </do_if>
+
+      </actions>
+      <patch sinceversion="2">
+        <set_value name="$CriteriaResultCue" exact="null"/>
+        <set_value name="$AdditionCheckCue" exact="null"/>
+      </patch>
+      <cues>
+
+        <cue name="Signal_Cleanup" onfail="cancel">
+          <conditions>
+            <check_value value="$ErrorList.count" min="1"/>
+          </conditions>
+          <actions>
+            <signal_cue cue="Cleanup"/>
+          </actions>
+        </cue>
+
+        <cue name="StartMission" onfail="cancel" version="2">
+          <conditions>
+            <check_value value="$ErrorList.count" min="0"/>
+          </conditions>
+          <actions>
+            <set_value name="$shipdone" exact="0"/>
+            <set_value name="$fleetdone" exact="false"/>
+            <set_value name="$shiptotal" exact="0"/>
+            <signal_cue_instantly cue="UpdateBriefing" param="false"/>
+            <do_all exact="$Fleet.count" counter="$i">
+              <set_value name="$shiptotal" exact="$Fleet.{$i}.$amount" operation="add"/>
+            </do_all>
+            <assert value="$shiptotal == 1 or $Text_ProgressBar" text="'No progress bar text for multiple ship case [Owens]'"/>
+            <create_list name="$FleetShips" comment="objects of matching ships"/>
+          </actions>
+          <patch sinceversion="2">
+            <create_list name="$FleetShips" comment="objects of matching ships"/>
+            <!-- recalculate -->
+            <set_value name="$shiptotal" exact="0"/>
+            <do_all exact="$Fleet.count" counter="$i">
+              <set_value name="$shiptotal" exact="$Fleet.{$i}.$amount" operation="add"/>
+            </do_all>
+          </patch>
+          <cues>
+
+            <cue name="DebugDeliverShip" instantiate="true">
+              <conditions>
+                <event_cue_signalled comment="manually trigger for testing OwnerChanged-cue"/>
+              </conditions>
+              <actions>
+                <set_value name="$Ship_Def" exact="$Fleet.random"/>
+
+                <do_if value="$Ship_Def.$macro?">
+                  <set_value name="$shipmacro" exact="$Ship_Def.$macro" />
+                </do_if>
+                <do_else>
+                  <!--Get some random ship for debugging (may not be able to match the equipment list)-->
+                  <get_ship_definition macro="$shipmacro" faction="faction.argon"/>
+                </do_else>
+
+                <do_if value="@$Ship_Def.$equipment">
+                  <generate_loadout result="$loadout" macro="$shipmacro" macros="$Ship_Def.$equipment" level="1" />
+                </do_if>
+                <do_else>
+                  <generate_loadout result="$loadout" macro="$shipmacro" level="1" />
+                </do_else>
+                
+                <remove_value name="$Ship_Def"/>
+
+                <create_ship name="$TheLastShip" zone="player.zone" macro="$shipmacro">
+                  <pilot group="argon.pilot">
+                    <owner exact="faction.player"/>
+                  </pilot>
+                  <loadout loadout="$loadout.{1}"/>
+                  <owner exact="faction.player"/>
+                  <drop ref="standardwares"/>
+                  <position object="player.ship" exact="4km"/>
+                </create_ship>
+
+                <!--TODO Wares and Mods-->
+
+                <do_if value="$Transfer">
+                  <set_owner object="$TheLastShip" faction="$Faction" />
+                </do_if>
+              </actions>
+            </cue>
+
+            <cue name="DebugDeliverFleet" instantiate="true">
+              <conditions>
+                <event_cue_signalled comment="manually trigger for testing OwnerChanged-cue"/>
+              </conditions>
+              <actions>
+
+                <do_all exact="$Fleet.count" counter="$i">
+                  <set_value name="$Ship_Def" exact="$Fleet.{$i}"/>
+
+                  <do_if value="$Ship_Def.$macro?">
+                    <set_value name="$shipmacro" exact="$Ship_Def.$macro" />
+                  </do_if>
+                  <do_else>
+                    <!--Get some random ship for debugging (may not be able to match the equipment list)-->
+                    <get_ship_definition macro="$shipmacro" faction="faction.argon"/>
+                  </do_else>
+
+                  <do_all exact="$Ship_Def.$amount" counter="$j" comment="create as many of these as needed">
+                    <create_list name="$loadout"/>
+                    <do_if value="$Ship_Def.$equipment?">
+                      <!--TODO @Owen this is not enough to create a fully working loadout. Incorrect calls to GenerateLoadout? If only shields are in $equipment, no engines wil be added.-->
+                      <generate_loadout macro="$shipmacro" macros="$Ship_Def.$equipment" level="1" result="$loadout" comment="returns a LIST of loadouts"/>
+                    </do_if>
+
+                    <do_if value="$loadout.count">
+                      <create_ship name="$TheLastShip" zone="player.zone" macro="$shipmacro">
+                        <pilot group="argon.pilot">
+                          <owner exact="faction.player"/>
+                        </pilot>
+                        <loadout loadout="$loadout.{1}"/>
+                        <owner exact="faction.player"/>
+                        <drop ref="standardwares"/>
+                        <safepos object="player.ship" z="4km"/>
+                      </create_ship>
+                    </do_if>
+                    <do_else>
+                      <create_ship name="$TheLastShip" zone="player.zone" macro="$shipmacro">
+                        <pilot group="argon.pilot">
+                          <owner exact="faction.player"/>
+                        </pilot>
+                        <owner exact="faction.player"/>
+                        <drop ref="standardwares"/>
+                        <safepos object="player.ship" z="4km"/>
+                      </create_ship>
+                    </do_else>
+
+                    <!-- add wares -->
+                    <do_if value="$Ship_Def.$wares?">
+                      <do_all exact="$Ship_Def.$wares.keys.count" counter="$k">
+                        <set_value name="$ware" exact="$Ship_Def.$wares.keys.{$k}" />
+
+                        <do_if value="$ware.isammo">
+                          <add_ammo object="$TheLastShip" macro="$ware.objectmacro" amount="$Ship_Def.$wares.{$ware}"/>
+                        </do_if>
+                        <do_elseif value="$ware.iscargo">
+                          <add_cargo result="$cargoresult" object="$TheLastShip" ware="$ware" exact="$Ship_Def.$wares.{$ware}"/>
+                          <do_if value="not $cargoresult">
+                            <debug_text text="'Could not add cargo ' + $Ship_Def.$wares.{$ware} + 'x ' + $ware"/>
+                          </do_if>
+                        </do_elseif>
+                        <do_elseif value="$ware.isinventory">
+                          <debug_text text="'inventory-ware unsupported: ' + $ware.name"/>
+                        </do_elseif>
+                      </do_all>
+                    </do_if>
+                    
+                    <!-- add ammo -->
+                    <do_if value="$Ship_Def.$ammo?">
+                      <do_all exact="$Ship_Def.$ammo.keys.count" counter="$k">
+                        <set_value name="$ammomacro" exact="$Ship_Def.$ammo.keys.{$k}" />
+                        <add_ammo object="$TheLastShip" macro="$ammomacro" amount="$Ship_Def.$ammo.{$ammomacro}"/>
+                      </do_all>
+                    </do_if>
+
+                    <!-- add mods -->
+                    <do_if value="$Ship_Def.$mods?">
+                      <do_all exact="$Ship_Def.$mods.count" counter="$ModCounter">
+                        <set_value name="$ware" exact="$Ship_Def.$mods.{$ModCounter}"/>
+
+                        <do_if value="$ware.isenginemod">
+                          <add_equipment_mods object="$TheLastShip">
+                            <engine ware="$ware"/>
+                          </add_equipment_mods>
+                        </do_if>
+                        <do_elseif value="$ware.isweaponmod">
+                          <find_object_component name="$TargetWeapon" class="class.weapon" object="$TheLastShip" multiple="false"/>
+                          <do_if value="$TargetWeapon">
+                            <add_equipment_mods object="$TheLastShip">
+                              <weapon ware="$ware" macro="$TargetWeapon.macro"/>
+                            </add_equipment_mods>
+                          </do_if>
+                          <do_else>
+                            <debug_text text="'No targetweapon found, ignoring weaponmods (if any)'"/>
+                          </do_else>
+                        </do_elseif>
+                        <do_elseif value="$ware.isshipmod">
+                          <add_equipment_mods object="$TheLastShip">
+                            <ship ware="$ware"/>
+                          </add_equipment_mods>
+                        </do_elseif>
+                        <do_elseif value="$ware.isshieldmod">
+                          <add_equipment_mods object="$TheLastShip">
+                            <shield ware="$ware"/>
+                          </add_equipment_mods>
+                        </do_elseif>
+                      </do_all>
+                    </do_if>
+
+                    <do_if value="$Transfer">
+                      <set_owner object="$TheLastShip" faction="$Faction" />
+                    </do_if>
+
+                  </do_all>
+                </do_all>
+
+              </actions>
+            </cue>
+
+            <cue name="CheckMissionStatus" checkinterval="5s" instantiate="true">
+              <conditions>
+                <check_value value="$fleetdone == false"/>
+              </conditions>
+              <actions>
+
+                <find_ship name="$PlayerShipsInSector" space="$TargetSector" owner="faction.player" masstraffic="false" multiple="true">
+                  <match_distance space="$TargetSector" value="$TargetOffset" max="$TargetRadius"/>
+                </find_ship>
+
+                <create_list name="$FleetDone" exact="$Fleet.count"/>
+                <clear_list list="$FleetShips"/>
+                <!--$ResultTable = table of ships as keys. contained values of table entry states if a ship matched the criteria or not
+                    table[ {$ship} = 'success' or 'no_equipment' or 'failed_additional_checks']-->
+                <set_value name="$ResultTable" exact="table[]"/>
+                <set_value name="$shipdoneprev" exact="$shipdone"/>
+                <set_value name="$shipdone" exact="0"/>
+
+                <!-- loop over all playerships in the correct location -->
+                <do_all exact="$PlayerShipsInSector.count" counter="$s" reverse="true">
+                  <set_value name="$currentship" exact="$PlayerShipsInSector.{$s}"/>
+                  <debug_text text="'Checking ship: ' + $currentship.name" chance="$DebugChance"/>
+
+                  <!-- loop over all fleet-requests -->
+                  <do_all exact="$Fleet.count" counter="$i">
+                    <set_value name="$Ship_Def" exact="$Fleet.{$i}"/>
+                    <do_if value="$FleetDone.{$i} ge $Ship_Def.$amount or ($Fleet.{$i}.$macro? and not $currentship.macro.ismacro.{$Fleet.{$i}.$macro})">
+                      <continue comment="already have enough of this kind of ship, or when it's a non-matching macro - then skip"/>
+                    </do_if>
+
+                    <set_value name="$shipmatches" exact="true"/>
+                    <set_value name="$shipequip" exact="if $Ship_Def.$equipment?  then $Ship_Def.$equipment else []"/>
+                    <set_value name="$shipwares" exact="if $Ship_Def.$wares?      then $Ship_Def.$wares     else table[]"/>
+                    <set_value name="$shipammo" exact="if $Ship_Def.$ammo?        then $Ship_Def.$ammo      else table[]"/>
+                    <set_value name="$shipmods" exact="if $Ship_Def.$mods?        then $Ship_Def.$mods      else []"/>
+                    <include_actions ref="md.LIB_Generic.CheckShipMatches"/>
+
+                    <!-- Meeting all equipment requirements? -->
+                    <do_if value="$shipmatches == true">
+                      <do_if value="$AdditionCheckCue">
+                        <signal_cue_instantly cue="$AdditionCheckCue" param="[namespace, $currentship]"/>
+                        <set_value name="$shipmatches" exact="$CheckCueResult"/>
+                      </do_if>
+                      <do_if value="$shipmatches">
+                        <set_value name="$FleetDone.{$i}" operation="add"/>
+                        <set_value name="$shipdone" operation="add"/>
+                        <append_to_list name="$FleetShips" exact="$currentship"/>
+                        <debug_text text="'Adding ship: ' + $currentship.name" chance="$DebugChance"/>
+                        <set_value name="$ResultTable.{$currentship}" exact="'success'"/>
+                        <remove_value name="$PlayerShipsInSector.{$s}"/>
+                        <!--debug_text text="'RML_DeliverFleet: matching ' + $shipmacro" chance="100"/-->
+                        <signal_cue_instantly cue="UpdateBriefing" param="true"/>
+                      </do_if>
+                      <do_else>
+                        <set_value name="$ResultTable.{$currentship}" exact="'failed_additional_checks'"/>
+                      </do_else>
+                    </do_if>
+                    <do_else>
+                      <!--debug_text text="'RML_DeliverFleet: non-matching ' + $shipmacro" chance="100"/-->
+                      <set_value name="$ResultTable.{$currentship}" exact="'no_equipment'"/>
+                    </do_else>
+                  </do_all>
+                </do_all>
+
+                <do_if value="$CriteriaResultCue">
+                  <signal_cue_instantly cue="$CriteriaResultCue" param="$ResultTable"/>
+                </do_if>
+
+                <!-- evaluation of fleet completion and briefing-update -->
+                <set_value name="$InShip" exact="false"/>
+                <do_if value="$shipdone">
+                  <do_all exact="$FleetShips.count" counter="$ship_i">
+                    <do_if value="player.ship == $FleetShips.{$ship_i}">
+                      <set_value name="$InShip" exact="true"/>
+                      <show_help line="1050" position="1" duration="30s" comment="You cannot deliver a fleet if you are aboard one of its ships."/>
+                    </do_if>
+                  </do_all>
+                  <do_if value="$shipdone ge $shiptotal and not $InShip" comment="enough ships?">
+                    <remove_help line="1050"/>
+                    <set_value name="$fleetdone" exact="true"/>
+                    <do_if value="$Transfer">
+                      <signal_cue_instantly cue="UpdateBriefing" param="false"/>
+                      <signal_cue cue="TransferFleetInteractiveNotificationTrigger"/>
+                    </do_if>
+                    <do_else>
+                      <!--Ships in place. No transfer needed-->
+                      <set_value name="$feedbackvalue" exact="1" comment="success"/>
+                      <signal_cue cue="Cleanup"/>
+                    </do_else>
+                    <cancel_cue cue="this.static"/>
+                  </do_if>
+                </do_if>
+                <do_else>
+                  <do_if value="$shipdoneprev != $shipdone">
+                    <signal_cue_instantly cue="UpdateBriefing" param="true"/>
+                  </do_if>
+                </do_else>
+              </actions>
+            </cue>
+
+            <cue name="TransferFleetInteractiveNotificationTrigger">
+              <conditions>
+                <event_cue_signalled/>
+              </conditions>
+              <actions>
+                <!-- 1-time instant trigger -->
+                <signal_cue cue="TransferFleetInteractiveNotification"/>
+              </actions>
+              <cues>
+                <!-- repeat after a while, in case user missed it the first time -->
+                <cue name="TransferFleetInteractiveNotification_Repeat"  checktime="parent.time + 60s" checkinterval="60s" instantiate="true"  >
+                  <actions>
+                    <signal_cue cue="TransferFleetInteractiveNotification"/>
+                  </actions>
+                </cue>
+              </cues>
+            </cue>
+
+            <cue name="TransferFleetInteractiveNotification" instantiate="true">
+              <conditions>
+                <event_cue_signalled/>
+                <check_value value="not player.isinconversation" comment="will be retriggered, so fine if skipped"/>
+              </conditions>
+              <actions>
+                <set_value name="$Event_Timeout" exact="md.$InteractiveMissionOfferTimeout"/>
+                <play_cutscene result="this.$TransferFleetNotification" key="'ShowPilot'" targetmonitor="true" timeout="$Event_Timeout">
+                  <interaction text="{1002,13004}" param="$Client" param2="'RML_DeliverFleet_InteractiveNotification_Callback'"/>
+                  <param name="npcref" object="$Client" />
+                </play_cutscene>
+                <!--set_entity_traits entity="$Client" customhandler="true"/-->
+              </actions>
+              <cues>
+                <cue name="TransferFleetNotification_Speak">
+                  <delay exact="1s"/>
+                  <actions>
+                    <speak actor="$Client" line="6014" comment="We need to perform a transfer" />
+                  </actions>
+                </cue>
+                <cue name="TransferFleetNotification_Interact">
+                  <conditions>
+                    <event_player_interaction param="$Client" param2="'RML_DeliverFleet_InteractiveNotification_Callback'"/>
+                  </conditions>
+                  <actions>
+                    <do_if value="TransferFleetNotification_Timeout.state == cuestate.active">
+                      <cancel_cue cue="TransferFleetNotification_Timeout"/>
+                    </do_if>
+                    <stop_cutscene cutscene="parent.$TransferFleetNotification"/>
+                    <start_conversation actor="$Client" conversation="DeliverFleet_TransferOwnership"/>
+                  </actions>
+                </cue>
+                <cue name="TransferFleetNotification_Timeout">
+                  <delay exact="$Event_Timeout"/>
+                  <actions>
+                    <!-- the cutscene is removed automatically due to the timeout -->
+                    <cancel_cue cue="TransferFleetInteractiveNotification"/>
+                  </actions>
+                </cue>
+              </cues>
+            </cue>
+
+            <cue name="TransferConversationLogic" onfail="cancel">
+              <conditions>
+                <check_value value="$Transfer"/>
+              </conditions>
+              <cues>
+                <cue name="TransferFleetConversationStart" instantiate="true">
+                  <conditions>
+                    <event_conversation_started actor="$Client" />
+                    <check_value value="$fleetdone" comment="Only proceed if we actually delivered the fleet"/>
+                  </conditions>
+                  <actions>
+                    <add_player_choice text="$Text_AcceptTransfer" position="left" section="transfer_accept" />
+                    <add_player_choice text="$Text_RejectTransfer" position="right" section="transfer_decline" />
+                  </actions>
+                </cue>
+                <cue name="TransferFleetConversationNextSection" instantiate="true">
+                  <conditions>
+                    <event_conversation_next_section actor="$Client" />
+                  </conditions>
+                  <actions>
+
+                    <!-- TODO: @Owen, Roger - what if the player is onboard of one of these ships? -->
+
+                    <do_if value="event.param == 'transfer_accept'">
+
+                      <!-- check if fleet is still alive -->
+                      <set_value name="$TransferFailCount" exact="0"/>
+                      <do_all exact="$FleetShips.count" counter="$i">
+                        <set_value name="$Ship" exact="$FleetShips.{$i}"/>
+                        <do_if value="not $Ship.isoperational">
+                          <set_value name="$TransferFailCount" operation="add"/>
+                          <break/>
+                        </do_if>
+                      </do_all>
+
+                      <debug_text text="'Transferring ownership of ' + $FleetShips.count + ' ships to ' + $Faction + ' (fail=' + $TransferFailCount != 0 + ')'" chance="$DebugChance"/>
+                      
+                      <do_if value="$TransferFailCount == 0">
+                        
+                        <set_value name="$LeaderShip" exact="$FleetShips.{1}"/>
+                        <do_all exact="$FleetShips.count" counter="$i">
+                          <set_value name="$Ship" exact="$FleetShips.{$i}"/>
+                          <do_if value="$Ship.size gt $LeaderShip.size" comment="can't compare .class, use size instead (good enough)">
+                            <set_value name="$LeaderShip" exact="$Ship" comment="largest ship is leader"/>
+                          </do_if>
+                          <debug_text text="'Transferring ' + $Ship.name" chance="$DebugChance"/>
+                          <set_owner object="$Ship" faction="$Faction"/>
+                          <run_actions ref="md.LIB_Generic.TransferShipOwnership">
+                            <param name="Ship" value="$Ship"/>
+                            <param name="Faction" value="$Faction"/>
+                          </run_actions>
+                        </do_all>
+
+                        <!-- TODO: Set commandeerable for FactionLogic -->
+                        <do_all exact="$FleetShips.count" counter="$i">
+                          <set_value name="$Ship" exact="$FleetShips.{$i}"/>
+                          <do_if value="not $Ship.pilot" comment="create pilot if missing, so scripts can run">
+                            <create_control_entity object="$Ship" post="controlpost.aipilot">
+                              <select faction="$Faction" tags="tag.fighterpilot"/>
+                            </create_control_entity>
+                          </do_if>
+                          <start_script object="$Ship.pilot" name="'orders.base'" />
+                          <do_if value="$Ship == $LeaderShip">
+                            <create_order object="$Ship" id="'Patrol'" default="true">
+                              <param name="range" value="class.sector"/>
+                              <param name="pursuetargets" value="true"/>
+                            </create_order>
+                          </do_if>
+                          <do_else>
+                            <create_order id="'AssignCommander'" object="$Ship" immediate="true">
+                              <param name="commander" value="$LeaderShip"/>
+                              <param name="assignment" value="assignment.defence"/>
+                              <param name="cancelorders" value="true"/>
+                            </create_order>
+                          </do_else>
+                        </do_all>
+
+                        <!-- transfer accepted and all ships alive, mission success-->
+                        <set_value name="$feedbackvalue" exact="1" comment="success"/>
+                        <signal_cue cue="Cleanup"/>
+                      </do_if>
+                      <do_else>
+                        <!-- ships were destroyed in the meanwhile, mission failed -->
+                        <set_value name="$feedbackvalue" exact="-1" comment="fail"/>
+                        <signal_cue cue="Cleanup"/>
+                      </do_else>
+                    </do_if>
+                    <do_else>
+                      <!-- transfer rejected = mission failed -->
+                      <set_value name="$feedbackvalue" exact="-1" comment="fail"/>
+                      <signal_cue cue="Cleanup"/>
+                    </do_else>
+                  </actions>
+                </cue>
+              </cues>
+            </cue>
+
+          </cues>
+        </cue>
+
+        <cue name="UpdateBriefing" instantiate="true" comment="Called each time a briefing-update is needed">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+
+            <do_if value="$UpdateBriefing">
+
+              <do_if value="$fleetdone">
+                <set_value name="$ObjectiveText" exact="$Text_Objective_Transfer" comment="All required ships at target location, transfer ownership"/>
+              </do_if>
+              <do_else>
+                <set_value name="$ObjectiveText" exact="$Text_Objective_Get" comment="Waiting for ships to be delivered"/>
+              </do_else>
+
+              <update_mission cue="$MissionCue">
+                <briefing>
+                  <objective step="$StartStep" action="objective.deliver" text="$ObjectiveText" object="$TargetSector" offset="$TargetOffset" radius="$TargetRadius"/>
+                </briefing>
+              </update_mission>
+              <do_if value="$shiptotal == 1">
+                <set_objective cue="$MissionCue" step="$StartStep" action="objective.deliver" text="$ObjectiveText" object="$TargetSector" offset="$TargetOffset" radius="$TargetRadius" silent="event.param"/>
+              </do_if>
+              <do_else>
+                <set_objective cue="$MissionCue" step="$StartStep" action="objective.deliver" text="$ObjectiveText" object="$TargetSector" offset="$TargetOffset" radius="$TargetRadius" silent="event.param">
+                  <progress progress="$shipdone" max="$shiptotal" text="$Text_ProgressBar"/>
+                </set_objective>
+              </do_else>
+            </do_if>
+
+          </actions>
+        </cue>
+
+        <cue name="Cleanup">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <!--TODO remove_objective-->
+
+            <do_if value="$feedbackvalue" exact="0">
+              <do_if value="$ErrorList.count" exact="0">
+                <debug_text text="'ERROR: RML_Deliver_Fleet.Cleanup - Feedback value is 0 and no error values were set. Defaulting to -100'"/>
+                <set_value name="$feedbackvalue" exact="-100"/>
+              </do_if>
+              <do_else>
+                <set_value name="$feedbackvalue" exact="$ErrorList.{1}"/>
+
+                <do_if value="md.$RML_Debugging">
+                  <do_all exact="$ErrorList.count" counter="$Counter">
+                    <do_if value="$ErrorList.{$Counter}" exact="-104">
+                      <set_value name="$FeedbackText" exact="'$Client parameter left undefined'"/>
+                    </do_if>
+                    <do_elseif value="$ErrorList.{$Counter}" exact="-103">
+                      <set_value name="$FeedbackText" exact="'$Faction parameter left undefined'"/>
+                    </do_elseif>
+                    <do_elseif value="$ErrorList.{$Counter}" exact="-102">
+                      <set_value name="$FeedbackText" exact="'$Fleet is incorrectly defined'"/>
+                    </do_elseif>
+                    <do_elseif value="$ErrorList.{$Counter}" exact="-101">
+                      <set_value name="$FeedbackText" exact="'Cue parameters not defined'"/>
+                    </do_elseif>
+                    <do_elseif value="$ErrorList.{$Counter}" exact="-100">
+                      <set_value name="$FeedbackText" exact="'Undefined failure. Defaulted to -100'"/>
+                    </do_elseif>
+                    <do_else>
+                      <set_value name="$FeedbackText" exact="'Error: Unknown error value'"/>
+                    </do_else>
+
+                    <debug_text text="'Mission Error. Feedback id: ' + $ErrorList.{$Counter} + ' - ' + $FeedbackText" filter="error"/>
+                  </do_all>
+                </do_if>
+              </do_else>
+            </do_if>
+            <do_else>
+
+              <do_if value="$feedbackvalue" exact="-1">
+                <set_value name="$FeedbackText"  exact="{30004,6033}" comment="'Player rejected ownership transfer'"/>
+              </do_if>
+              <do_elseif value="$feedbackvalue" exact="1">
+                <set_value name="$FeedbackText" exact="'Delivered ship with required upgrades'"/>
+              </do_elseif>
+
+              <do_if value="$feedbackvalue" min="1">
+                <debug_text text="'Mission Successful. Feedback id: ' + $feedbackvalue + ' - ' + $FeedbackText" chance="md.$RML_Debugging * $DebugChance"/>
+              </do_if>
+              <do_elseif value="@$FeedbackText">
+                <set_value name="$EndSignalCue.$EndFeedbackText" exact="$FeedbackText"/>
+                <debug_text text="'Mission Failed. Feedback id: ' + $feedbackvalue + ' - ' + $FeedbackText" chance="md.$RML_Debugging * $DebugChance"/>
+              </do_elseif>
+              <do_else>
+                <debug_text text="'WARNING: Unhandled feedback value ' + $feedbackvalue" chance="$DebugChance"/>
+              </do_else>
+
+            </do_else>
+
+            <set_value name="$EndSignalCue.$EndFeedbackValue" exact="$feedbackvalue"/>
+            <do_if value="$ReturnFleetShips">
+              <set_value name="$EndSignalCue.$FleetShips" exact="$FleetShips"/>
+            </do_if>
+            
+            <signal_cue cue="$EndSignalCue"/>
+            <cancel_cue cue="DeliverFleet"/>
+          </actions>
+        </cue>
+      </cues>
+    </library>
+  </cues>
+</mdscript>

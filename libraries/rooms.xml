@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rooms xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="libraries.xsd">
+  <room id="corridor_arg" group="corridor_arg">
+    <category tags="corridor" race="argon" />
+  </room>
+  <room id="corridor_par" group="corridor_par">
+    <category tags="corridor" race="paranid" />
+  </room>
+  <room id="corridor_tel" group="corridor_tel">
+    <category tags="corridor" race="teladi" />
+  </room>
+  <room id="office_arg" group="office_arg">
+    <category tags="[room, office]" race="argon" />
+  </room>
+  <room id="office_tel" group="office_tel">
+    <category tags="[room, office]" race="teladi" />
+  </room>
+  <room id="office_par" group="office_par">
+    <category tags="[room, office]" race="paranid" />
+  </room>
+  <room id="office_bor" group="office_bor">
+    <category tags="[room, boron_test]" race="argon" />
+  </room>
+  <room id="factionrep_office_gen" group="factionrep_office_gen">
+    <category tags="[room, factionrep]" race="[argon, teladi, paranid]" />
+  </room>
+  <room id="prison_gen" group="prison_gen">
+    <category tags="[room, prison]" race="[argon, teladi, paranid]" />
+  </room>
+  <room id="bar_gen" group="bar_gen">
+    <category tags="[room, bar]" race="[argon, teladi, paranid]" />
+  </room>
+  <room id="security_gen" group="security_gen">
+    <category tags="[room, security]" race="[argon, teladi, paranid]" />
+  </room>
+  <room id="infrastructure_gen" group="infrastructure_gen">
+    <category tags="[room, infrastructure]" race="[argon, teladi, paranid]" />
+  </room>
+</rooms>

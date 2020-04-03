@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<missiongroups>
+  <!-- ID: See X4Ep1_*.xml, the $MissionGroup is one of the below
+  Description hardcoded for now, will move into TextDB -->
+  <group id="argon_police"          name="{30206,1}" description="Argon Police" faction="argon"/>
+  <group id="argon_war_xenon"       name="{30210,1}" description="Someone get me the Xenon Slayer! What do you mean he's busy until 2021?!" faction="argon" enemy="xenon"/>
+  <group id="argon_war_holyorder"   name="{30211,1}" description="Someone get me the Xenon Slayer! What do you mean he's busy until 2021?!" faction="argon" enemy="holyorder"/>
+  <group id="paranid_war_holyorder" name="{30212,1}" description="War description!" faction="paranid" enemy="holyorder"/>
+  <group id="holyorder_war_argon"   name="{30213,1}" description="War description!" faction="holyorder" enemy="argon"/>
+  <group id="holyorder_war_paranid" name="{30214,1}" description="War description!" faction="holyorder" enemy="paranid"/>
+  <group id="antigone_trade_guild"  name="{30205,1}" description="Antigone Trade Guild Description" faction="antigone"/>
+  <group id="teladi_trade_guild"    name="{30204,1}" description="Teladi Trade Guild Description" faction="teladi"/>
+  <group id="scaleplate_pirates"    name="{30207,1}" description="Scale Plate Pact Pirates mission group" faction="scaleplate"/>
+  <group id="mentor_plot"           name="{30201,1}" description="Mentor mission mission group" faction="argon"/>
+  <group id="diplomat_mentor_plot"  name="{30202,1}" description="Diplomatic mentor mission mission group" faction="argon"/>
+
+  <!-- testcode -->
+  <group id="argon_secret_service"  name="Argon Secret Service" description="The Argon secret service mission group" faction="argon"/>
+
+</missiongroups>

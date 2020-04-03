@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="iso-8859-1" ?>
+<aiscript name="move.flee.boost" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="aiscripts.xsd" >
+  <!--  
+  
+  Flee using boost. 
+  Check if htere are any obstacles in front:
+  - If not, fly quickly on straight line
+  - if htere is something in the middle (XL, L or station) rotate to aim on the opposite direction and boost there
+  
+  -->
+  <params>
+    <param name="maxdistance" default="20km" comment="maximum distance to move" />
+    <param name="maxboostduration" default="[(20km / [this.ship.maxspeed, 1m].max)s, 30s].max" comment="maximum duration of boost movement. this may be shortened within the script."/>
+    <param name="debugchance" default="0" />
+  </params>
+  <interrupts>
+    <handler ref="TargetInvalidHandler"/>
+  </interrupts>
+  <attention min="unknown">
+    <actions>
+      <!-- Return false if it can't boost -->
+      <do_if value="not this.ship.boost.available">
+        <debug_text text="'this ship cannot boost'" chance="$debugchance" />
+        <return value="false" />
+      </do_if>
+
+      <!-- set them in spline if is on visile attention level -->
+      <do_if value="this.attention ge attention.visible">
+        <debug_text text="'only set spline on high attention'" chance="$debugchance" />
+        <set_flight_control_model object="this.ship" flightcontrolmodel="flightcontrolmodel.spline" />
+      </do_if>
+
+      <!-- Find the obstacles in front of this ship -->
+      <do_if value="this.sector">
+        <find_gravidar_contact object="this.ship" class="[class.ship_l, class.ship_xl, class.station]" groupname="$obstacles" multiple="true" >
+          <match_context macro="this.sector.macro"/>
+          <match_is_in_view_of vertical="25deg" horizontal="25deg" object="this.ship" />
+          <match_distance max="$maxdistance" object="this.ship" />
+        </find_gravidar_contact>
+        <do_for_each name="$locobstacle" in="$obstacles" reverse="true">
+          <do_if value="$locobstacle.sector != this.sector">
+            <remove_from_group group="$obstacles" object="$locobstacle"/>
+          </do_if>
+        </do_for_each>
+      </do_if>
+
+      <!--  Try to fly in the oposite direction of the average positions of the enemies -->
+      <do_if value="@$obstacles.count">
+        <set_value name="$x" exact="0"  />
+        <set_value name="$y" exact="0"/>
+        <set_value name="$z" exact="0" />
+        <!-- Add all positions -->
+        <do_all exact="$obstacles.count" counter="$i">
+          <create_position name="$enemypos" space="this.ship" object="$obstacles.{$i}" />
+          <set_value name="$x" exact="$enemypos.x" operation="add" />
+          <set_value name="$y" exact="$enemypos.y" operation="add" />
+          <set_value name="$z" exact="$enemypos.z" operation="add" />
+        </do_all>
+        <!-- resultpos is the average position of all enemies -->
+        <debug_text text="'x:%1, y:%2, z:%3'.[$x, $y, $z]" chance="$debugchance" />
+        <create_position name="$resultpos" x="$x / ($obstacles.count * 1)" y="$y / ($obstacles.count * 1)" z="$z / ($obstacles.count * 1)" />
+        <debug_text text="'resultpos %1'.[$resultpos]" chance="$debugchance" />
+
+        <!-- Go in oposite direction of resultpos [x,y,z] -->
+        <set_value name="$distfactor" exact="[$maxdistance / this.ship.distanceto.{$resultpos}, 0.1].max" />
+        <debug_text text="'dist factor %1, dist %2'.[$distfactor, this.ship.distanceto.{$resultpos}]" chance="$debugchance" />
+        <!-- Final position in the oposite direction -->
+        <create_position name="$finalpos" x="$resultpos.x * -$distfactor"
+                                          y="$resultpos.y * -$distfactor"
+                                          z="$resultpos.z * -$distfactor" object="this.ship" space="this.zone"/>
+
+        <debug_text text="'finalpos %1, distfactor %2, dist %3'.[$finalpos, $distfactor, this.ship.distanceto.{$resultpos}]" chance="$debugchance" />
+        <debug_text text="'start move. this pos %1, final pos %2'.[this.ship.position, $finalpos]" chance="$debugchance" />
+
+        <create_orientation name="$orientation" orientation="look_at" refposition="$finalpos">
+          <position object="this.ship" />
+        </create_orientation>
+        <!-- Rotate to aim the final position -->
+        <move_to object="this.ship" destination="this.zone" abortpath="true" forceposition="false" finishonapproach="false" forcerotation="true" avoid="false">
+          <position object="this.ship" z="5m" />
+          <rotation value="$orientation" />
+        </move_to>
+      </do_if>
+
+      <debug_text text="player.age + ' %1 (%2) starting flee boost.'.[this.ship.knownname, this.ship]" chance="$debugchance"/>
+      <set_value name="$startpos" exact="this.ship.position" chance="$debugchance"/>
+      <set_value name="$startzone" exact="this.zone" chance="$debugchance"/>
+
+      <set_value name="$boost" exact="true"/>
+      <set_value name="$maxboostduration" exact="[this.assignedcontrolled.boost.maxduration * 0.9, $maxboostduration].min"/>
+      <do_if value="this.assignedcontrolled.shieldpercentage lt 50">
+        <set_value name="$boost" exact="false"/>
+        <set_value name="$maxboostduration" exact="[($maxdistance / [this.ship.maxspeed, 1m].max)s, $maxboostduration].min"/>
+      </do_if>
+
+      <!-- Move straight forward, base on the previous rotation -->
+      <move_to object="this.ship" destination="this.zone" abortpath="true" forceposition="false" finishonapproach="false" boost="$boost" travel="not $boost">
+        <position object="this.ship" z="$maxdistance" />
+        <interrupt_after_time time="$maxboostduration" />
+      </move_to>
+      <debug_text text="player.age + ' %1 (%2) done fleeing. moved %3 meters away from starting position to zone: %6. startzone: %7 startzone size: %5 maxdistance: %4 max boost duration: %8'.[this.ship.knownname, this.ship, this.ship.distanceto.{$startpos}, $maxdistance, $startzone.size, this.zone.knownname, $startzone.knownname, $maxboostduration]" chance="$debugchance"/>
+
+      <return value="true" />
+
+    </actions>
+  </attention>
+</aiscript>

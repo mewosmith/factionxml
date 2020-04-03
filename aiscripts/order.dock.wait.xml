@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<aiscript name="order.dock.wait" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="aiscripts.xsd" version="8">
+
+  <!-- REMEMBER that the wait will be skipped if this script is called immediately and no timeout is given as long as we have at least one more order in our queue. -->
+
+  <order id="DockAndWait" name="{1041, 451}" description="{1041, 452}" category="navigation">
+    <params>
+      <param name="destination" type="object" text="{1041, 10027}" comment="Destination. Object">
+        <input_param name="class" value="if this.ship.isclass.[class.ship_s, class.ship_xs] then [class.station, class.ship_m, class.ship_l, class.ship_xl] else [class.station, class.ship_l, class.ship_xl]"/>
+      </param>
+      <param name="building" type="internal" default="false" text="{1041, 10016}" comment="Building. Whether the purpose of docking is to build, upgrade or repair" />
+      <param name="trading" type="internal" default="false" text="{1041, 10131}" comment="Trading. Whether the purpose of docking is to trade" />
+      <param name="allowplayeronly" type="internal" default="false" text="'Allow PlayerOnly'" comment="Allow PlayerOnly. Whether the dock may exclusively be used by the player" />
+      <param name="ventureplatform" type="internal" default="null" text="'Venture Platform'" comment="Venture Platform. Use if the purpose of docking is to go on a venture" />
+      <param name="timeout" type="time" default="0s" infinitevalue="0s" text="{1041, 10034}" advanced="true" comment="Duration">
+        <input_param name="min" value="0s"/>
+        <input_param name="max" value="10h"/>
+        <input_param name="step" value="30s"/>
+      </param>
+      <param name="waittime" type="time" default="10min" text="{1041, 10061}" advanced="true" comment="Max wait time. maximum time we are willing to wait for a dock to be assigned">
+        <input_param name="startvalue" value="10min"/>
+        <input_param name="min" value="0s"/>
+        <input_param name="max" value="10h"/>
+        <input_param name="step" value="30s"/>
+      </param>
+      <param name="dockfollowers" type="bool" default="this.ship.allcommanders.indexof.{$destination} and ((@$destination.type == shiptype.carrier) or this.ship.isunit) and this.ship.subordinates.count" text="{1041, 10032}" advanced="true" comment="Dock subordinates">
+        <patch value="this.ship.isunit" condition="this.ship.isunit and not $dockfollowers" sinceversion="3"/>
+      </param>
+      <param name="releasesignal" type="internal" default="null" comment="Release signal. List: [param, param2]. Wait will be cancelled if a signal with $releasesignal.{1} as event.param and $releasesignal.{2} as event.param2 is sent to this.object. While event.param MUST be non-null, event.param2 may be null."/>
+      <param name="subordinateorders" type="internal" default="[]" comment="Subordinate orders. subordinate dock orders to cancel"/>
+      <param name="dockorder" type="internal" default="null" comment="Dock order ID. the DockAt order created in this script. used for cleanup."/>
+      <param name="callerid" type="internal" default="null" comment="Caller ID. Order ID of the order that called this script. used for failure handling."/>
+      <param name="undockhandler" type="internal" default="null" comment="Undock handler. order name that the dock orders should be passed to if another script is handling undocking. this will expect a parameter in the handling script called $subordinateorders. if used with dockfollowers, does not order subordinates to undock upon completion of this order. to be used if caller will handle undocking separately."/>
+      <param name="isdockfollower" type="internal" default="false" comment="order stems from commander docking with $dockfollowers set."/>
+      <param name="debugchance" type="bool" default="0" advanced="true" text="{1041, 10086}" comment="Print debug output">
+        <input_param name="truevalue" value="100"/>
+      </param>
+    </params>
+    <requires>
+      <match shiptype="shiptype.lasertower" negate="true"/>
+    </requires>
+    <location object="$destination" condition="@$destination.exists"/>
+  </order>
+  <interrupts>
+    <handler consume="false">
+      <conditions>
+        <check_any>
+          <event_object_signalled object="this.assignedcontrolled" param="'playerownedship_proceed'" check="false"/>
+          <!--<check_all>
+            <check_any>
+              <check_all>
+                <event_player_teleport_successful/>
+                <check_value value="this.assignedcontrolled.container.exists and not player.entity.hascontext.{this.assignedcontrolled.container}"/>
+              </check_all>
+              <check_all>
+                <event_object_undocked_from container="@this.assignedcontrolled.container" check="false"/>
+                <check_value value="player.entity.hascontext.{event.param}"/>
+              </check_all>
+            </check_any>
+            <check_value value="$waitforplayer?"/>
+          </check_all>-->
+          <check_all>
+            <!-- proceed when the player issues a new order. -->
+            <event_object_order_ready object="this.assignedcontrolled"/>
+            <check_value value="@$releasesignal.{1} == 'playerownedship_proceed'"/>
+            <check_value value="(event.param != this.assignedcontrolled.order) and (event.param != this.assignedcontrolled.defaultorder)"/>
+            <debug_text text="'DockAndWait proceed: new order: ' + @event.param.id" debugchance="$debugchance"/>
+          </check_all>
+        </check_any>
+        <check_value value="this.assignedcontrolled.dock"/>
+        <check_value value="this.assignedcontrolled.order.id == 'DockAndWait'"/>
+      </conditions>
+      <actions>
+        <debug_text text="player.age + ': player undocked and we were waiting for the player. undocking.'" chance="$debugchance"/>
+        <!-- immediately used and cleaned up in orders.base -->
+        <set_value name="this.$skipwait"/>
+        <remove_value name="global.$Time_PlayerStoppedControl"/>
+        <do_if value="this.assignedcontrolled.nextorder">
+          <debug_text text="'cancelling ' + this.assignedcontrolled.nextorder.id" chance="$debugchance"/>
+          <cancel_order order="this.assignedcontrolled.nextorder"/>
+        </do_if>
+      </actions>
+    </handler>
+    <handler>
+      <conditions>
+        <event_object_destroyed object="this.assignedcontrolled.commander" check="false"/>
+        <check_value value="$isdockfollower"/>
+        <check_value value="not this.assignedcontrolled.isunit"/>
+      </conditions>
+      <actions>
+        <debug_text text="player.age + ': %s %s %s with pilot %s, commander of dockfollower %s. this order: %s'.[@this.assignedcontrolled.commander.idcode, @this.assignedcontrolled.commander.knownname, this.assignedcontrolled.commander, @this.assignedcontrolled.commander.pilot, event.name, this.assignedcontrolled.order]" chance="0"/>
+        <debug_text text="'commander order: %s, commander has subordinateorders: %s, this in subordinateorders: %s'.[@this.assignedcontrolled.commander.order.id, @this.assignedcontrolled.commander.order.$subordinateorders.count, @this.assignedcontrolled.commander.order.$subordinateorders.indexof.{this.assignedcontrolled.order}]" chance="0"/>
+        <!-- handler needed if commander dies. -->
+        <!-- NB: there is at least one case where subordinates should not undock with commander so it should not be handled here. -->
+        <do_if value="event.name == 'event_object_destroyed'">
+          <abort_called_scripts resume="finish"/>
+        </do_if>
+      </actions>
+    </handler>
+    <handler ref="SectorChangeHandler"/>
+    <handler ref="InspectedHandler"/>
+    <handler ref="FoundAbandonedHandler"/>
+    <handler ref="FoundLockboxHandler"/>
+  </interrupts>
+  <init>
+    <set_command command="command.dockat" param="$destination" />
+  </init>
+  <patch sinceversion="1">
+    <do_if value="(@this.assignedcontrolled.defaultorder.id == 'Escort') and $destination.isoperational and ($destination == this.assignedcontrolled.defaultorder.$target)">
+      <!-- connected with change in order.fight.escort. carrier-based ships should be docked while running their escort order to be responsive to threats. -->
+      <do_if value="@this.assignedcontrolled.order.id == 'DockAndWait'">
+        <cancel_order order="this.assignedcontrolled.order"/>
+      </do_if>
+      <do_else>
+        <debug_text text="'PATCH: cannot cancel order: %s. was expecting DockAndWait order.'.[this.assignedcontrolled.order.id]"/>
+      </do_else>
+    </do_if>
+  </patch>
+  <patch sinceversion="2">
+    <do_if value="$building and not this.ship.build and typeof $callerid == datatype.order and not $callerid.exists">
+      <cancel_order order="this.ship.order"/>
+    </do_if>
+  </patch>
+  <patch sinceversion="5" early="true">
+    <set_value name="$isdockfollower" exact="false"/>
+  </patch>
+  <patch sinceversion="5">
+    <do_if value="$dockfollowers and @this.assignedcontrolled.commander.isclass.ship and (((this.assignedcontrolled.commander.order.id == 'DockAndWait' or this.assignedcontrolled.commander.order.id == 'DockAt') and this.assignedcontrolled.commander.order.$destination == $destination) or this.assignedcontrolled.commander.hascontext.{$destination})">
+      <set_value name="$isdockfollower" exact="true"/>
+      <do_if value="this.assignedcontrolled.order.id == 'DockAndWait'">
+        <edit_order_param order="this.assignedcontrolled.order" param="'isdockfollower'" value="true"/>
+      </do_if>
+    </do_if>
+  </patch>
+  <patch sinceversion="6">
+    <do_if value="this.assignedcontrolled.commander and this.assignedcontrolled.subordinategroupdockoverride and (@this.assignedcontrolled.defaultorder.id == 'DockAndWait') and (this.assignedcontrolled.defaultorder.$destination == this.assignedcontrolled.commander)">
+      <debug_text text="'%s %s %s subordinate of %s %s %s. resetting default order to escort.'.[@this.assignedcontrolled.idcode, @this.assignedcontrolled.knownname, this.assignedcontrolled, @this.assignedcontrolled.commander.idcode, @this.assignedcontrolled.commander.knownname, this.assignedcontrolled.commander]" filter="savegame"/>
+      <create_order object="this.assignedcontrolled" id="'Escort'" default="true">
+        <param name="target" value="this.assignedcontrolled.commander"/>
+      </create_order>
+      <do_if value="this.assignedcontrolled.order.id == 'DockAndWait' and this.assignedcontrolled.order.isparameditable.callerid">
+        <edit_order_param order="this.assignedcontrolled.order" param="'callerid'" value="this.assignedcontrolled.defaultorder"/>
+      </do_if>
+    </do_if>
+  </patch>
+  <patch sinceversion="8">
+    <set_value name="$loccommander" exact="this.assignedcontrolled.commander"/>
+    <!-- $isdockfollower not reliable as of this patch. $isdockfollower made reliable along with this patch. -->
+    <do_if value="not this.isplayerowned and (not $loccommander or (@$loccommander.order.id != 'DockAndWait')) and $dockfollowers and not $callerid.exists and this.assignedcontrolled.order.isinfinite and not this.assignedcontrolled.nextorder and not this.assignedcontrolled.isunit">
+      <set_value name="$locsubordinates" exact="this.assignedcontrolled.subordinates"/>
+      <do_for_each name="$locsub" in="$locsubordinates">
+        <do_for_each name="$locorder" in="$locsub.orders" reverse="true">
+          <do_if value="($locorder.id == 'DockAndWait') and $locorder.$dockfollowers and not $locorder.$callerid.exists and $locorder.isinfinite">
+            <debug_text text="'PATCH: %s %s %s docked indefinitely. undocking.'.[@$locsub.idcode, @$locsub.knownname, $locsub]" filter="savegame"/>
+            <cancel_order order="$locorder"/>
+          </do_if>
+        </do_for_each>
+      </do_for_each>
+      <debug_text text="'PATCH: %s %s %s docked indefinitely. undocking.'.[@this.assignedcontrolled.idcode, @this.assignedcontrolled.knownname, this.assignedcontrolled]" filter="savegame"/>
+      <cancel_order order="this.assignedcontrolled.order"/>
+      <remove_value name="$locsubordinates"/>
+    </do_if>
+    <remove_value name="$loccommander"/>
+  </patch>
+  <attention min="unknown">
+    <actions>
+
+      <!-- undock if i am docking to follow my commander and:
+              i do not have an operational commander,
+                or my commander is not docking, or is not docking here, and is not already docked here. -->
+      <do_if value="$isdockfollower 
+                      and (not this.assignedcontrolled.commander.isoperational 
+                        or (((@this.assignedcontrolled.commander.order.id != 'DockAt') 
+                          and (@this.assignedcontrolled.commander.order.id != 'DockAndWait')) 
+                            or (this.assignedcontrolled.commander.order.$destination != $destination)) 
+                          and not this.assignedcontrolled.commander.hascontext.{$destination})">
+        <!-- paired with interrupt handler above to detect commander getting destroyed. this is in case commander was destroyed or replaced before this script starts or, more likely, restarts after order.dock. -->
+        <debug_text text="'isdockfollower but commander is either already dead or is no longer docking.'" chance="$debugchance"/>
+        <do_if value="$callerid.exists">
+          <edit_order_param order="$callerid" param="'cannotdock'" value="true"/>
+        </do_if>
+        <resume label="finish"/>
+      </do_if>
+
+      <do_if value="not $destination.isoperational or not @$destination.isclass.container">
+        <debug_text text="'destination: %s is invalid. it should be a container. order cannot be completed.'.[$destination]" filter="error" chance="(not @$destination.isclass.container) * 100"/>
+        <do_if value="$callerid.exists">
+          <edit_order_param order="$callerid" param="'cannotdock'" value="true"/>
+        </do_if>
+        <resume label="finish"/>
+      </do_if>
+
+      <!-- disabled. if a player-owned ship docks with the player on board and is allowed to wait, stop waiting after the player leaves. -->
+      <!--<do_if value="this.assignedcontrolled.isplayerowned and player.entity.hascontext.{this.controlled}">-->
+      <run_script name="'player.interaction'" chance="0" />
+      <!--  <set_value name="$waitforplayer"/>-->
+      <!--</do_if>-->
+
+      <label name="start"/>
+
+      <!-- TODO: encapsulate these checks in a dedicated action? change to work with flags? -->
+      <debug_text text="'docking debug output for %s(%s- %s):\n PROPERTY | CUR | REQ\n container %s | %s\n building  %s | %s\n trading   %s | %s\n venture platform %s | %s\n player    %s | %s'.[this.ship.knownname, this.ship, this.ship.idcode, @this.ship.dock.container, $destination, @this.ship.dock.isbuildingallowed, $building, @this.ship.dock.istradingallowed, $trading, @this.ship.dock.ventureplatform, $ventureplatform, @this.ship.dock.isplayeronly, $allowplayeronly]" chance="$debugchance"/>
+      <do_if value="(@this.ship.dock.container != $destination) or (this.ship.dock and (($building and not this.ship.dock.isbuildingallowed) or ($trading and not this.ship.dock.istradingallowed) or (not $allowplayeronly and this.ship.dock.isplayeronly) or ($ventureplatform != this.ship.dock.ventureplatform)))">
+        <do_if value="(not this.ship.parkedat or ((this.ship.parkedat != $destination) and not @this.ship.parkedat.hascontext.{$destination}))">
+          <do_if value="this.assignedcontrolled.order.id == 'DockAndWait'">
+            <set_value name="$dockandwaitorder" exact="this.assignedcontrolled.order"/>
+          </do_if>
+          <create_order name="$dockorder" object="this.ship" id="'DockAt'" immediate="true">
+            <param name="destination" value="$destination"/>
+            <param name="building" value="$building" />
+            <param name="trading" value="$trading" />
+            <param name="ventureplatform" value="$ventureplatform" />
+            <param name="waittime" value="$waittime"/>
+            <param name="dockfollowers" value="$dockfollowers"/>
+            <param name="isdockfollower" value="$isdockfollower"/>
+            <param name="dockandwaitid" value="this.ship.order"/>
+            <param name="callerid" value="$callerid"/>
+            <param name="debugchance" value="$debugchance"/>
+          </create_order>
+          <do_if value="$dockandwaitorder?">
+            <edit_order_param order="$dockandwaitorder" param="'dockorder'" value="$dockorder"/>
+          </do_if>
+          <wait exact="1ms"/>
+        </do_if>
+      </do_if>
+
+      <!-- this has to be done before the wait because the sync point is in order.wait. if this is called immediately by an order that is still in the queue and should handle undocking, that order will start during the wait.  -->
+      <do_if value="$dockfollowers and $undockhandler and $undockhandler.exists">
+        <do_if value="$undockhandler.$subordinateorders?">
+          <edit_order_param order="$undockhandler" param="'subordinateorders'" value="$subordinateorders"/>
+          <debug_text text="'passing subordinate dock orders back to order: %s'.[$undockhandler.id]" chance="$debugchance"/>
+        </do_if>
+        <do_else>
+          <debug_text text="'undockhandler: %s %s provided does not have list subordinateorders'.[$undockhandler.id, $undockhandler]" filter="error"/>
+        </do_else>
+      </do_if>
+
+      <!-- wait for new orders -->
+      <set_command_action commandaction="commandaction.standingby"/>
+      <debug_text text="'%1 successfully docked at %2. waiting.'.[this.ship.knownname, $destination.knownname]" chance="$debugchance"/>
+      <do_if value="not $releasesignal">
+        <run_script name="'order.wait'">
+          <param name="timeout" value="$timeout"/>
+        </run_script>
+      </do_if>
+      <do_else>
+        <run_script name="'order.wait.signal'">
+          <param name="timeout" value="$timeout"/>
+          <param name="releasesignal" value="$releasesignal"/>
+          <param name="debugchance" value="$debugchance"/>
+        </run_script>
+      </do_else>
+
+      <label name="finish"/>
+
+      <!-- $subordinateorders initialized in order.dock -->
+      <do_if value="$dockfollowers and (not $undockhandler or not $undockhandler.exists or not @$undockhandler.$subordinateorders)">
+        <do_all exact="$subordinateorders.count" counter="$i">
+          <do_if value="$subordinateorders.{$i}.exists">
+            <debug_text text="'ordering %1 %2 %3 out of dock and back to the squadron.'.[$subordinateorders.{$i}.object.idcode, $subordinateorders.{$i}.object.knownname, $subordinateorders.{$i}.object]" chance="$debugchance"/>
+            <cancel_order order="$subordinateorders.{$i}"/>
+          </do_if>
+        </do_all>
+      </do_if>
+
+    </actions>
+  </attention>
+  <on_abort>
+    <do_all exact="$subordinateorders.count" counter="$i">
+      <do_if value="$subordinateorders.{$i}.exists and ($subordinateorders.{$i}.state == orderstate.started) and (not $undockhandler or not $undockhandler.exists or not @$undockhandler.$subordinateorders)">
+        <debug_text text="'on_abort: ordering %1 %2 %3 out of dock and back to the squadron.'.[$subordinateorders.{$i}.object.idcode, $subordinateorders.{$i}.object.knownname, $subordinateorders.{$i}.object]" chance="$debugchance"/>
+        <cancel_order order="$subordinateorders.{$i}"/>
+      </do_if>
+    </do_all>
+  </on_abort>
+</aiscript>

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<mdscript name="Test_ShipCreation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="md.xsd">
+
+  <cues>
+    <cue name="ShipCreation">
+      <conditions>
+        <event_cue_signalled />
+      </conditions>
+      <actions>
+        <do_all exact="5">
+          <create_ship name="$myship" zone="player.zone" group="argon_civilian_mass_traffic" groupname="$mygroup">
+            <owner exact="faction.argon" overridenpc="true" />
+            <pilot group="argon.pilot" />
+            <position object="player.ship" exact="500m"/>
+          </create_ship>
+          <debug_text text="'Created ship: ' + $myship + ', name=' + $myship.knownname"/>
+        </do_all>
+        <!-- Create mission target symbol -->
+        <create_mission cue="ShipCreation" name="'Ship creation'" faction="faction.player" type="missiontype.think" difficulty="level.trivial">
+          <objective action="objective.follow" group="$mygroup" />
+        </create_mission>
+      </actions>
+      <cues>
+<!-- 
+        <cue name="KlausTest" instantiate="true" checkinterval="1s">
+          <actions>
+            <set_value name="$testval" exact="60" />
+            <set_value name="$progress" exact="player.age - (player.age / $testval)i * $testval" />
+            <debug_text text="'' + $progress + ' of ' + $testval" />
+            <update_objective_progress cue="ShipCreation" progress="$progress" max="$testval" />
+          </actions>
+        </cue>
+ -->
+        <cue name="Remove">
+          <conditions>
+            <event_cue_signalled cue="parent"/>
+          </conditions>
+          <actions>
+            <do_all exact="$mygroup.count" counter="$i">
+              <destroy_object object="$mygroup.{$i}" />
+            </do_all>
+            <remove_mission cue="ShipCreation" type="completed" />
+            <reset_cue cue="ShipCreation"/>
+          </actions>
+        </cue>
+      </cues>
+    </cue>
+    <cue name="ToggleShipCreation">
+      <force name="Create/Remove Test Mission Targets">
+        <signal_cue cue="ShipCreation" />
+      </force>
+    </cue>
+  </cues>
+
+</mdscript>

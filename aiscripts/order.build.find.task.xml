@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<aiscript name="order.build.find.task" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="aiscripts.xsd" version="7">
+  <!--
+
+  Order for a CV to find tasks to aid in building or repair
+  by Owen
+
+  -->
+  <order id="FindBuildTasks" name="{1041, 491}" description="{1041, 492}" category="trade" infinite="true">
+    <params>
+      <param name="range" default="if this.ship.jobmainzone then this.ship.jobmainzone.sector else this.sector" type="object" text="{1041, 10017}" advanced="true" comment="Building space range">
+        <input_param name="class" value="[class.cluster, class.sector]"/>
+      </param>
+      <param name="maxjumps" default="36" type="number" text="{1041, 10055}" advanced="true" comment="Max gate distance to find build tasks">
+        <input_param name="startvalue" value="36"/>
+        <input_param name="min" value="0"/>
+        <input_param name="max" value="36"/>
+        <input_param name="step" value="1"/>
+      </param>
+      <param name="playeronly" text="{1041, 10155}" default="this.ship.isplayerowned" type="internal" comment="Only respond to requests from player builds?"/>
+      <param name="debugchance" type="bool" default="0" advanced="true" text="{1041, 10086}" comment="Print debug output">
+        <input_param name="truevalue" value="100"/>
+      </param>
+    </params>
+    <requires primarypurpose="purpose.build"/>
+  </order>
+  <interrupts>
+    <handler ref="AttackHandler" />
+    <handler ref="MissileLockHandler" />
+    <handler ref="ScannedHandler" />
+    <handler ref="InspectedHandler"/>
+    <handler ref="FoundAbandonedHandler"/>
+    <handler ref="FoundLockboxHandler"/>
+    <handler ref="ResupplyHandler" />
+    <handler comment="Requested for build">
+      <conditions>
+        <event_object_signalled object="this.container" param="'request construction vessel'" comment="event.param2 == $requesting_buildmodule, event.param3 = $buildtask" />
+        <set_value name="event.param2.container.tradenpc.$construction_vessel_response" exact="false"/>
+        <check_value value="not $playeronly or event.param2.owner == faction.player"/>
+        <check_value value="not @this.$assigningtobuildstorage and not this.ship.constructionmodule and $spaces.indexof.{event.param2.cluster} and event.param2.hasrelation.dock.{this.ship} and event.param2.container.tradenpc"/>
+        <!--Immidiate feedback as the actions will not occur this frame-->
+        <set_value name="event.param2.container.tradenpc.$construction_vessel_response" exact="true"/>
+        <!--Make sure this CV doesn't say YES! to any other build storage request this frame-->
+        <set_value name="this.$assigningtobuildstorage" exact="true"/>
+      </conditions>
+      <actions>
+        <set_value name="$buildmodule" exact="event.param2"/>
+        <assign_construction_vessel object="this.ship" buildmodule="event.param2"/>
+        <remove_value name="this.$assigningtobuildstorage"/>
+        <!--TODO @Owen Do not abort restocking?-->
+        <abort_called_scripts resume="deploy" />
+      </actions>
+    </handler>
+  </interrupts>
+  <init>
+    <!-- Main action for waiting times -->
+    <!--TODO @Owen -->
+    <set_command_action commandaction="commandaction.searchingtrades" />
+  </init>
+  <patch sinceversion="7">
+    <do_if value="this.ship.constructionmodule">
+      <debug_text text="'Searching construction vessel ' + this.ship + ' ' + this.ship.knownname + ' had an assigned constructionmodule. Removing.'" filter="savegame"/>
+      <disengage_construction_vessel object="this.ship"/>
+    </do_if>
+  </patch>
+  <patch sinceversion="4">
+    <do_if value="not $destinations.count?">
+      <set_value name="$destinations" exact="$spaces"/>
+    </do_if>
+  </patch>
+  <patch sinceversion="6">
+    <do_all exact="@$destinations.count" counter="$i" reverse="true">
+      <do_if value="$destinations.{$i}.owner and this.assignedcontrolled.hasrelation.enemy.{$destinations.{$i}.owner}">
+        <remove_value name="$destinations.{$i}"/>
+      </do_if>
+    </do_all>
+  </patch>
+  <attention min="unknown">
+    <actions>
+      <label name="start" />
+
+      <do_if value="player.age gt @$next_resupply_check" chance="30">
+        <debug_text text="'%1 (%2) ready to resupply.'.[this.ship.knownname, this.ship]" chance="$debugchance"/>
+        <signal_objects object="this.ship" param="'resupply'" param2="[false]" param3="$debugchance" comment="param2 = [urgent?, resupplystationID], param3 = $debugchance"/>
+        <set_value name="$next_resupply_check" exact="player.age + 30min"/>
+      </do_if>
+
+      <!-- Ranges -->
+      <do_if value="$range and not @$range.isclass.space">
+        <!-- For jobs, get the string range 'zone', 'sector', 'cluster' -->
+        <set_value name="$range" exact="this.ship.{$range}" />
+      </do_if>
+
+      <debug_text text="'looking for clusters within %s jumps of %s %s.'.[$maxjumps, $range.knownname, $range]" chance="$debugchance"/>
+      <find_cluster_in_range distances="$clusterstable" multiple="true" object="$range" maxdistance="$maxjumps"/>
+      <!-- sort them -->
+      <set_value name="$spaces" exact="$clusterstable.keys.sorted" />
+      <!-- init possible destinations --> 
+      <set_value name="$destinations" exact="[]" />
+
+      <!-- try to find an interesting location -->
+      <do_all exact="$spaces.count" counter="$i">
+        <!-- find shipyards, wharfs, equipment docks -->
+        <find_station name="$shipyards" space="$spaces.{$i}" append="false" multiple="true">
+          <match_content class="class.buildmodule" comment="State of the buildmodule doesn't really matter"/>
+          <match_relation_to object="this.ship" relation="neutral" comparison="ge"/>
+        </find_station>
+        <!-- if there are shipyards in range -->
+        <do_if value="$shipyards.count">
+          <!-- add their zones as destinations -->
+          <do_all exact="$shipyards.count" counter="$j">
+            <append_to_list name="$destinations" exact="$shipyards.{$j}.zone"  />
+          </do_all>
+        </do_if>
+        <!-- try and find gates, when no shipyard, with 50% chance -->
+        <do_elseif value="true" chance="50">
+          <find_gate name="$gates" space="$spaces.{$i}" multiple="true"/>
+          <!-- if there are gates in range -->
+          <do_if value="$gates.count">
+            <!-- add their zones as destinations -->
+            <do_all exact="$gates.count" counter="$j">
+              <!-- NB: $spaces are clusters which do not have owners. biggest spaces that can be owned are sectors. -->
+              <do_if value="not $gates.{$j}.sector.owner or (not this.assignedcontrolled.hasrelation.enemy.{$gates.{$j}.sector.owner})">
+                <append_to_list name="$destinations" exact="$gates.{$j}.zone"  />
+              </do_if>
+            </do_all>
+          </do_if>
+        </do_elseif>
+        <!-- with a max number of destinations is enough -->
+        <do_if value="$destinations.count ge 5">
+          <break/>
+        </do_if>        
+      </do_all>
+      <!-- Default random destinations -->
+      <do_if value="not $destinations.count">
+        <debug_text text="'No interesting destiantion found. Use all $spaces in range'" chance="$debugchance" />
+        <set_value name="$destinations" exact="$spaces" />
+      </do_if>
+
+      <set_order_syncpoint_reached order="this.ship.order"/>
+
+      <assert value="not this.ship.constructionmodule" text="this.ship + ' ' + this.ship.knownname + ' is looking for build tasks while it already is assigned to ' + this.ship.constructionmodule + ' [Owen]'" break="always"/>
+
+      <label name="await build task"/>
+
+      <do_while value="true">
+        <!-- Initialize buildmodule to later be set by an event-->
+        <set_value name="$buildmodule" exact="null"/>
+                
+        <!-- Move to destination -->
+        <do_if value="@$destinations.count">
+          <set_value name="$randindex" min="1" max="$destinations.count" profile="decreasing"/>
+          <debug_text text="'Idle destiantion: %s (%s of %s)'.[$destinations.{$randindex}.knownname, $randindex, $destinations.count]" chance="$debugchance" />
+          
+          <run_script name="'move.generic'">
+            <param name="destination" value="$destinations.{$randindex}"/>
+            <param name="endintargetzone" value="true" />
+          </run_script>
+        </do_if>
+
+        <!-- Idle for a while -->
+        <run_script name="'move.idle'" >
+          <param name="Min" value="1min" />
+          <param name="Max" value="5min" />
+        </run_script>
+      </do_while>
+
+      <label name="deploy"/>
+
+      <do_if value="not $buildmodule.exists or not $buildmodule.buildstorage.base">
+        <resume label="await build task"/>
+      </do_if>
+
+      <create_order id="'DeployToStation'" object="this.ship" immediate="true">
+        <param name="station" value="$buildmodule.buildstorage.base"/>
+        <param name="debugchance" value="$debugchance"/>
+      </create_order>
+
+    </actions>
+  </attention>
+</aiscript>

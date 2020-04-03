@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<aiscript name="lib.target.selection.singletarget" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="aiscripts.xsd">
+  <!-- selection of subtargets for a given single target. we currently have three cases:
+          simple target, S or M ship or surface element: target itself,
+          capital ship: all surface elements plus the target itself,
+          station: all modules, maybe all surface elements, NOT the target itself.
+
+          requires variable $evaltarget which must be a ship or a station.
+          returns a group of targets named $resulttargets.
+
+  implemented as an interrupt library so it can be used within interrupt actions.
+  must not have any blocking actions! -->
+  <interrupts>
+    <library>
+      <actions name="SelectTargets">
+        <do_if value="@$evaltarget.canbeattacked">
+          <do_if value="$evaltarget.sector and ($evaltarget.sector == this.sector)">
+            <create_group groupname="$resulttargets"/>
+
+            <do_if value="not $evaltarget.isrealclass.station">
+              <add_to_group groupname="$resulttargets" object="$evaltarget"/>
+            </do_if>
+
+            <do_if value="@$evaltarget.iscapitalship or $evaltarget.isrealclass.station">
+              <find_object_component groupname="$resulttargets" object="$evaltarget" checkoperational="false" integrated="false" indestructible="false" invulnerable="false" multiple="true">
+                <match_any>
+                  <match surfaceelement="not $evaltarget.isrealclass.station or not this.assignedcontrolled.iscapitalship"/>
+                  <match module="$evaltarget.isrealclass.station"/>
+                </match_any>
+                <match state="componentstate.wreck" negate="true"/>
+              </find_object_component>
+            </do_if>
+
+            <debug_text text="'%s %s %s %s found %s target%s connected to %s %s %s %s'.[this.assignedcontrolled.class, this.assignedcontrolled.idcode, this.assignedcontrolled.knownname, this.assignedcontrolled, $resulttargets.count, if ($resulttargets.count gt 1) then 's' else '', $evaltarget.class, @$evaltarget.idcode, @$evaltarget.knownname, $evaltarget]" chance="@$debugchance"/>
+          </do_if>
+          <do_else>
+            <debug_text text="'evaltarget: %s %s %s %s is not in this sector.'.[@$evaltarget.class, @$evaltarget.idcode, @$evaltarget.knownname, @$evaltarget]" chance="@$debugchance"/>
+          </do_else>
+        </do_if>
+        <do_else>
+          <debug_text text="'evaltarget: %s %s %s %s is invalid or not operational.'.[@$evaltarget.class, @$evaltarget.idcode, @$evaltarget.knownname, @$evaltarget]" chance="@$debugchance"/>
+        </do_else>
+      </actions>
+    </library>
+  </interrupts>
+</aiscript>

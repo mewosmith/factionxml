@@ -1,0 +1,334 @@
+<?xml version="1.0" encoding="iso-8859-1" ?>
+<aiscript name="order.fight.patrol" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="aiscripts.xsd" version="1">
+  <order id="Patrol" name="{1041, 391}" description="{1041, 392}" category="combat">
+    <params>
+      <param name="space" default="null" type="object" text="{1041, 10007}" required="true" comment="The area to patrol. Mandatory for UI">
+        <input_param name="class" value="[class.sector]"/>
+      </param>
+      <param name="range" default="null" type="internal" text="{1041, 10094}" comment="Range. class.zone, class.sector, class.cluster (only for jobs)"/>
+      <param name="pursuetargets" default="false" type="bool" text="{1041, 10091}" advanced="true" comment="Pursue targets"/>
+      <param name="pursuedistance" default="[this.ship.maxradarrange, 1km].max" type="length" text="{1041, 10090}" advanced="true" comment="Pursue distance">
+        <input_param name="min" value="1km"/>
+        <input_param name="max" value="[this.ship.maxradarrange, 1km].max"/>
+        <input_param name="step" value="1km"/>
+      </param>
+      <param name="includeroute" default="true" type="bool" text="{1041, 10151}" advanced="true" comment="Patrol each zone along the way"/>
+      <param name="allowothertargets" default="true" type="internal" text="{1041, 10037}" comment="Engage all hostiles within range"/>
+      <param name="targetpurposes" default="[]" type="internal" comment="Purposes of ships to engage"/>
+      <param name="timeout" type="time" default="0s" infinitevalue="0s" text="{1041, 10034}" required="false" advanced="true" comment="Duration">
+        <input_param name="min" value="0s" />
+        <input_param name="max" value="10h" />
+        <input_param name="step" value="30s" />
+        <input_param name="startvalue" value="15min" />
+      </param>
+      <param name="debugchance" type="bool" default="0" advanced="true" text="{1041, 10086}" comment="Print debug output">
+        <input_param name="truevalue" value="100"/>
+      </param>
+    </params>
+    <requires>
+      <match shiptype="shiptype.lasertower" negate="true"/>
+    </requires>
+    <location object="$space" condition="$space.exists" />
+  </order>
+  <interrupts>
+    <handler ref="SectorChangeHandler"/>
+    <handler ref="AttackHandler" />
+    <handler ref="MissileLockHandler" />
+    <handler ref="ScannedHandler" />
+    <handler ref="InspectedHandler"/>
+    <handler ref="FoundAbandonedHandler"/>
+    <handler ref="FoundLockboxHandler"/>
+    <handler ref="ResupplyHandler" />
+    <handler>
+      <conditions>
+        <event_object_target_invalid object="this.ship"/>
+      </conditions>
+      <actions>
+        <do_if value="this.ship.order == this.ship.defaultorder and $patrolzone? and $patrolzone == $space">
+          <debug_text text="'WARNING: The zone this ship wants to patrol no longer exists. If this spams with the same entity, find a better solution.'"/>
+        </do_if>
+        <abort_called_scripts resume="start"/>
+      </actions>
+    </handler>
+  </interrupts>
+  <init>
+    <set_command command="command.patrol" />
+    <set_command_action commandaction="commandaction.calculating" />
+  </init>
+  <patch sinceversion="1">
+    <do_if value="@this.assignedcontrolled.commander.isclass.station and ($space != this.assignedcontrolled.commander.zone)">
+      <debug_text text="'PATCH: %s %s %s, subordinate of %s %s %s, had orders that were incorrectly set up. reassigned to patrolling zone of commander.'.[this.assignedcontrolled.idcode, this.assignedcontrolled.knownname, this.assignedcontrolled, this.assignedcontrolled.commander.idcode, this.assignedcontrolled.commander.knownname, this.assignedcontrolled.commander]"/>
+      <set_value name="$space" exact="this.assignedcontrolled.commander.zone"/>
+      <set_value name="$range" exact="null"/>
+      <do_if value="@this.assignedcontrolled.defaultorder.id == 'Patrol'">
+        <edit_order_param order="this.assignedcontrolled.defaultorder" param="'space'" value="$space"/>
+        <edit_order_param order="this.assignedcontrolled.defaultorder" param="'range'" value="$range"/>
+      </do_if>
+    </do_if>
+  </patch>
+  <attention min="unknown">
+    <actions>
+
+      <label name="start" />
+
+      <set_value name="$capship" exact="this.ship.isclass.ship_l or this.ship.isclass.ship_xl" />
+
+      <do_if value="not $space.exists">
+        <do_if value="$space">
+          <debug_text text="'space does not exist. attempting to recover.'" chance="$debugchance"/>
+          <set_value name="$alarm"/>
+        </do_if>
+
+        <do_if value="this.controlled.isjobship and not this.controlled.jobmainzone">
+          <debug_text text="'%s %s is a jobship that does not have a jobmainzone. Attempting to recover.'.[this.controlled.knownname, this.controlled]" chance="$debugchance"/>
+          <set_value name="$alarm"/>
+        </do_if>
+
+        <do_if value="this.controlled.jobmainzone.exists">
+          <!-- if i'm a job ship with a main zone, use the main zone -->
+          <set_value name="$startzone" exact="this.ship.jobmainzone"/>
+        </do_if>
+        <do_elseif value="not this.zone.isclass.highway">
+          <!-- otherwise, if i'm not in a highway, use this zone -->
+          <set_value name="$startzone" exact="this.zone"/>
+        </do_elseif>
+        <do_elseif value="this.sector">
+          <!-- otherwise, if i'm in a sector, use some zone in this sector -->
+          <find_zone name="$startzone" space="this.sector" normalzone="true"/>
+        </do_elseif>
+        <do_else>
+          <!-- otherwise, assume that we're in a superhighway so use the destination of this highway. -->
+          <set_value name="$startzone" exact="this.zone.destination"/>
+        </do_else>
+
+        <do_if value="not $startzone.exists or $startzone.isclass.highway">
+          <do_if value="not $startzone.exists">
+            <debug_text text ="'ERROR: startzone does not exist. ending script.'" filter="error"/>
+          </do_if>
+          <do_elseif value="$startzone.isclass.highway">
+            <debug_text text="'ERROR: startzone is a highway. ending script. jobzone: ' + this.ship.jobmainzone" filter="error"/>
+          </do_elseif>
+          <resume label="finish"/>
+        </do_if>
+
+        <do_if value="$range" exact="class.zone">
+          <set_value name="$space" exact="$startzone"/>
+        </do_if>
+        <do_elseif value="$range" exact="class.sector">
+          <set_value name="$space" exact="$startzone.sector" />
+        </do_elseif>
+        <do_elseif value="$range" exact="class.cluster">
+          <set_value name="$space" exact="$startzone.cluster" />
+        </do_elseif>
+        <do_else>
+          <!-- Default space -->
+          <!--TODO: Different spaces per class?-->
+          <do_if value="$capship">
+            <set_value name="$space" exact="$startzone.sector" />
+          </do_if>
+          <do_else>
+            <set_value name="$space" exact="$startzone.sector" />
+          </do_else>
+        </do_else>
+        <remove_value name="$startzone"/>
+
+        <do_if value="$space.exists">
+          <debug_text text="'recovered. space is now %s %s (%s)'.[$space.class, $space.knownname, $space]" chance="$alarm? * $debugchance"/>
+          <do_if value="this.assignedcontrolled.defaultorder.id == 'Patrol'">
+            <edit_order_param order="this.assignedcontrolled.defaultorder" param="'space'" value="$space"/>
+          </do_if>
+          <do_if value="this.assignedcontrolled.order.id == 'Patrol'">
+            <edit_order_param order="this.assignedcontrolled.order" param="'space'" value="$space"/>
+          </do_if>
+          <remove_value name="$alarm"/>
+        </do_if>
+        <do_else>
+          <debug_text text="'did not recover. ending script.'" chance="$alarm? * $debugchance"/>
+          <remove_value name="$alarm"/>
+          <resume label="finish"/>
+        </do_else>
+      </do_if>
+
+      <!--If not in $space, go there (while not patrolling)-->
+      <do_if value="not this.hascontext.{$space}">
+        <run_script name="'move.generic'">
+          <param name="destination" value="$space" />
+          <param name="endintargetzone" value="true" />
+          <param name="activepatrol" value="$includeroute"/>
+          <param name="debugchance" value="$debugchance"/>
+        </run_script>
+      </do_if>
+
+      <do_if value="this.ship.order" comment="Safety check in case the script is called from non-order script">
+        <!-- Required for all infinite orders, no effect in case of finite timeout -->
+        <set_order_syncpoint_reached order="this.ship.order" />
+      </do_if>
+
+      <!--$endzone is the zone the ship will attempt to get to, patrolling each zone along the way-->
+      <label name="find_endzone" />
+
+      <wait min="1ms" max="1s"/>
+
+      <set_value name="$route" exact="null"/>
+      <do_if value="$space.isclass.zone">
+        <set_value name="$endzone" exact="$space"/>
+      </do_if>
+      <do_else>
+        <do_if value="this.isplayerowned">
+          <find_zone name="$endzone" space="$space" normalzone="true" knownto="this.trueowner">
+            <match_distance object="this.ship" min="40km" comment="Exclude current zone"/>
+          </find_zone>
+        </do_if>
+        <do_else>
+          <find_zone name="$endzone" space="$space" normalzone="true">
+            <match_distance object="this.ship" min="40km" comment="Exclude current zone"/>
+          </find_zone>
+        </do_else>
+
+        <do_if value="not $endzone">
+          <!--fallback-->
+          <do_if value="this.isplayerowned">
+            <find_zone name="$endzone" space="$space" normalzone="true" knownto="this.trueowner"/>
+          </do_if>
+          <do_else>
+            <find_zone name="$endzone" space="$space" normalzone="true"/>
+          </do_else>
+          <assert value="$endzone" text="'No endzone found in space ' + $space + ' ' + $space.knownname"/>
+        </do_if>
+
+        <do_if value="$includeroute">
+          <get_global_path component="$route" multiple="true" uselocalhighways="false">
+            <start object="this.ship"/>
+            <end object="$endzone"/>
+          </get_global_path>
+
+          <!--In some cases, the path may not include the endzone (e.g. using jumpgates). Append endzone to route-->
+          <do_if value="$route.count and $route.{$route.count} != $endzone">
+            <append_to_list name="$route" exact="$endzone"/>
+          </do_if>
+
+          <do_all exact="$route.count" counter="$i" reverse="true">
+            <do_if value="not $route.{$i}.isclass.zone or not $route.{$i}.isnormalzone">
+              <debug_text text="'Removing ' + $route.{$i} + ' ' + $route.{$i}.knownname + ' from list of patrol zones'" chance="$debugchance"/>
+              <remove_value name="$route.{$i}"/>
+            </do_if>
+          </do_all>
+        </do_if>
+      </do_else>
+
+      <debug_text text="'End zone is now %s %s, %s'.[$endzone.knownname, $endzone, $endzone.sector.knownname]" chance="$debugchance"/>
+
+      <do_if value="$debugchance and $route">
+        <do_all exact="$route.count" counter="$i">
+          <debug_text text="'Route ' + $i + ' ' + $route.{$i} + ' ' + $route.{$i}.knownname"/>
+        </do_all>
+      </do_if>
+
+
+      <!--Patrol zone is the next zone to patrol on its way to $endzone-->
+      <label name="find_patrolzone"/>
+
+      <do_if value="$space.isclass.zone">
+        <set_value name="$patrolzone" exact="$space"/>
+      </do_if>
+      <do_elseif value="@$route.count">
+        <set_value name="$patrolzone" exact="$route.{1}"/>
+        <remove_value name="$route.{1}"/>
+      </do_elseif>
+      <do_elseif value="@$patrolzone != $endzone">
+        <set_value name="$patrolzone" exact="$endzone"/>
+      </do_elseif>
+      <do_else>
+        <!--No more route-->
+        <resume label="find_endzone"/>
+      </do_else>
+
+      <!-- Evaluate exit condition -->
+      <do_if value="this.ship.jobexpired or ($timeout and $inittime? and (player.age ge $inittime + $timeout))">
+        <resume label="finish" />
+      </do_if>
+
+      <debug_text text="'Patrol zone is now %s %s, %s'.[$patrolzone.knownname, $patrolzone, $patrolzone.sector.knownname]" chance="$debugchance"/>
+
+      <!--If not in the same sector as $patrolzone, use move.generic (not a patrol)-->
+      <do_if value="this.sector != $patrolzone.sector">
+        <run_script name="'move.generic'">
+          <param name="destination" value="$patrolzone" />
+          <param name="endintargetzone" value="true" />
+          <param name="activepatrol" value="$includeroute"/>
+          <param name="debugchance" value="$debugchance"/>
+        </run_script>
+      </do_if>
+
+      <do_if value="not $inittime?">
+        <set_value name="$inittime" exact="player.age" />
+      </do_if>
+
+      <label name="find_position"/>
+
+      <!-- Evaluate exit condition -->
+      <do_if value="this.ship.jobexpired or ($timeout and (player.age ge $inittime + $timeout))">
+        <resume label="finish" />
+      </do_if>
+
+      <!-- Safety checking for non-existing zones -->
+      <do_if value="not $endzone.exists or not $patrolzone.exists or $endzone.isclass.highway or $patrolzone.isclass.highway">
+        <do_if value="not $endzone.exists">
+          <debug_text text="'endzone does not exist. attempting to recover.'" chance="$debugchance"/>
+        </do_if>
+        <do_elseif value="not $patrolzone.exists">
+          <debug_text text="'patrolzone does not exist. attempting to recover.'" chance="$debugchance"/>
+        </do_elseif>
+        <do_elseif value="$endzone.isclass.highway">
+          <debug_text text="'endzone is a highway. attempting to recover.'" chance="$debugchance"/>
+        </do_elseif>
+        <do_elseif value="$patrolzone.isclass.highway">
+          <debug_text text="'patrolzone is a highway. attempting to recover.'" chance="$debugchance"/>
+        </do_elseif>
+
+        <wait min="1s" max="2s" />
+        <resume label="start" />
+      </do_if>
+      <do_else>
+        <create_position name="$base_pos" space="$patrolzone" max="$patrolzone.size / 2"/>
+        <set_value name="$y" min="-2km" max="2km"/>
+        <get_safe_pos result="$pos" radius="this.ship.size + 200m" ignored="this.ship" value="position.[$base_pos.x, $y, $base_pos.z]" zone="$patrolzone" allowyaxis="false"/>
+      </do_else>
+
+      <label name="patrol" />
+
+      <run_script name="'move.seekenemies'">
+        <param name="destination" value="$patrolzone"/>
+        <param name="pos" value="$pos"/>
+        <param name="pursuetargets" value="$pursuetargets" />
+        <param name="pursuedistance" value="$pursuedistance" />
+        <param name="allowothertargets" value="$allowothertargets" />
+        <param name="targetpurposes" value="$targetpurposes" />
+        <param name="internalorder" value="true"/>
+        <param name="debugchance" value="$debugchance" />
+      </run_script>
+
+      <wait min="1s" max="2s" />
+
+      <do_if value="player.age gt @$next_resupply_check" chance="30">
+        <debug_text text="'%1 (%2) ready to resupply.'.[this.ship.knownname, this.ship]" chance="$debugchance"/>
+        <signal_objects object="this.ship" param="'resupply'" param2="[false]" param3="$debugchance" comment="param2 = [urgent?, resupplystationID], param3 = $debugchance"/>
+        <set_value name="$next_resupply_check" exact="player.age + 30min"/>
+      </do_if>
+
+      <resume label="find_patrolzone"/>
+
+      <!-- Required for sync point handler -->
+      <label name="finish" />
+
+      <!-- check if this is a jobship at the end of its lifetime -->
+      <do_if value="this.ship.jobexpired">
+        <debug_text text="'%1 doing job %2 has expired. die!'.[this.ship.knownname, this.ship.job]" chance="$debugchance"/>
+        <create_order object="this.ship" id="'MoveDie'" immediate="true">
+          <param name="byhighway" value="not this.ship.isclass.[class.ship_l, class.ship_xl]" />
+          <param name="byhostile" value="true" />
+        </create_order>
+      </do_if>
+    </actions>
+  </attention>
+</aiscript>

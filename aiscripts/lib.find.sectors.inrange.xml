@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<aiscript name="lib.find.sectors.inrange" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="aiscripts.xsd">
+  <params>
+    <param name="refobject" default="this.assignedcontrolled" comment="Reference object from which gate distance is measured."/>
+    <param name="mingatedistance" default="0" comment="Minimum gate distance from refobject"/>
+    <param name="maxgatedistance" default="1" comment="Maximum gate distance from refobject"/>
+    <param name="applyblacklist" default="true"/>
+    <param name="blacklistgroup" default="null"/>
+    <param name="debugchance" default="0"/>
+  </params>
+  <attention min="unknown">
+    <actions>
+      <!-- NB: we are always allowed to operate in our commander's current sector, regardless of blacklist definition. -->
+      <set_value name="$commandersector" exact="@this.assignedcontrolled.commander.sector"/>
+      <!-- NB: if all spaces are invalid due to blacklists, we are allowed to operate in our current sector. -->
+      <set_value name="$mysector" exact="if not @this.zone.issuperhighway then this.sector else this.zone.destination.sector"/>
+
+      <do_if value="$applyblacklist and not $blacklistgroup">
+        <include_interrupt_actions ref="GetBlacklistgroup"/>
+      </do_if>
+
+      <set_value name="$refsector" exact="null"/>
+      <do_if value="$refobject.isclass.sector">
+        <set_value name="$refsector" exact="$refobject"/>
+      </do_if>
+      <do_elseif value="$refobject.sector">
+        <set_value name="$refsector" exact="$refobject.sector"/>
+      </do_elseif>
+      <do_elseif value="@$refobject.zone.issuperhighway">
+        <set_value name="$refsector" exact="$refobject.zone.destination.sector"/>
+      </do_elseif>
+      <do_elseif value="@$refobject.issuperhighway">
+        <set_value name="$refsector" exact="$refobject.destination.sector"/>
+      </do_elseif>
+      <do_else>
+        <find_sector name="$locsectors" space="$refobject" multiple="true"/>
+        <do_if value="not $locsectors.count">
+          <debug_text text="'refobject: %s %s %s is not a sector, not in a sector, and has no sectors.'.[@$refobject.class, @$refobject.knownname, $refobject]" filter="error"/>
+        </do_if>
+        <do_all exact="$locsectors.count" counter="$i">
+          <do_if value="not $evaldist?">
+            <set_value name="$refsector" exact="$locsectors.{$i}"/>
+            <set_value name="$evaldist" exact="$refobject.gatedistance.{$refsector}"/>
+          </do_if>
+          <do_elseif value="$refobject.gatedistance.{$refsector} lt $evaldist">
+            <set_value name="$refsector" exact="$locsectors.{$i}"/>
+            <set_value name="$evaldist" exact="$refobject.gatedistance.{$refsector}"/>
+          </do_elseif>
+        </do_all>
+        <remove_value name="$evaldist"/>
+        <remove_value name="$locsectors"/>
+      </do_else>
+
+      <find_cluster_in_range distances="$clusterstable" multiple="true" object="$refobject" mindistance="$mingatedistance" maxdistance="$maxgatedistance"/>
+      <set_value name="$sectortable" exact="table[]"/>
+      <debug_text text="'found %s clusters. mingatedistance: %s, maxgatedistance: %s'.[$clusterstable.keys.count, $mingatedistance, $maxgatedistance]" chance="$debugchance"/>
+
+      <do_all exact="$clusterstable.keys.count" counter="$i">
+        <find_sector name="$locsectors" space="$clusterstable.keys.{$i}" multiple="true"/>
+        <do_all exact="$locsectors.count" counter="$j">
+          <do_if value="not $applyblacklist or ($locsectors.{$j} == $commandersector) or (not $locsectors.{$j}.isblacklisted.{blacklisttype.sectoractivity}.{$blacklistgroup}.{this.assignedcontrolled} and not $locsectors.{$j}.isblacklisted.{blacklisttype.sectortravel}.{$blacklistgroup}.{this.assignedcontrolled})">
+            <set_value name="$locgatedist" exact="if ($applyblacklist and ($locsectors.{$j} != $commandersector)) then $refobject.gatedistance.{$locsectors.{$j}}.{$blacklistgroup}.{this.assignedcontrolled} else $refobject.gatedistance.{$locsectors.{$j}}"/>
+            <!-- locgatedist == -1 means no path -->
+            <do_if value="($locgatedist ge 0) and ($locgatedist ge $mingatedistance) and ($locgatedist le $maxgatedistance)">
+              <debug_text text="'adding %s with gate dist %s'.[$locsectors.{$j}.knownname, $locgatedist]" chance="$debugchance"/>
+              <set_value name="$sectortable.{$locsectors.{$j}}" exact="$locgatedist"/>
+            </do_if>
+            <do_else>
+              <debug_text text="'%s %s is outside defined range. removed.'.[$locsectors.{$j}.class, @$locsectors.{$j}.knownname]" chance="$debugchance"/>
+            </do_else>
+            <remove_value name="$locgatedist"/>
+          </do_if>
+          <do_else>
+            <debug_text text="'%s %s is blacklisted. removed.'.[$locsectors.{$j}.class, @$locsectors.{$j}.knownname]" chance="$debugchance"/>
+          </do_else>
+        </do_all>
+      </do_all>
+      <remove_value name="$locsectors"/>
+      <!-- sort them -->
+      <set_value name="$spaces" exact="$sectortable.keys.sorted"/>
+
+      <!-- If mingatedistance <= 0, include the refobject space -->
+      <do_if value="($mingatedistance le 0) and $refsector and not $spaces.indexof.{$refsector}">
+        <set_value name="$spaces.{1}" exact="$refsector" operation="insert"/>
+      </do_if>
+
+      <do_if value="not $spaces.count">
+        <debug_text text="'no valid spaces found. probably due to blacklist. adding my own sector.'" chance="$debugchance"/>
+        <do_if value="$mysector">
+          <set_value name="$spaces.{1}" exact="$mysector" operation="insert"/>
+        </do_if>
+      </do_if>
+
+      <return value="$spaces"/>
+    </actions>
+  </attention>
+</aiscript>

@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<aiscript name="build.buildstorage" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="aiscripts.xsd" >
+  <!--
+  
+  Script to handle build orders on build storages
+   
+  Author: Owen
+  
+  -->
+  <interrupts>
+    <handler>
+      <conditions>
+        <event_build_added object="this.object" />
+      </conditions>
+      <actions>
+        <set_value name="$build" exact="event.param"/>
+
+        <!--Attempt to process the build regardless whether the build module is building or not-->
+        <process_build build="$build" object="this.object" buildmodule="$buildmodule"/>
+        <abort_called_scripts resume="loop"/>
+      </actions>
+    </handler>
+    <handler>
+      <conditions>
+        <event_object_built_station object="this.object"/>
+      </conditions>
+      <actions>
+        <set_value name="$baseowner" exact="this.object.base.owner"/>
+        <do_if value="$baseowner and $baseowner != faction.ownerless and $baseowner != faction.player">
+          <assert value="not this.object.base.tradenpc" text="'newly constructed station ' + this.object.base + ' ' + this.object.base.knownname + ' already has a trade NPC [Owen]'"/>
+          <debug_text text="'Initialise newly constructed station: ' + this.object.base.knownname + ' ' + this.object.base" chance="$debugchance"/>
+          <signal_objects object="player.galaxy" param="'init station'" param2="this.object.base" param3="false"/>
+        </do_if>
+        <remove_value name="$baseowner"/>
+      </actions>
+    </handler>
+  </interrupts>
+  <init>
+    <set_value name="$debugchance" exact="0" />
+    <set_value name="$buildmodule" exact="this.object.buildmodule"/>
+  </init>
+  <attention min="unknown">
+    <actions>
+      <do_if value="not this.object.isclass.buildstorage">
+        <debug_text text="'attempting to run buildstorage script on non-buildstorage! object %1 (on zone %2). Wrong Shipyard setup?'.[this.object.knownname, this.object.zone.knownname]" />
+        <return />
+      </do_if>
+      <do_if value="this.object.buildmodules.count != 1">
+        <debug_text text="'invalid number of buildmodules on buildstorage! object %1 (on zone %2).'.[this.object.knownname, this.object.zone.knownname]" />
+        <return />
+      </do_if>
+
+      <label name="loop" />
+
+      <!--If the current build is waiting for a construction vessel, request one, but only for non-player builds-->
+      <do_if value="not $buildmodule.isplayerowned and $buildmodule.iswaitingforconstructionvessel and not $buildmodule.constructionvessel">
+        <!--TODO @Owen Better identification for construction vessels-->
+        <debug_text text="'attempting to find construction vessel'" chance="$debugchance"/>
+        <set_value name="$constructionvessel" exact="null"/>
+        <set_value name="this.$construction_vessel_response" exact="false"/>
+        <set_value name="$searchspace" exact="this.sector"/>
+        <set_value name="$clusterindex" exact="0"/>
+        <do_while value="$searchspace">
+          <find_ship name="$constructionvessels" primarypurpose="purpose.build" class="class.ship_xl" space="$searchspace" multiple="true">
+            <match_relation_to object="this.object" relation="dock"/>
+          </find_ship>
+          <do_all exact="$constructionvessels.count" counter="$i">
+            <!--TODO @Owen filters-->
+            <do_if value="not $constructionvessels.{$i}.constructionmodule">
+              <signal_objects object="$constructionvessels.{$i}" param="'request construction vessel'" param2="$buildmodule"/>
+              <debug_text text="'sending request to construction vessel ' + $constructionvessels.{$i}" chance="$debugchance"/>
+              <do_if value="this.$construction_vessel_response">
+                <debug_text text="'request successful'" chance="$debugchance"/>
+                <break/>
+              </do_if>
+            </do_if>
+          </do_all>
+          <do_if value="this.$construction_vessel_response">
+            <remove_value name="this.$construction_vessel_response"/>
+            <break/>
+          </do_if>
+          <do_else>
+            <do_if value="not $nearclusters?">
+              <find_cluster_in_range distances="$clusterstable" multiple="true" object="this" maxdistance="5"/>
+              <set_value name="$nearclusters" exact="$clusterstable.keys.sorted"/>
+            </do_if>
+            <set_value name="$clusterindex" operation="add"/>
+            <do_if value="$clusterindex gt $nearclusters.count">
+              <set_value name="$searchspace" exact="null"/>
+            </do_if>
+            <do_else>
+              <set_value name="$searchspace" exact="$nearclusters.{$clusterindex}"/>
+            </do_else>
+          </do_else>
+        </do_while>
+      </do_if>
+      <remove_value name="$nearclusters"/>
+      <remove_value name="$clusterstable"/>
+
+      <do_if value="not $buildmodule.isplayerowned and $buildmodule.requiresconstructionvessel and not $buildmodule.constructionvessel">
+        <!--interrupt after a short while to check if the buildmodule is currently waiting for a construction vessel.
+        $buildmodule.requiresconstructionvessel means that the build will need one to begin. However, we don't want to take a CV until all the resources are present.
+        When $buildmodule.iswaitingforconstructionvessel is true, we will then search for a CV-->
+        <wait min="1min" max="2min"/>
+      </do_if>
+      <do_else>
+        <wait min="30min" max="40min">
+          <interrupt>
+            <conditions>
+              <event_build_finished object="this.object"/>
+            </conditions>
+          </interrupt>
+        </wait>
+
+        <!--Wait a little longer so the next build can initialise-->
+        <wait min="4s" max="10s"/>
+      </do_else>
+
+      <!-- Return to process orders -->
+      <resume label="loop" />
+
+      <label name="finish" />
+      <debug_text text="' End script. Unreachable under normal circumstances [Owen]'" />
+
+    </actions>
+  </attention>
+</aiscript>

@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<aiscript name="order.move.recon.update" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="aiscripts.xsd">
+  <order id="ExploreUpdate" name="{1041, 301}" description="{1041, 302}" category="trade">
+    <params>
+      <param name="targetspace" required="true" type="object" default="null" text="{1041, 10117}" comment="Space. Space to scout">
+        <input_param name="class" value="[class.sector, class.gate, class.highwayentrygate]"/>
+      </param>
+      <param name="destination" type="position" text="{1041, 10085}" default="if $targetspace.isclass.sector then [$targetspace, $targetspace.coreposition] else if $targetspace.isclass.gate then [$targetspace.destination.sector, $targetspace.destination.sector.coreposition] else if $targetspace.isclass.highwayentrygate then [$targetspace.highway.destination.sector, $targetspace.highway.destination.sector.coreposition] else [$targetspace, position.[0, 0, 0]]" advanced="true" comment="Position. Position to start from">
+        <input_param name="class" value="class.sector"/>
+      </param>
+      <param name="radius" type="length" default="if $targetspace.isclass.sector then ($targetspace.coresize / 2m) else if $targetspace.isclass.gate then ($targetspace.destination.sector.coresize / 2m) else if $targetspace.isclass.highwayentrygate then ($targetspace.highway.destination.sector.coresize / 2m) else 350km" text="{1041, 10093}" comment="Radius">
+        <input_param name="min" value="0m"/>
+        <input_param name="max" value="350km"/>
+        <input_param name="step" value="1km"/>
+      </param>
+      <param name="timeout" type="time" default="0s" infinitevalue="0s" advanced="true" text="{1041, 10034}" comment="Duration">
+        <input_param name="min" value="0s"/>
+        <input_param name="max" value="24h"/>
+        <input_param name="step" value="10min"/>
+      </param>
+      <param name="targetclasses" type="internal" default="[class.station]" comment="Target object classes"/>
+      <param name="debugchance" type="bool" default="0" advanced="true" text="{1041, 10086}" comment="Print debug output">
+        <input_param name="truevalue" value="100"/>
+      </param>
+    </params>
+    <skill min="20"/>
+    <requires>
+      <match shiptype="shiptype.lasertower" negate="true"/>
+    </requires>
+    <location object="$destination.{1}" position="$destination.{2}" radius="$radius" condition="@$destination.{1}.isclass.sector"/>
+  </order>
+  <interrupts>
+    <handler ref="SectorChangeHandler"/>
+    <handler ref="TargetInvalidHandler"/>
+    <handler ref="AttackHandler"/>
+    <handler ref="MissileLockHandler" />
+    <handler ref="ScannedHandler"/>
+    <handler ref="InspectedHandler"/>
+    <handler ref="FoundAbandonedHandler"/>
+    <handler ref="FoundLockboxHandler"/>
+    <handler ref="ResupplyHandler"/>
+  </interrupts>
+  <init>
+    <do_if value="not $targetspace" comment="for venture support where we cannot define targetspace">
+      <do_if value="this.sector">
+        <set_value name="$targetspace" exact="this.sector"/>
+      </do_if>
+      <do_else>
+        <!-- assumes that if this.sector is null, we are in a superhighway -->
+        <do_if value="this.zone.issuperhighway">
+          <set_value name="$targetspace" exact="this.zone.destination.sector"/>
+        </do_if>
+        <do_else>
+          <debug_text text="'%s %s %s is neither in a sector nor in a superhighway. zone: %s %s. aborting.'.[this.assignedcontrolled.idcode, this.assignedcontrolled.knownname, this.assignedcontrolled, this.zone.knownname, this.zone]" filter="error"/>
+          <return/>
+        </do_else>
+      </do_else>
+      <do_if value="$targetspace">
+        <edit_order_param order="this.assignedcontrolled.order" param="'targetspace'" value="$targetspace" comment="will cause script to restart"/>
+      </do_if>
+    </do_if>
+    <do_if value="$targetspace and not $destination">
+      <edit_order_param order="this.assignedcontrolled.order" param="'destination'" value="if (not $targetspace.isclass.gate or not @$targetspace.destination) then [$targetspace, position.[0, 0, 0]] else [$targetspace.destination.sector, position.[0, 0, 0]]" comment="will cause script to restart"/>
+    </do_if>
+
+    <do_if value="$destination and not $destination.{1}.isclass.sector">
+      <debug_text text="'destination provided, but it is not relative to a sector. destination.{1}: %s %s %s, destination.{2}: %s'.[$destination.{1}.class, $destination.{1}.knownname, $destination.{1}, $destination.{2}]" filter="error"/>
+    </do_if>
+  </init>
+  <attention min="unknown">
+    <actions>
+
+      <label name="start"/>
+
+      <do_if value="$destination and (this.sector != $destination.{1} or @this.ship.bboxdistanceto.{$destination} gt 10km)">
+        <!-- Command Info -->
+        <set_command command="command.movetozone" param="$destination.{1}"/>
+        <run_script name="'move.generic'">
+          <param name="destination" value="$destination.{1}"/>
+          <param name="position" value="$destination.{2}"/>
+          <param name="debugchance" value="$debugchance"/>
+        </run_script>
+      </do_if>
+
+      <run_script name="'order.move.recon'">
+        <param name="targetspace" value="$targetspace"/>
+        <param name="radius" value="$radius"/>
+        <param name="timeout" value="$timeout"/>
+        <param name="targetclasses" value="$targetclasses"/>
+        <param name="exploreupdate" value="true"/>
+        <param name="debugchance" value="$debugchance"/>
+      </run_script>
+    </actions>
+  </attention>
+</aiscript>

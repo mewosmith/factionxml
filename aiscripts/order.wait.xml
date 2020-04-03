@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="iso-8859-1" ?>
+<aiscript name="order.wait" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="aiscripts.xsd" version="2">
+  <!--
+  Wait order
+  -->
+
+  <order id="Wait" name="{1041, 101}" description="{1041, 102}" category="navigation">
+    <params>
+      <param name="timeout" type="time" default="0s" infinitevalue="0s" text="{1041, 10034}" comment="Duration">
+        <input_param name="min" value="0s" />
+        <input_param name="max" value="5h" />
+        <input_param name="step" value="30s" />
+      </param>
+      <param name="allowdocked" type="bool" default="this.ship.isplayerowned and not this.ship.iscapitalship" text="{1041, 10121}" comment="Stay docked. only works for non capital ships. implementation is in orders.base."/>
+      <param name="holdfire" type="bool" default="false" text="{1041, 10157}" comment="Hold fire. Hold fire until this order is completed or aborted."/>
+      <param name="noattackresponse" type="internal" default="false" comment="Will not respond to attacks. Read in interrupt.attacked"/>
+      <param name="debugchance" type="bool" default="0" advanced="true" text="{1041, 10086}" comment="Print debug output">
+        <input_param name="truevalue" value="100"/>
+      </param>
+    </params>
+    <requires>
+      <match shiptype="shiptype.lasertower" negate="true"/>
+    </requires>
+  </order>
+
+  <interrupts>
+    <handler ref="AttackHandler"/>
+    <handler ref="MissileLockHandler" />
+    <handler ref="InspectedHandler"/>
+    <handler ref="FoundAbandonedHandler"/>
+    <handler ref="FoundLockboxHandler"/>
+    <handler consume="false">
+      <conditions>
+        <!-- proceed when the player issues a new order. -->
+        <event_object_order_ready object="this.assignedcontrolled"/>
+        <debug_text text="'event_object_order_ready\n event.param: %s %s\n current order: %s %s\n default order: %s %s\n next order: %s %s'.[event.param.id, event.param, this.assignedcontrolled.order.id, this.assignedcontrolled.order, this.assignedcontrolled.defaultorder.id, this.assignedcontrolled.defaultorder, @this.assignedcontrolled.nextorder.id, this.assignedcontrolled.nextorder]" debugchance="$debugchance"/>
+        <check_value value="this.isplayerowned"/>
+        <check_value value="event.param.exists"/>
+        <check_value value="(event.param != this.assignedcontrolled.defaultorder)"/>
+        <check_value value="(event.param.id != 'Undock')"/>
+        <check_value value="this.assignedcontrolled.dock"/>
+        <!-- if this Wait is an order in this ship's order queue, this.assignedcontrolled.order.id == 'Wait'. if this wait is this ship's default order, this.assignedcontrolled.order == event.param. -->
+        <check_value value="this.assignedcontrolled.order.id == 'Wait' or ((this.assignedcontrolled.defaultorder.id == 'Wait') and (event.param == this.assignedcontrolled.order))"/>
+        <check_value value="(event.param.id != 'DockAndWait' or (event.param.$ventureplatform and not this.assignedcontrolled.dock.isventureronly) or (not this.assignedcontrolled.hascontext.{event.param.$destination})) and ((event.param.id != 'Wait') or not event.param.$allowdocked)"/>
+        <debug_text text="'Wait proceed: new order: ' + @event.param.id" debugchance="$debugchance"/>
+      </conditions>
+      <actions>
+        <debug_text text="player.age + ': got a new order: %s undocking.'.[event.param.id]" chance="$debugchance"/>
+        <!-- immediately used and cleaned up in orders.base -->
+        <set_value name="this.$skipwait"/>
+      </actions>
+    </handler>
+  </interrupts>
+
+  <init>
+    <set_command command="command.wait" />
+    <set_command_action commandaction="commandaction.standingby" />
+
+    <set_value name="$starttime" exact="player.age"/>
+
+    <!-- Required for all infinite orders, no effect in case of finite timeout -->
+    <set_order_syncpoint_reached order="this.ship.order" />
+  </init>
+
+  <patch sinceversion="2">
+    <do_if value="not $holdfire?">
+      <set_value name="$holdfire" exact="false"/>
+    </do_if>
+  </patch>
+
+  <attention min="unknown">
+    <actions>
+
+      <!-- TODO: Player feedback here? -->
+
+      <!--<set_to_default_flight_control_model object="this.object"/>-->
+      <stop_moving object="this.assignedcontrolled"/>
+
+      <do_if value="$holdfire">
+        <!-- hold fire -->
+        <run_script name="'lib.set.weaponmode'" result="$weaponmodes" sinceversion="1">
+          <param name="weaponmode" value="weaponmode.holdfire"/>
+          <param name="debugchance" value="$debugchance"/>
+        </run_script>
+      </do_if>
+
+      <do_if value="not this.zone.isclass.highway and not this.assignedcontrolled.dock">
+        <!-- this will align this ship to the ecliptic plane -->
+        <move_to object="this.assignedcontrolled" destination="this.zone" forceposition="false" forcerotation="true">
+          <position object="this.assignedcontrolled" z="5m"/>
+          <rotation pitch="0deg" yaw="this.assignedcontrolled.rotation.yaw" roll="0deg"/>
+          <interrupt_after_time time="0s"/>
+        </move_to>
+      </do_if>
+
+      <do_if value="$timeout">
+        <!-- Wait for timeout -->
+        <wait exact="$timeout" />
+      </do_if>
+      <do_else>
+        <!-- Wait until a new order is added, or if there is a sync point, until it is released -->        
+        <wait />
+      </do_else>
+
+      <!-- restore weapon modes -->
+      <do_if value="$holdfire and $weaponmodes? and $weaponmodes.keys.count">
+        <run_script name="'lib.set.weaponmode'" sinceversion="1">
+          <param name="weapons" value="$weaponmodes.keys.list"/>
+          <param name="weaponmodes" value="$weaponmodes"/>
+          <param name="debugchance" value="$debugchance"/>
+        </run_script>
+      </do_if>
+
+      <apply_experience entity="this" experience="'ship_bored'" factor="[((player.age - $starttime) / 24h)f, 1.0].min"/>
+      <apply_experience object="this.assignedcontrolled" role="entityrole.service" experience="'ship_bored'" factor="[((player.age - $starttime) / 24h)f, 1.0].min"/>
+
+      <remove_value name="this.$haltedby"/>
+
+    </actions>
+  </attention>
+  <on_abort>
+    <do_if value="this.assignedcontrolled.exists">
+      <apply_experience entity="this" experience="'ship_bored'" factor="[((player.age - $starttime) / 24h)f, 1.0].min"/>
+      <apply_experience object="this.assignedcontrolled" role="entityrole.service" experience="'ship_bored'" factor="[((player.age - $starttime) / 24h)f, 1.0].min"/>
+    </do_if>
+
+    <remove_value name="this.$haltedby"/>
+
+    <!-- restore weapon modes -->
+    <do_if value="$holdfire and $weaponmodes? and $weaponmodes.keys.count">
+      <do_all exact="$weaponmodes.keys.count" counter="$i">
+        <debug_text text="'restore weapon %s %s. mode: %s'.[$weaponmodes.keys.{$i}.knownname, $weaponmodes.keys.{$i}, $weaponmodes.{$weaponmodes.keys.{$i}}]" chance="$debugchance"/>
+        <set_weapon_mode weapon="$weaponmodes.keys.{$i}" weaponmode="$weaponmodes.{$weaponmodes.keys.{$i}}" />
+      </do_all>
+    </do_if>
+  </on_abort>
+</aiscript>

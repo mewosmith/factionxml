@@ -1,0 +1,2734 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<mdscript name="Test_MD" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="md.xsd">
+  <cues>
+
+    <!-- Do not commit cues above this line - reserved for local changes -->
+
+    <cue name="MessengerTest" instantiate="true">
+      <conditions>
+        <event_cue_signalled />
+      </conditions>
+      <actions>
+        <write_incoming_message title="'Test 1 - Foo'" text="'Lorem Ipsum\ntu deliat.'" source="player.entity.container" highpriority="true">
+          <cutscene key="'OrbitIndefinitely'" param="player.entity.container" />
+        </write_incoming_message>
+        <write_incoming_message title="'Test 2 - Bar'" text="'Lorem Ipsum\ntu deliat\n\nHello there!.'" source="player.entity" highpriority="true" interaction="guidance" object="player.entity.sector" />
+        <write_incoming_message title="'Test 3 - FooBar'" text="'Lorem Ipsum\ntu deliat.'" source="'Lino T.'" highpriority="false" interaction="showonmap" object="player.entity.container" />
+        <write_incoming_message title="'Test 4'" text="'Lorem Ipsum\ntu deliat.'" source="player.sector" highpriority="false" />
+      </actions>
+    </cue>
+
+    <cue name="FrozenCutsceneReproCase" instantiate="true" namespace="this">
+      <conditions>
+        <event_cue_signalled />
+      </conditions>
+      <actions>
+        <set_value name="$npc" exact="@player.target.pilot" />
+        <do_if value="not $npc.isclass.npc">
+          <show_notification text="'Repro case requires ship target with pilot NPC'" priority="2" />
+          <cancel_cue cue="this" />
+        </do_if>
+      </actions>
+      <delay exact="1ms" />
+      <actions>
+        <play_cutscene result="$cutscene1" key="'ShowPilot'" targetmonitor="true" timeout="10s" caption="'Cutscene 1'">
+          <param name="npcref" object="$npc" />
+        </play_cutscene>
+        <debug_text text="'Started cutscene1 = ' + $cutscene1" />
+      </actions>
+      <delay exact="500ms" />
+      <actions>
+        <play_cutscene result="$cutscene2" key="'ShowPilot'" targetmonitor="true" timeout="10s" caption="'Cutscene 2'">
+          <param name="npcref" object="$npc" />
+        </play_cutscene>
+        <debug_text text="'Started cutscene2 = ' + $cutscene2" />
+      </actions>
+      <delay exact="500ms" />
+      <actions>
+        <play_cutscene result="$cutscene3" key="'ShowPilot'" targetmonitor="true" timeout="10s" caption="'Cutscene 3'">
+          <param name="npcref" object="$npc" />
+        </play_cutscene>
+        <debug_text text="'Started cutscene3 = ' + $cutscene3" />
+      </actions>
+      <delay exact="500ms" />
+      <actions>
+        <debug_text text="'Stopping cutscene ' + $cutscene2" />
+        <stop_cutscene cutscene="$cutscene2" />
+      </actions>
+      <force name="Repro: Frozen Cutscene" />
+    </cue>
+
+    <cue name="CustomUserQuestion">
+      <cues>
+        <cue name="Open_CustomUserQuestion" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <open_menu menu="UserQuestionMenu" param="[0, 0, 'custom', [ 'Titel123', 'Question1234', [ 'leftid', 'Left' ], [ 'rightid', 'Right' ] ]]" />
+          </actions>
+        </cue>
+    
+        <cue name="Open_CustomUserQuestion_InvertInput" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <open_menu menu="UserQuestionMenu" param="[0, 0, 'custom', [ 'Inversion test', 'Do you want the yaw to be inverted?', [ 'leftid', 'Yes', 1, 'invert_steering_yaw', true ], [ 'rightid', 'No', 1, 'invert_steering_yaw', false ], 'invertinput' ]]" />
+          </actions>
+        </cue>
+
+        <cue name="Result_CustomUserQuestion" instantiate="true">
+          <conditions>
+            <event_ui_triggered screen="'UserQuestionMenu'" control="'selected'" />
+          </conditions>
+          <actions>
+            <debug_text text="'Selected option: ' + event.param3" />
+          </actions>
+        </cue>
+      </cues>
+    </cue>
+
+    <cue name="SetGateAsObjective" instantiate="true" namespace="this">
+      <conditions>
+        <event_cue_signalled/>
+      </conditions>
+      <actions>
+        <find_gate name="$Gates" multiple="true" space="player.sector"/>
+        <do_if value="$Gates.count">
+          <set_value name="$DistTable" exact="table[]"/>
+          <do_all exact="$Gates.count" counter="$i">
+            <set_value name="$DistTable.{$Gates.{$i}}" exact="player.entity.distanceto.{$Gates.{$i}}"/>
+          </do_all>
+          <set_value name="$Gate" exact="$DistTable.keys.sorted.{1}"/>
+          <create_mission cue="this" name="'gate test'" description="'objective pointing to the destination sector'" type="missiontype.trade" faction="faction.argon" difficulty="level.trivial">
+            <briefing>
+              <objective step="1" action="objective.flyto" object="$Gate"/>
+            </briefing>
+            <objective step="1" action="objective.flyto" object="$Gate"/>
+          </create_mission>
+        </do_if>
+      </actions>
+      <cues>
+        <cue name="SetGateAsObjective_Abort">
+          <conditions>
+            <event_mission_aborted cue="parent"/>
+          </conditions>
+          <actions>
+            <cancel_cue cue="parent"/>
+          </actions>
+        </cue>
+      </cues>
+    </cue>
+
+    <cue name="Spacesuit">
+      <cues>
+
+        <cue name="SpacesuitOxygenLogging">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <cues>
+            <cue name="SpacesuitOxygenLogging_print" checkinterval="1s" instantiate="true">
+              <conditions>
+                <check_value value="player.spacesuit"/>
+              </conditions>
+              <actions>
+                <set_value name="$thespacesuit" exact="player.spacesuit"/>
+                <debug_text text="'Oxygen %remaining: '+ $thespacesuit.oxygenpercentage + ' time-remaining: ' + $thespacesuit.oxygentimeremaining + ' low: ' + $thespacesuit.oxygenlow"/>
+                <do_if value="$oxygenlow?">
+                  <do_if value="(not $oxygenlow) and ($thespacesuit.oxygenlow)">
+                    <debug_text text="'running low on oxygen'"/>
+                  </do_if>
+                </do_if>
+                <set_value name="$oxygenlow" exact="$thespacesuit.oxygenlow"/>
+              </actions>
+            </cue>
+          </cues>
+        </cue>
+
+        <cue name="SpacesuitOxygenLevel" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <set_spacesuit_oxygen object="player.ship" percent="20"/>
+          </actions>
+        </cue>
+
+        <cue name="SpacesuitOxygenLevelMax" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <set_spacesuit_oxygen object="player.ship" percent="100"/>
+          </actions>
+        </cue>
+
+        <cue name="SpacesuitBombs" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <add_inventory entity="player.entity" ware="ware.bomb_player_limpet_mine_01_mk1" exact="10"/>
+            <add_inventory entity="player.entity" ware="ware.weapon_gen_spacesuit_demolition_01_mk1" exact="1"/>
+          </actions>
+        </cue>
+
+        <cue name="SpacesuitBombAttached_Listen">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <!-- Spacesuit weapons -->
+            <add_inventory ware="ware.weapon_gen_spacesuit_demolition_01_mk1"     exact="1"/>
+            <add_inventory ware="ware.weapon_gen_spacesuit_laser_01_mk1"          exact="1"/>
+            <add_inventory ware="ware.weapon_gen_spacesuit_repairlaser_01_mk1"    exact="1"/>
+            <!-- Add bombs + EMP's -->
+            <add_inventory entity="player.entity" ware="ware.bomb_player_limpet_mine_01_mk1" exact="5" comment="spacesuit bombs/explosives"/>
+            <add_inventory entity="player.entity" ware="ware.bomb_player_limpet_emp_01_mk1" exact="5" comment="EMP/signal-leaks"/>
+          </actions>
+          <cues>
+
+            <cue name="SpaceSuitBombHint" instantiate="true">
+              <conditions>
+                <event_player_bomb_attached/>
+                <check_value value="event.param.macro != macro.bomb_player_limpet_mine_01_mk1_macro"/>
+              </conditions>
+              <actions>
+                <debug_text text="'Try switching to bombs'"/>
+              </actions>
+            </cue>
+
+            <cue name="SpacesuitBombAttached" instantiate="true">
+              <conditions>
+                <event_player_bomb_attached comment="this triggers for explosive-bombs AND EMP-bombs"/>
+              </conditions>
+              <actions>
+                <debug_text text="'Player Bomb Attached: ' + event.param.macro"/>
+              </actions>
+            </cue>
+          </cues>
+        </cue>
+      </cues>
+    </cue>
+
+    <cue name="MapFilter" instantiate="true">
+      <conditions>
+        <event_cue_signalled/>
+      </conditions>
+      <actions>
+        <raise_lua_event name="'mapfilter'" param="'layer_trade;false'" />
+      </actions>
+    </cue>
+
+    <cue name="ShowHelpOverlay">
+      <cues>
+
+        <cue name="ShowHelpOverlay_MapHelp" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <show_help_overlay id="'map_standardbutton_help'" />
+          </actions>
+        </cue>
+        
+        <cue name="ShowHelpOverlay_Test" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <show_help_overlay id="'toplevel_encyclopedia'" />
+            <show_help_overlay id="'trader_purchase_equipment'" highlightonly="true"/>
+            <show_help_overlay id="'trader_purchase_module'" highlightonly="true" />
+            <show_help_overlay id="'trader_purchase_ship'" highlightonly="true" />
+            <show_help_overlay id="'trader_purchase_module_gen_build_dockarea_m_01'" highlightonly="true" />
+            <show_help_overlay id="'trader_purchase_module_gen_build_l_01'" highlightonly="true" />
+            <show_help_overlay id="'trader_purchase_module_gen_build_xl_01'" highlightonly="true" />
+          </actions>
+        </cue>
+        
+        <cue name="ShowHelpOverlay_ConstructionModules" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <show_help_overlay id="'stationbuildst_dock'" highlightonly="true" />
+            <do_all exact="16" counter="$i">
+              <show_help_overlay id="'stationbuildst_dock_dockarea' + $i" highlightonly="true" />
+            </do_all>
+            <show_help_overlay id="'stationbuildst_storage'" highlightonly="true" />
+            <do_all exact="8" counter="$i">
+              <show_help_overlay id="'stationbuildst_storage_solid' + $i" highlightonly="true" />
+            </do_all>
+          </actions>
+        </cue>
+
+        <cue name="ShowHelpOverlay_Filters" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <do_all exact="1" counter="$i">
+              <show_help_overlay id="'FilterItem' + $i" highlightonly="true"/>
+            </do_all>            
+          </actions>
+        </cue>
+
+        <cue name="ShowHelpOverlay_Timeline" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <show_help_overlay id="'encyclopedia_sidebar_timeline_01'" />
+          </actions>
+        </cue>
+        
+        <cue name="ShowHelpOverlay_DeactivateSatellite" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <show_help_overlay id="'interactmenu_detach'" />
+            <!--show_help_overlay id="'interactmenu_deactivatesatellite'" /-->
+          </actions>
+        </cue>
+
+        <cue name="ShowHelpOverlay_ToggleBoardingStages" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <show_help_overlay id="'boarding_stage1'" />
+            <show_help_overlay id="'boarding_stage2'" />
+            <show_help_overlay id="'boarding_stage3'" />
+            <show_help_overlay id="'boarding_selectmarines'" />
+            <show_help_overlay id="'boarding_operation_cancel'" />
+          </actions>
+        </cue>
+
+        <cue name="ShowHelpOverlay_AssignCrew" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <show_help_overlay id="'crew_assigncrew'" highlightonly="true"/>
+          </actions>
+        </cue>
+
+        <cue name="ShowHelpOverlay_ShipOptions" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <show_help_overlay id="'trade_context_shipOptions'" highlightonly="true"/>
+          </actions>
+        </cue>
+
+        <cue name="ShowHelpOverlay_ToggleFlyTo" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <show_help_overlay id="'interactmenu_flyto'" highlightonly="true"/>
+          </actions>
+        </cue>
+
+        <cue name="ShowHelpOverlay_ToggleOrderCancel" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <show_help_overlay id="'map_ordercancel'" highlightonly="true"/>
+          </actions>
+        </cue>
+
+        <cue name="ShowHelpOverlay_ToggleOrderQueue" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <show_help_overlay id="'map_defaultorder'" highlightonly="true"/>
+            <show_help_overlay id="'map_orderqueue'" highlightonly="true"/>
+          </actions>
+        </cue>
+
+        <cue name="ShowHelpOverlay_ToggleRemoveOrder" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <show_help_overlay id="'interactmenu_removeorder'" highlightonly="true"/>
+          </actions>
+        </cue>
+
+        <cue name="ShowHelpOverlay_ToggleClaim" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <show_help_overlay id="'interactmenu_claim'" highlightonly="true"/>
+          </actions>
+        </cue>
+
+        <cue name="ShowHelpOverlay_ToggleBehaviourAssignement" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <show_help_overlay id="'map_behaviourassignement'" highlightonly="true"/>
+          </actions>
+        </cue>
+        
+        <cue name="ShowHelpOverlay_ToggleConfirmtrade" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <show_help_overlay id="'map_confirmtrade'" highlightonly="true"/>
+          </actions>
+        </cue>
+
+        <cue name="ShowHelpOverlay_ToggleTradeFilter" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <show_help_overlay id="'toggle_trade_filter'" highlightonly="true"/>
+            <show_help_overlay id="'map_searchbar'" highlightonly="true"/>
+          </actions>
+        </cue>
+
+        <cue name="RemoveHelpOverlay_Encyclopedia" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <remove_help_overlay id="'toplevel_encyclopedia'" />
+          </actions>
+        </cue>
+
+        <cue name="RemoveHelpOverlay_Timeline" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <remove_help_overlay id="'encyclopedia_sidebar_timeline_01'" />
+          </actions>
+        </cue>
+
+        <cue name="RemoveHelpOverlay_All" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <remove_help_overlay all="true" />
+          </actions>
+        </cue>
+
+      </cues>
+    </cue>
+
+    <cue name="TransporterSlotTargetTest">
+      <conditions>
+        <event_cue_signalled />
+      </conditions>
+      <actions>
+        <find_player_transporter_slot name="$slot" object="player.room" />
+        <do_if value="$slot">
+          <create_mission cue="this" name="'Transporter target test'" faction="faction.player" type="missiontype.think" difficulty="level.trivial">
+            <objective action="objective.find" slot="$slot" />
+          </create_mission>
+        </do_if>
+        <do_else>
+          <reset_cue cue="this" />
+        </do_else>
+      </actions>
+      <cues>
+        <cue name="Remove">
+          <conditions>
+            <event_cue_signalled cue="parent"/>
+          </conditions>
+          <actions>
+            <remove_mission cue="parent" type="completed" />
+            <reset_cue cue="parent"/>
+          </actions>
+        </cue>
+      </cues>
+    </cue>
+    <cue name="ToggleTransporterSlotTargetTest">
+      <force name="Test Guidance to Transporter Room">
+        <signal_cue cue="TransporterSlotTargetTest" />
+      </force>
+    </cue>
+
+    <cue name="FindFactoryWithWare" instantiate="true">
+      <conditions>
+        <event_cue_signalled/>
+      </conditions>
+      <actions>
+        <set_value name="$ware" exact="ware.engineparts"/>
+        <!--set_value name="$ware" exact="ware.smartchips"/-->
+
+        <debug_text text="'Ware in storage:' + $ware.name"/>
+        <find_station name="$Result" space="player.galaxy" multiple="true">
+          <match_resources wares="$ware"/>
+        </find_station>
+        <do_all exact="$Result.count" counter="$i">
+          <debug_text text="$Result.{$i}.knownname + ' ' + $Result.{$i}.sector.knownname"/>
+        </do_all>
+
+        <debug_text text="'Producing ware:' + $ware.name"/>
+        <find_station name="$Result" space="player.galaxy" multiple="true">
+          <match_products wares="$ware"/>
+        </find_station>
+        <do_all exact="$Result.count" counter="$i">
+          <debug_text text="$Result.{$i}.knownname + ' ' + $Result.{$i}.sector.knownname"/>
+        </do_all>
+
+      </actions>
+    </cue>
+
+    <cue name="Get_Build_Wares" instantiate="true">
+      <conditions>
+        <event_cue_signalled/>
+      </conditions>
+      <actions>
+        <set_value name="$Object" exact="player.target"/>
+        <set_value name="$OtherFaction" exact="faction.teladi"/>
+        <!--<debug_text text="'equipment'"/>
+        <get_equipment_build_wares object="$Object" result="$Wares" otherfaction="$OtherFaction" requireblueprints="true"/>
+        <do_all exact="$Wares.count" counter="$i">
+          <debug_text text="$Wares.{$i}"/>
+        </do_all>-->
+
+        <!--<remove_licence faction="faction.teladi" licencefaction="faction.ministry" type="generaluseship"/>-->
+        <add_licence faction="faction.teladi" licencefaction="faction.ministry" type="generaluseship"/>
+        <!--<add_licence faction="faction.antigone" licencefaction="faction.argon" type="militaryship"/>-->
+        <debug_text text="'build at ' + $Object.knownname"/>
+        <get_ship_build_wares object="$Object" result="$Wares" otherfaction="$OtherFaction" requireblueprints="true" canbuild="true"/>
+        <do_all exact="$Wares.count" counter="$i">
+          <debug_text text="$Wares.{$i} + ' ' + $Wares.{$i}.objectmacro"/>
+        </do_all>
+
+      </actions>
+    </cue>
+
+    <cue name="MissionLifetimeTest" instantiate="true">
+      <conditions>
+        <event_cue_signalled/>
+      </conditions>
+      <actions>
+        <create_cue_actor cue="this" name="$Actor">
+          <select faction="faction.antigone"/>
+        </create_cue_actor>
+      </actions>
+      <cues>
+
+        <cue name="CreateMissionOfferCue" comment="auto-run this cue">
+          <actions>
+            <debug_text text="'created-offer'"/>
+            <create_offer cue="CreateMissionCue" type="missiontype.fight" name="'Test Mission'" description="'Test Description'" difficulty="level.easy" faction="faction.argon" actor="$Actor" icon="'briefing_boso_ta_01'" iconcaption="'The Boso'" > 
+              <briefing>
+                <objective step="1" action="objective.talkto" text="'Test Offer'"/>
+              </briefing>
+            </create_offer>
+          </actions>
+          <cues>
+
+            <cue name="CreateMissionCue" comment="run after offer was created">
+              <conditions>
+                <event_cue_signalled comment="wait for manual trigger, for testing missionoffers"/>
+              </conditions>
+              <actions>
+                <debug_text text="'created'"/>
+                <create_mission cue="CreateMissionCue" offercue="CreateMissionCue"/>
+              </actions>
+              <cues>
+                <cue name="MissionKeepAlive" comment="avoids CreateMission-cue from being auto-removed">
+                  <conditions>
+                    <event_cue_signalled/>
+                  </conditions>
+                </cue>
+              </cues>
+            </cue>
+
+            <cue name="MissionRemoveManual" comment="removes the mission from the missionmanager (but does NOT trigger UI-aborted)">
+              <conditions>
+                <event_cue_signalled/>
+              </conditions>
+              <actions>
+                <debug_text text="'remove'"/>
+                <remove_mission cue="CreateMissionCue" type="completed"/>
+              </actions>
+            </cue>
+
+            <cue name="MissionAborted" comment="Only called if the player clicks on 'abort' in the UI">
+              <conditions>
+                <event_mission_aborted cue="CreateMissionCue"/>
+              </conditions>
+              <actions>
+                <debug_text text="'mission was aborted'"/>
+              </actions>
+            </cue>
+
+          </cues>
+        </cue>
+
+      </cues>
+    </cue>
+
+    <cue name="CreatePositionTest" instantiate="true">
+      <conditions>
+        <event_cue_signalled/>
+      </conditions>
+      <actions>
+        <set_value name="$TargetSector" exact="player.entity.sector"/>
+        <create_position name="$TargetOffset" space="$TargetSector" max="300km"/>
+        <get_safe_pos result="$PlotOffsetSafe" sector="$TargetSector" x="$TargetOffset.x" y="0m" z="$TargetOffset.z" max="25km" comment="note: safe-pos-y is unlikely to be 0"/>
+        <set_value name="$PlotOffsetUnsafe" exact="position.[$TargetOffset.x, 0m, $TargetOffset.z]" comment="force y to zero"/>
+        <debug_text text="'create_pos: ' + $TargetOffset"/>
+        <debug_text text="'get_safepos: ' + $PlotOffsetSafe"/>
+        <debug_text text="'set_value: ' + $PlotOffsetUnsafe"/>
+      </actions>
+    </cue>
+
+    <cue name="RewardShipTest" instantiate="true">
+      <conditions>
+        <event_cue_signalled/>
+      </conditions>
+      <actions>
+
+        <set_value name="$Faction" exact="faction.paranid"/>
+        <set_value name="$shipcargo" exact="[[2500, ware.nividium]]"/>
+        <run_actions ref="md.LIB_Generic.FindShipMacroForCargo" result="$shipmacro">
+          <param name="shipcargo" value="$shipcargo"/>
+          <param name="Faction" value="$Faction"/>
+        </run_actions>
+        
+        <debug_text text="'$shipmacro: ' + $shipmacro"/>
+
+        <include_actions ref="md.LIB_Generic.FindNearestStationForFaction" comment="input: $faction, output: $SuitableStation"/>
+
+        <do_if value="$shipmacro and $SuitableStation">
+          <!--     *-100 * $shipmacro.cargo.{ware.nividiaum}.free -->
+          <generate_loadout result="$shiploadout" macro="$shipmacro" level="1"/>
+          <create_list name="$RewardObject"/>
+          <append_to_list name="$RewardObject" exact="table[
+                          $macro = $shipmacro,
+                          $loadout = $shiploadout, 
+                          $cargo = $shipcargo, 
+                          $station = $SuitableStation, 
+                          $bulkcrew = [30, 100, ['argon_military_crew', 'argon_freighter_crew'].random], 
+                          $pilot = [ faction.argon, [tag.pilot], [9,12].random ],
+                          $mods = [ware.mod_shield_capacity_01_mk3, ware.mod_engine_travelthrust_02_mk2, ware.mod_weapon_cooling_01_mk1, ware.mod_weapon_damage_04_mk2],
+                          $paintmod = ware.paintmod_0085,
+                          ]"/>
+
+          <do_all exact="$RewardObject.count" counter="$ri">
+            <do_if value="(typeof $RewardObject.{$ri} == datatype.ware) and $RewardObject.{$ri}.isinventory">
+              <add_inventory entity="player.entity" ware="$RewardObject.{$ri}" />
+            </do_if>
+            <do_elseif value="typeof $RewardObject.{$ri} == datatype.table" comment="list of something">
+              <do_if value="$RewardObject.{$ri}.$macro and $RewardObject.{$ri}.$loadout">
+                <set_value name="$macro"    exact="$RewardObject.{$ri}.$macro"/>
+                <set_value name="$loadout"  exact="$RewardObject.{$ri}.$loadout"/>
+                <set_value name="$cargo"    exact="$RewardObject.{$ri}.$cargo"/>
+                <set_value name="$bulkcrew" exact="$RewardObject.{$ri}.$bulkcrew"/>
+                <set_value name="$pilot"    exact="@$RewardObject.{$ri}.$pilot"/>
+                <set_value name="$mods"     exact="$RewardObject.{$ri}.$mods"/>
+                <set_value name="$paintmod" exact="@$RewardObject.{$ri}.$paintmod"/>
+                <set_value name="$station"  exact="$RewardObject.{$ri}.$station"/>
+
+                <set_value name="$reward_ship" exact="null"/>
+                <do_if value="$station">
+                  <create_ship name="$reward_ship" macro="$shipmacro" zone="$station.zone" dock="$SuitableStation">
+                    <loadout loadout="$loadout.{1}"/>
+                    <owner exact="faction.player"/>
+                    <paint ware="@$paintmod"/>
+                    <people ref="$bulkcrew.{3}">
+                      <fillpercent exact="100"/>
+                    </people>
+                    <pilot>
+                      <select tags="@$pilot.{2}" faction="@$pilot.{1}"/>
+                      <skills>
+                        <!-- todo: test if this ONLY sets piloting and sets other skills to 0, or if this overrides piloting (and leaves other skills) -->
+                        <skill type="piloting" exact="@$pilot.{3}"/>
+                      </skills>
+                    </pilot>
+                    <loadout loadout="$loadout.{1}"/>
+                  </create_ship>
+                </do_if>
+                <do_if value="not $reward_ship" comment="fallback, in case dock was valid, but all docks are full">
+                  <create_ship name="$reward_ship" macro="$macro" zone="$station.zone">
+                    <loadout loadout="$loadout.{1}"/>
+                    <owner exact="faction.player"/>
+                    <paint ware="@$paintmod"/>
+                    <people ref="$bulkcrew.{3}">
+                      <fillpercent exact="100"/>
+                    </people>
+                    <safepos object="if $station then $station else player.entity" min="5km" max="15km"/>
+                  </create_ship>
+                </do_if>
+
+                <do_if value="$reward_ship">
+                  <debug_text text="'$reward_ship: ' + $reward_ship + ' ' + $reward_ship.knownname"/>
+                  <do_if value="$cargo">
+                    <debug_text text="'Adding cargo'"/>
+                    <do_all exact="$cargo.count" counter="$ci">
+                      <add_cargo object="$reward_ship" ware="$cargo.{$ci}.{2}" exact="$cargo.{$ci}.{1}" result="$cargo_result"/>
+                      <debug_text text="'Adding ' + $cargo.{$ci}.{1}+ 'x ' + $cargo.{$ci}.{2} + ' result=' + $cargo_result"/>
+                    </do_all>
+                  </do_if>
+
+                  <do_if value="$mods and $mods.count">
+                    <debug_text text="'Installing mods: ' + $mods"/>
+                    <add_equipment_mods object="$reward_ship">
+                      <mods list="$mods"/>
+                    </add_equipment_mods>
+                  </do_if>
+
+                </do_if>
+
+              </do_if>
+              <do_else>
+                <debug_text text="'No macro in table?!'"/>
+              </do_else>
+            </do_elseif>
+          </do_all>
+          <!--show_notification text="[{1015,90}, '', @$Definition.$RewardText]" sound="notification_achievement" comment="Rewards received" /-->
+        </do_if>
+        <do_else>
+          <debug_text text="'No suitable station found'"/>
+        </do_else>
+
+      </actions>
+    </cue>
+
+
+    <cue name="WareSelect" instantiate="true">
+      <conditions>
+        <event_cue_signalled/>
+        <check_value value="player.target"/>
+      </conditions>
+      <actions>
+        <set_value name="$TextOffset" exact="[150300, 150700].random"/>
+
+        <set_value name="$TextVsWares" exact="table[
+            { 150300 } = [ ware.spaceweed ],
+            { 150700 } = [ ware.energycells, ware.ore, ware.silicon],
+            ]"/>
+
+        <set_value name="$TargetWare" exact="$TextVsWares.{$TextOffset}.random"/>
+        <debug_text text="'text=' + $TextOffset + ' ware: ' + $TargetWare.name"/>
+
+      </actions>
+    </cue>
+
+    <cue name="DumpPlayerTargetInfo" instantiate="true">
+      <conditions>
+        <event_cue_signalled/>
+        <check_value value="player.target"/>
+      </conditions>
+      <actions>
+
+        <do_if value="not player.target">
+          <debug_text text="'No target selected!'"/>
+        </do_if>
+        <do_elseif value="player.target.isclass.station">
+
+          <debug_text text="'canbuildships: ' + player.target.canbuildships 
+                         + ' canequipships: ' + player.target.canequipships 
+                         + ' isshipyard: ' + player.target.isshipyard 
+                         + ' iswharf: ' + player.target.iswharf"/>
+
+          <debug_text text="'buildmodules:'"/>
+          <set_value name="$buildmodules" exact="player.target.buildmodules"/>
+          <do_all exact="$buildmodules.count" counter="$m">
+            <debug_text text="'- class=' + $buildmodules.{$m}.class + ' busy=' + $buildmodules.{$m}.isbusy"/>
+          </do_all>
+
+          <debug_text text="'piers:'"/>
+          <find_object_component name="$r0" object="player.target" multiple="true" class="class.pier"/>
+          <do_all exact="$r0.count" counter="$i">
+            <debug_text text="'- name: `' + $r0.{$i}.name + '` class=' + $r0.{$i}.class"/>
+          </do_all>
+
+
+          <debug_text text="'dockingbays:'"/>
+          <find_object_component name="$r1" object="player.target" multiple="true" class="class.dockingbay"/>
+          <do_all exact="$r1.count" counter="$i">
+            <debug_text text="'- name: `' + $r1.{$i}.name + '` class=' + $r1.{$i}.class + ' module-class=' + $r1.{$i}.module.class"/>
+            <do_if value="$r1.{$i}.module">
+              <do_if value="$r1.{$i}.module.isclass.pier">
+                <debug_text text="'  - #pierdocks=' + $r1.{$i}.module.numpierdocks"/>
+              </do_if>
+            </do_if>
+          </do_all>
+
+          <debug_text text="'all components:'"/>
+          <find_object_component name="$r2" object="player.target" multiple="true"/>
+          <do_all exact="$r2.count" counter="$i">
+            <debug_text text="'- `' + $r2.{$i}.name + '` macro: `macro.' + $r2.{$i}.macro + '`' + '` class: `class.' + $r2.{$i}.class "/>
+          </do_all>
+
+          <debug_text text="'Maximum Storage - Container: ' + player.target.cargo.capacity.container + ' solid: ' + player.target.cargo.capacity.solid + ' liquid: ' + player.target.cargo.capacity.liquid"/>
+        </do_elseif>
+        <do_else>
+          <debug_text text="'Unhandled class: ' + player.target.class"/>
+        </do_else>
+
+      </actions>
+    </cue>
+
+    <cue name="DamagePlayerTarget" instantiate="true">
+      <conditions>
+        <event_cue_signalled/>
+        <check_value value="player.target"/>
+      </conditions>
+      <actions>
+        <find_object_component object="player.target" name="$modules" multiple="true" class="class.module"/>
+        <do_all exact="$modules.count" counter="$i">
+          <set_object_hull object="$modules.{$i}" exact="3"/>
+        </do_all>
+      </actions>
+    </cue>
+    
+    <cue name="AssignPilotToPlayerTarget" instantiate="true" namespace="this">
+      <conditions>
+        <event_cue_signalled />
+        <check_value value="player.target"/>
+      </conditions>
+      <actions>
+        <create_control_entity object="player.target" post="controlpost.aipilot">
+          <select race="race.argon"/>
+        </create_control_entity>
+      </actions>
+    </cue>
+
+    <cue name="Spawn">
+      <cues>
+        
+        <cue name="SpawnHostileSatellites_v2" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <do_all exact="3">
+              <create_object name="$Beacon" groupname="$Beacons" macro="macro.ship_gen_xs_cargodrone_empty_01_a_macro" zone="player.zone" owner="faction.xenon">
+                <safepos object="player.zone" z="3km" max="300m"/>
+              </create_object>
+            </do_all>
+          </actions>
+        </cue>
+        
+        <cue name="SpawnFighters" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+            <check_value value="player.target"/>
+          </conditions>
+          <actions>
+            <find_object_component object="player.target" name="$targets" multiple="true" class="[class.module, class.turret]"/>
+
+            <do_all exact="50">
+              <create_ship name="$fighter" macro="macro.ship_arg_s_fighter_01_a_macro" zone="player.target.zone">
+                <pilot>
+                  <select race="race.drone"/>
+                </pilot>
+                <owner exact="faction.player"/>
+                <safepos object="player.target" radius="20m"/>
+              </create_ship>
+
+              <create_order id="'Attack'" name="$attackOrder" object="$fighter">
+                <param name="primarytarget" value="$targets.random"/>
+                <param name="secondarytargets" value="$targets"/>
+                <param name="pursuetargets" value="false"/>
+              </create_order>
+            </do_all>
+          </actions>
+        </cue>
+
+        <cue name="SpawnLaserTowers" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+            <check_value value="player.target"/>
+          </conditions>
+          <actions>
+            <do_all exact="50">
+              <create_ship name="$lasertower" macro="macro.ship_gen_s_lasertower_01_a_macro" zone="player.target.zone">
+                <pilot>
+                  <select race="race.drone"/>
+                </pilot>
+                <owner exact="faction.player"/>
+                <safepos object="player.target" radius="20m"/>
+              </create_ship>
+              <do_if value="$lasertower.exists">
+                <create_order name="$order" id="'Lasertower'" object="$lasertower" default="true"/>
+              </do_if>
+            </do_all>
+          </actions>
+        </cue>
+    
+        <cue name="SpawnBeaconWithDefenses" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <create_object name="$SpawnBeacon" macro="macro.env_deco_nav_beacon_t1_mission_macro" owner="faction.buccaneers" zone="player.ship.zone">
+              <position x="player.ship.position.x" y="player.ship.position.y" z="player.ship.position.z + 500m"/>
+            </create_object>
+            <!-- lasertowers -->
+            <do_all exact="3">
+              <create_ship name="$LasersBeacon" macro="[macro.ship_gen_s_lasertower_01_a_macro, macro.ship_gen_xs_lasertower_01_a_macro].random" zone="player.ship.zone">
+                <pilot>
+                  <select race="race.drone"/>
+                </pilot>
+                <owner exact="faction.buccaneers"/>
+                <safepos object="$SpawnBeacon" min="100m" max="500m"/>
+              </create_ship>
+              <set_object_radar_visible object="$LasersBeacon" visible="false"/>
+            </do_all>
+            <!-- mines -->
+            <do_all exact="5">
+              <create_object name="$MinesBeacon" macro="[macro.weapon_gen_mine_01_macro].random" owner="faction.buccaneers" zone="player.ship.zone">
+                <safepos object="$SpawnBeacon" min="250m" max="500m"/>
+              </create_object>
+              <!--set_object_radar_visible object="$MinesBeacon" visible="false"/-->
+              <add_to_group groupname="$SpawnBeaconMines" object="$MinesBeacon"/>
+            </do_all>      
+            <create_mission cue="this" name="'NavBeacon'" type="missiontype.find" faction="faction.player" activate="true">
+              <briefing>
+                <objective step="1" action="objective.flyto" object="$SpawnBeacon" />
+              </briefing>
+              <objective step="1" action="objective.flyto" object="$SpawnBeacon"/>
+            </create_mission>
+          </actions>
+          <cues>
+            <cue name="BeaconWithDefensesKeepAlive">
+              <conditions>
+                <event_cue_signalled/>
+              </conditions>
+            </cue>
+          </cues>
+        </cue>
+
+        <cue name="SpawnCargo_v2" instantiate="true">
+          <conditions>
+            <event_cue_signalled />
+          </conditions>
+          <actions>
+            <set_value name="$Ship" exact="player.controlled" />
+            <add_cargo object="$Ship" ware="ware.advancedelectronics" exact="5" />
+          </actions>
+        </cue>
+
+        <cue name="SpawnResupplier_v2" instantiate="true">
+          <conditions>
+            <event_cue_signalled />
+          </conditions>
+          <actions>
+            <create_ship name="$Ship" macro="ship_arg_xl_resupplier_01_a_macro" zone="player.zone">
+              <owner exact="faction.player" overridenpc="true" />
+              <pilot>
+                <select race="[race.argon, race.paranid, race.teladi]" tags="tag.aipilot"/>
+              </pilot>
+              <units>
+                <unit category="unitcategory.transport" mk="1" exact="10" />
+                <unit category="unitcategory.repair" mk="1" exact="3" />
+              </units>
+              <drop ref="ship_large_civilian" />
+              <safepos object="player.zone" x="4km" y="1km" z="6km" />
+            </create_ship>
+            <add_cargo object="$Ship" ware="ware.advancedelectronics" min="50" max="100" />
+            <add_cargo object="$Ship" ware="ware.antimatterconverters" min="50" max="100" />
+            <add_cargo object="$Ship" ware="ware.dronecomponents" min="50" max="100" />
+            <add_cargo object="$Ship" ware="ware.energycells" min="50" max="100" />
+            <add_cargo object="$Ship" ware="ware.engineparts" min="50" max="100" />
+            <add_cargo object="$Ship" ware="ware.fieldcoils" min="50" max="100" />
+            <add_cargo object="$Ship" ware="ware.hullparts" min="50" max="100" />
+            <add_cargo object="$Ship" ware="ware.missilecomponents" min="50" max="100" />
+            <add_cargo object="$Ship" ware="ware.shieldcomponents" min="50" max="100" />
+            <add_cargo object="$Ship" ware="ware.smartchips" min="50" max="100" />
+            <add_cargo object="$Ship" ware="ware.turretcomponents" min="50" max="100" />
+            <add_cargo object="$Ship" ware="ware.weaponcomponents" min="50" max="100" />
+          </actions>
+        </cue>
+
+        <cue name="SpawnCrate" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <find_crate_slot name="$Slots" multiple="true" tags="tag.crate_s" object="player.entity.room"/>
+            <do_if value="$Slots.count">
+              <debug_text text="'found ' + $Slots.count + ' available crate slots in ' + player.entity.room + ' ' + player.entity.room.knownname"/>
+              <create_crate name="$Crate" macro="macro.crate_gen_s_01_macro" slot="$Slots.{1}"/>
+              <add_cargo object="$Crate" ware="ware.inv_interfaceunit" exact="3"/>
+              <debug_text text="'created ' + $Crate + ' ' + $Crate.knownname"/>
+
+              <find_crate_slot name="$Slots" multiple="true" tags="tag.crate_s" object="player.entity.room"/>
+              <debug_text text="'there are now ' + $Slots.count + ' available crate slots'"/>
+            </do_if>
+          </actions>
+          <force name="Test_Create_Crate"/>
+        </cue>
+
+        <cue name="SpawnDeskPropHQ" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <!-- create Dal's desk in the playerHQ, boron tank room-->
+            <get_room_definition macro="$RoomMacro" doors="$RoomDoors" tags="tag.boron_test" />
+            <find_station name="$PlayerHQ" macro="macro.station_pla_headquarters_base_01_macro" space="player.galaxy"/>
+            <do_if value="$PlayerHQ.exists">
+              <find_room name="$PlayerHQ_BoronRoom" object="$PlayerHQ" macro="$RoomMacro" />
+              <find_prop_slot name="$PlayerHQ_PropSlot" room="$PlayerHQ_BoronRoom" tags="tag.prop_dal_computer"/>
+              <do_if value="false">
+                <create_prop name="$Prop" slot="$PlayerHQ_PropSlot" macro="macro.props_01_room_gen_boronoffice_01_macro"/>
+              </do_if>
+              <do_else>
+                <create_prop name="$Prop" slot="$PlayerHQ_PropSlot" macro="macro.props_02_room_gen_boronoffice_01_macro"/>
+              </do_else>
+            </do_if>
+            <do_else>
+              <debug_text text="'No playerHQ'"/>
+            </do_else>
+          </actions>
+          <delay exact="5s"/>
+          <actions>
+            <destroy_object object="$Prop"/>
+          </actions>
+        </cue>
+        
+        <cue name="SpawnSignalleak">
+          <conditions>
+            <event_cue_signalled/>
+            <check_value value="(player.target) and (player.target.isclass.station)"/>
+          </conditions>
+          <actions>
+            <!-- find leak location -->
+            <set_value name="$LeakObject" exact="player.target"/>
+            <include_actions ref="md.Signal_Leaks.GetLeakSlots" comment="returns $SignalLeakLocation"/>
+            <set_value name="$SignalLeakLocation" exact="$LeakLocations.random"/>
+            <!-- create leak -->
+            <set_value name="$MissionLeakMacro" exact="macro.dataleak_s_plot_01_macro" />
+            <find_object_surface posname="$SurfacePos" rotname="$SurfaceRot" object="$SignalLeakLocation.component" height="$MissionLeakMacro.boundingbox.max.y - $MissionLeakMacro.boundingbox.center.y">
+              <position value="$SignalLeakLocation.offset" />
+              <offsetrotation pitch="-90deg" comment="the rotation created by the normal would look away from the surface, we want a rotation that's looking parallel to the surface" />
+            </find_object_surface>
+            <do_if value="@$SurfacePos">
+              <create_signal_leak name="$SignalLeak" groupname="$Leaks" macro="$MissionLeakMacro" type="signalleaktype.mission" object="$SignalLeakLocation.component">
+                <position value="$SurfacePos" />
+                <rotation value="$SurfaceRot" />
+              </create_signal_leak>
+              <create_position name="$SignalLeakPos" object="$SignalLeak" space="$SignalLeak.sector"/>
+            </do_if>
+            <!-- create mission with guidance, to easily find the leak -->
+            <create_mission cue="this" name="'leak test'" description="'objective pointing to the leak'" type="missiontype.trade" faction="faction.argon" difficulty="level.trivial">
+              <briefing>
+                <objective step="1" action="objective.flyto" object="$SignalLeak"/>
+              </briefing>
+              <objective step="1" action="objective.flyto" object="$SignalLeak"/>
+            </create_mission>
+          </actions>
+          <cues>
+            <cue name="SpawnSignalleak_Check">
+              <conditions>
+                <check_any>
+                  <event_player_repaired_signal_leak signal="$SignalLeak"/>
+                  <event_player_signal_unlock_finished signal="$SignalLeak"/>
+                </check_any>
+              </conditions>
+              <actions>
+                <debug_text text="'Leak repaired/unlocked! (removing it)'"/>
+                <destroy_object object="$SignalLeak" explosion="false"/>
+              </actions>
+            </cue>
+      </cues>
+    </cue>
+
+      </cues>
+    </cue>
+
+
+    <cue name="ScanTest">
+      <conditions>
+        <event_cue_signalled/>
+      </conditions>
+      <cues>
+        <cue name="InstallScannerInShip">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <install_software object="player.ship" software="ware.software_scannerobjectmk2" />
+            <install_software object="player.ship" software="ware.software_scannerobjectmk3" />
+          </actions>
+        </cue>
+        <cue name="Discovered" instantiate="true">
+          <conditions>
+            <event_player_discovered_object/>
+          </conditions>
+          <actions>
+            <!-- auto-triggers when you get close to something (both in ship and spacesuit - with shift+2/scanmode enabled), and increases the "revealedpercentage" -->
+            <!-- Note that military modules have a high secrecy-level, in which case you need to use the spacesuit-scanner -->
+            <set_value name="$ScannedObject" exact="event.param"/>
+            <debug_text text="'Discovered ' + $ScannedObject.name"/>
+          </actions>
+        </cue>
+        <cue name="ScannedLeak" instantiate="true">
+          <conditions>
+            <event_player_signal_unlock_started />
+          </conditions>
+          <actions>
+            <!-- in the spacesuit (with scanmode enabled), get close to a signalleak/dataleak to trigger this one -->
+            <set_value name="$ScannedObject" exact="event.param"/>
+            <debug_text text="'Scanned-leak: ' + $ScannedObject.name"/>
+          </actions>
+        </cue>
+        <cue name="Scanned" instantiate="true">
+          <conditions>
+            <event_scan_finished scanner="global.$PlayerControlledGroup"/>
+          </conditions>
+          <actions>
+            <!-- with scan-mode enabled (shift+) open context-menu and select "Deep-scan" (only on ships, not on stations) -->
+            <set_value name="$ScannedObject" exact="event.param"/>
+            <debug_text text="'Deep-Scanned: ' + $ScannedObject.name"/>
+          </actions>
+        </cue>
+      </cues>
+    </cue>
+
+    <cue name="ReputationOutput" instantiate="true">
+      <conditions>
+        <event_cue_signalled/>
+      </conditions>
+      <actions>
+        <do_all exact="60" counter="$i" reverse="true">
+          <set_value name="$Level" exact="$i-30" comment="level from +30 to -30"/>
+          <set_value name="$Drop" exact="5"/>
+          <include_actions ref="md.LIB_Generic.CalculateReputationDrop"/>
+        </do_all>
+      </actions>
+    </cue>
+
+    <cue name="ReputationDrop5" instantiate="true">
+      <conditions>
+        <event_cue_signalled/>
+      </conditions>
+      <actions>
+        <set_value name="$DebugChance" exact="100"/>
+        <set_value name="$Faction" exact="faction.argon"/>
+        <set_value name="$Level"   exact="faction.player.relation.{$Faction.relationto.{faction.player}}.uivalue"/>
+        <set_value name="$DropLevels" exact="5"/>
+        <include_actions ref="md.LIB_Generic.CalculateReputationDrop" comment="input: $Level, $DropLevels output: $ReputationDrop"/>
+        <add_faction_relation faction="faction.player" otherfaction="$Faction" value="-$ReputationDrop" reason="relationchangereason.missionfailed"/>
+      </actions>
+    </cue>
+    
+    <cue name="Statistics">
+      <cues>
+        <cue name="CountJobs_v2" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <find_ship multiple="true" name="$Ships" space="player.galaxy">
+
+            </find_ship>
+            <set_value name="$Jobs" exact="table[]"/>
+            <do_all exact="$Ships.count" counter="$i">
+              <do_if value="$Ships.{$i}.isjobship">
+                <set_value name="$Jobs.{'$' + $Ships.{$i}.job}" operation="add"/>
+              </do_if>
+            </do_all>
+            <do_all exact="$Jobs.keys.count" counter="$i">
+              <debug_text text="$Jobs.keys.{$i} + ' ' + $Jobs.{$Jobs.keys.{$i}}"/>
+            </do_all>
+          </actions>
+        </cue>
+
+        <cue name="CountConstructingJobs_v2" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <find_ship multiple="true" name="$Ships" checkoperational="false" recursive="true" space="player.galaxy">
+
+            </find_ship>
+            <set_value name="$Jobs" exact="table[]"/>
+            <do_all exact="$Ships.count" counter="$i">
+              <do_if value="$Ships.{$i}.isjobship and $Ships.{$i}.isconstruction">
+                <set_value name="$Jobs.{'$' + $Ships.{$i}.job}" operation="add"/>
+              </do_if>
+            </do_all>
+            <do_all exact="$Jobs.keys.count" counter="$i">
+              <debug_text text="$Jobs.keys.{$i} + ' ' + $Jobs.{$Jobs.keys.{$i}}"/>
+            </do_all>
+          </actions>
+        </cue>
+
+        <cue name="CountWaitingJobs_v2" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <find_waiting_job_ship name="$Ships" multiple="true">
+            </find_waiting_job_ship>
+
+            <set_value name="$Jobs" exact="table[]"/>
+            <do_all exact="$Ships.count" counter="$i">
+              <do_if value="$Ships.{$i}.isjobship">
+                <set_value name="$Jobs.{'$' + $Ships.{$i}.job}" operation="add"/>
+              </do_if>
+            </do_all>
+            <do_all exact="$Jobs.keys.count" counter="$i">
+              <debug_text text="$Jobs.keys.{$i} + ' ' + $Jobs.{$Jobs.keys.{$i}}"/>
+            </do_all>
+          </actions>
+        </cue>
+
+        <cue name="CountLeaks_v2" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <find_signalleak_location name="$Loc" multiple="true" container="player.target"/>
+            <find_object_component name="$DataLeaks" signalleaktype="signalleaktype.data" object="player.target" multiple="true" />
+            <find_object_component name="$SignalLeaks" signalleaktype="signalleaktype.voice" object="player.target" multiple="true" />
+            <debug_text text="$Loc.count"/>
+            <debug_text text="$DataLeaks.count"/>
+            <debug_text text="$SignalLeaks.count"/>
+          </actions>
+        </cue>        
+      </cues>
+    </cue>
+
+    <cue name="Missions">
+      <cues>
+        <cue name="Create_Mission_With_Multiple_Objectives" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <find_object name="$target" space="player.sector" excluded="player.container" />
+            <create_mission cue="this" name="'Mission briefing test'" type="missiontype.find" faction="faction.player" activate="true" endtime="player.age + 15min">
+              <briefing>
+                <objective step="1" action="objective.flyto" object="$target" failed="true" />
+                <objective step="2" action="objective.flyto" object="$target" />
+                <objective step="3" action="objective.attack" object="$target" endtime="player.age + 10min" />
+                <objective step="4" action="objective.board" object="$target" />
+              </briefing>
+            </create_mission>
+            <set_objective cue="this" step="3" action="objective.attack" object="$target"/>
+          </actions>
+          <delay exact="5s"/>
+          <actions>
+            <update_mission cue="Create_Mission_With_Multiple_Objectives">
+              <briefing>
+                <objective step="5" action="objective.buy"/>
+              </briefing>
+            </update_mission>
+          </actions>
+          <cues>
+            <cue name="Create_Mission_With_Multiple_Objectives__Keep_Alive">
+              <conditions>
+                <event_mission_aborted cue="parent" />
+              </conditions>
+              <actions>
+                <remove_mission cue="parent" />
+                <cancel_cue cue="parent" />
+              </actions>
+            </cue>
+          </cues>
+        </cue>
+
+        <cue name="Create_Mission_With_Radius_v2" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+            <check_value value="player.ship"/>
+          </conditions>
+          <actions>
+            <create_ship name="$target" zone="player.zone">
+              <select faction="faction.argon" size="class.ship_s" />
+              <owner exact="faction.player"/>
+              <pilot actor="null"/>
+              <position x="0" y="0" z="0"/>
+            </create_ship>
+            <create_mission cue="this" name="'Fly to 1km test'" type="missiontype.find" faction="faction.player" activate="true">
+              <briefing>
+                <objective step="1" action="objective.flyto" object="$target" />
+              </briefing>
+            </create_mission>
+            <set_objective cue="this" step="1" action="objective.flyto" object="$target" radius="1km" />
+          </actions>
+          <cues>
+            <cue name="Create_Mission_With_Radius__Keep_Alive_v2">
+              <conditions>
+                <event_cue_signalled/>
+              </conditions>
+            </cue>
+          </cues>
+        </cue>
+
+        <cue name="Create_Mission_UpdateObjective" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <set_value name="$MissionProgress" exact="0"/>
+            <create_mission cue="this" name="'Fly to 1km test'" type="missiontype.find" faction="faction.player" activate="true" endtime="player.age + 15min">
+              <briefing>
+                <objective step="1" action="objective.flyto" object="$target" />
+              </briefing>
+            </create_mission>
+            <set_objective cue="this" step="1" action="objective.attack" object="$target">
+              <progress progress="0" max="100"/>
+            </set_objective>
+          </actions>
+          <cues>
+            <cue name="Create_Mission_UpdateObjective_Ping" checkinterval="1s" instantiate="true">
+              <actions>
+                <set_value name="$MissionProgress" operation="add"/>
+                <set_objective cue="this" step="1" action="objective.attack" object="$target" silent="true">
+                  <progress progress="$MissionProgress" max="100"/>
+                </set_objective>
+              </actions>
+            </cue>
+          </cues>
+        </cue>
+
+        <cue name="Create_Mission_UpdateBriefing" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <create_mission cue="this" name="{30220,6001}" description="'Briefing part1'" type="missiontype.plot" faction="faction.hatikvah" difficulty="level.medium" abortable="false">
+              <briefing>
+                <objective step="1" action="objective.escort"/>
+              </briefing>
+            </create_mission>
+          </actions>
+          <delay exact="5s"/>
+          <actions>
+            <debug_text text="'updating briefing 1'"/>
+            <update_mission cue="this" description="'Briefing part1' + '\n' + 'Briefing part2'"/>
+          </actions>
+          <delay exact="5s"/>
+          <actions>
+            <debug_text text="'updating briefing 2'"/>
+            <update_mission cue="this" description="'Briefing part1' + '\n' + 'Briefing part2' + '\n' + 'Briefing part3'"/>
+          </actions>
+          <delay exact="5s"/>
+          <actions>
+            <debug_text text="'updating briefing 3'"/>
+            <update_mission cue="this" description="'Briefing part1' + '\n' + 'Briefing part2' + '\n' + 'Briefing part3' + '\n' + 'Briefing part4'"/>
+          </actions>
+          <delay exact="10s"/>
+          <actions>
+            <debug_text text="'mission expired'"/>
+          </actions>
+        </cue>
+      </cues>
+    </cue>
+  
+    <cue name="Trigger_Interactive_Event_Test" instantiate="true" namespace="this">
+      <conditions>
+        <event_cue_signalled/>
+      </conditions>
+      <actions>
+        <create_cue_actor cue="this" name="$Actor">
+          <select faction="faction.antigone"/>
+        </create_cue_actor>
+        <play_cutscene result="$cutsceneid" key="'ShowPilot'" targetmonitor="true" timeout="20s" caption="'Caption'" sound="notification_conversationstart">
+          <interaction text="'TEST'" param="$Actor" param2="'accept_interaction'"/>
+          <param name="npcref" object="$Actor" />
+        </play_cutscene>
+      </actions>
+      <delay exact="10s" />
+      <actions>
+        <!-- There was no player interaction yet, clean up -->
+        <!-- TEST: Abort with <stop_cutscene> via ID before it's finished -->
+        <stop_cutscene cutscene="$cutsceneid" />
+        <cancel_cue cue="this" />
+      </actions>
+      <force name="ForceInteractiveEvent"/>
+      <cues>
+        <cue name="Trigger_Interactive_Event_Test_Done">
+          <conditions>
+            <event_player_interaction param="$Actor" param2="'accept_interaction'"/>
+          </conditions>
+          <actions>
+            <stop_cutscene key="'ShowPilot'"/>
+            <debug_text text="'Interaction done. ' + event.param + ' ' + event.param2"/>
+            <!-- Clean up -->
+            <cancel_cue cue="parent" />
+          </actions>
+        </cue>
+      </cues>
+    </cue>
+
+    <cue name="Escapable_Conversation_Reprocase" instantiate="true">
+      <conditions>
+        <event_cue_signalled/>
+      </conditions>
+      <actions>
+        <create_ship name="$Ship" zone="player.zone">
+          <select faction="faction.argon" size="class.ship_s"/>
+          <owner exact="faction.argon" overridenpc="true"/>
+          <position object="player.ship" z="1km"/>
+        </create_ship>
+        <set_value name="$NPC" exact="$Ship.pilot"/>
+      </actions>
+      <cues>
+        <cue name="Escapable_Conversation_Reprocase_Init">
+          <delay exact="1s"/>
+          <actions>
+            <signal_cue cue="Escapable_Conversation_Reprocase_Start_Conv"/>
+          </actions>
+        </cue>
+
+        <cue name="Escapable_Conversation_Reprocase_Start_Conv" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <start_conversation actor="$NPC" conversation="test_conv"/>
+          </actions>
+        </cue>
+
+        <cue name="Escapable_Conversation_Reprocase_Conv_Started" instantiate="true">
+          <conditions>
+            <event_conversation_started actor="$NPC" conversation="test_conv"/>
+          </conditions>
+          <actions>
+            <allow_conversation_escape enabled="false"/>
+
+            <add_npc_line speaker="$NPC" line="10043" hidechoices="true"/>
+            <add_npc_line speaker="$NPC" line="10044" hidechoices="true"/>
+            <add_npc_line speaker="$NPC" line="10045" hidechoices="true"/>
+            <add_npc_line speaker="$NPC" line="10046" hidechoices="true"/>
+            <add_npc_line speaker="$NPC" line="10047" hidechoices="true"/>
+
+            <add_player_choice text="'...that made no sense'" section="end_conv"/>
+          </actions>
+        </cue>
+
+        <cue name="Escapable_Conversation_Reprocase_Conv_Next" instantiate="true">
+          <conditions>
+            <event_conversation_next_section actor="$NPC"/>
+          </conditions>
+          <actions>
+            <add_npc_line speaker="$NPC" line="2105" hidechoices="true"/>
+          </actions>
+        </cue>
+
+        <cue name="Escapable_Conversation_Reprocase_Conv_Ended" instantiate="true">
+          <conditions>
+            <event_conversation_finished actor="$NPC"/>
+          </conditions>
+        </cue>
+      </cues>
+    </cue>
+
+    <cue name="FindAndUnlockShadyGuy" instantiate="true">
+      <conditions>
+        <event_cue_signalled />
+      </conditions>
+      <actions>
+        <find_station name="$SectorStations" space="player.sector" multiple="true" />
+        <do_all exact="$SectorStations.count" counter="$StationCounter">
+          <set_value name="$ShadyGuy" exact="$SectorStations.{$StationCounter}.controlentity.{controlpost.shadyguy}" />
+          <do_if value="$ShadyGuy">
+            <break />
+          </do_if>
+        </do_all>
+
+        <do_if value="not $ShadyGuy">
+          <debug_text text="'There is no shady guy in your sector - try another one'" />
+        </do_if>
+        <do_else>
+          <set_entity_traits entity="$ShadyGuy" tradesvisible="true"/>
+          <create_mission cue="this" name="'Find Shady Guy'" type="missiontype.find" faction="faction.player" activate="true">
+            <briefing>
+              <objective step="1" action="objective.talkto" object="$ShadyGuy" />
+            </briefing>
+          </create_mission>
+          <set_objective cue="this" step="1" action="objective.talkto" object="$ShadyGuy" />
+        </do_else>
+      </actions>
+      <cues>
+        <cue name="FindAndUnlockShadyGuy_KeepAlive" instantiate="true">
+          <conditions>
+            <event_conversation_started actor="$ShadyGuy" />
+          </conditions>
+          <actions>
+            <remove_mission cue="this.parent" type="completed" />
+          </actions>
+        </cue>
+      </cues>
+    </cue>
+    
+    <cue name="LogbookTest" instantiate="true">
+      <conditions>
+        <event_cue_signalled />
+      </conditions>
+      <actions>
+        <write_to_logbook category="general" text="'Lorem Ipsum'" title="'FOO BAR'" entity="'Maurice Moss'" faction="faction.argon" money="1000000Cr" bonus="2000000Cr" />
+        <write_to_logbook category="general" text="'Lorem Ipsum'" title="'FOO BAR'" entity="'Maurice Moss'" faction="faction.argon" money="1000000Cr" />
+        <write_to_logbook category="general" text="'Lorem Ipsum'" title="'FOO BAR'" entity="player.entity" faction="faction.argon" bonus="2000000Cr" />
+        <write_to_logbook category="general" text="'Lorem Ipsum'" title="'FOO BAR'" entity="'Maurice Moss'" faction="faction.argon" money="1000000Cr" bonus="2000000Cr" />
+        <write_to_logbook category="general" text="'Lorem Ipsum'" title="'FOO BAR'" faction="faction.argon" money="1000000Cr" bonus="2000000Cr" />
+        <write_to_logbook category="general" text="'Lorem Ipsum'" title="'FOO BAR'" entity="'Maurice Moss'" money="1000000Cr" bonus="2000000Cr" />
+        <write_to_logbook category="general" text="'Lorem Ipsum'" title="'FOO BAR'" entity="'Maurice Moss'" faction="faction.argon" money="1000000Cr" bonus="2000000Cr" />
+      </actions>
+    </cue>
+
+    <cue name="NewstickerTest" instantiate="true">
+      <conditions>
+        <event_cue_signalled />
+      </conditions>
+      <actions>
+        <set_value name="$reason" exact="'my reason'"/>
+        <signal_cue_instantly cue="md.GenericMissions.GenericNewsLogbookEntry" param="['GNN headline', 'Xenon invading Argon Prime', 'A xenon fleet was spotted heading for Argon prime. The Argon military is mounting defenses.']"/>
+      </actions>
+    </cue>
+
+    <cue name="NotificationTests">
+      <cues>
+
+        <cue name="NotificationTest_Timeout">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <show_notification text="{30003,1018}" timeout="30s" />
+          </actions>
+        </cue>
+        
+        <!-- Trigger md.Notifications.IllegalCargoDropped with dummy parameters, using player target -->
+        <cue name="NotificationTest_IllegalCargoDropped" instantiate="true" namespace="this">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <do_if value="@player.target.isclass.ship and player.target.pilot">
+              <set_value name="$droppedwares" exact="[ware.spacefuel, ware.spaceweed, ware.majadust]" />
+              <set_value name="$droppedamounts" exact="[5, 11, 42]" />
+              <create_group groupname="$drops" />
+              <signal_objects object="player.entity" param="'IllegalCargoDropped'" param2="player.target" param3="[player.target.pilot, $droppedwares, $droppedamounts, $drops, player.target.zone.policefaction]" />
+            </do_if>
+          </actions>
+        </cue>
+
+        <!-- Fake version of md.Notifications.VolatileInventoryRemoved -->
+        <cue name="NotificationTest_VolatileInventoryRemoved" instantiate="true" namespace="this">
+          <conditions>
+            <event_cue_signalled />
+          </conditions>
+          <actions>
+            <set_value name="$lostwares" exact="table[{ware.inv_magneticmaterial} = 1, {ware.inv_unstablecrystal} = 2, {ware.inv_spaceflyeggs} = 4, {ware.inv_decryptionmodule} = 3]" />
+            <set_value name="$logtext" exact="[]" />
+            <set_value name="$wares" exact="$lostwares.keys.list" />
+            <do_all exact="$wares.count" counter="$i">
+              <append_to_list name="$logtext" exact="$wares.{$i}.name" />
+              <append_to_list name="$logtext" exact="$lostwares.{$wares.{$i}}" />
+            </do_all>
+            <!-- Set up $tickertext from $logtext -->
+            <set_value name="$tickertext" exact="$logtext.clone" />
+            <set_value name="$tickertext.{1}" operation="insert" exact="{1015,102}" />
+            <set_value name="$tickertext.{2}" operation="insert" exact="''" />
+            <resize_list list="$tickertext" count="2*4" />
+            <set_value name="$tickertext.{2*4 - 1}" exact="{1015, 60}" />
+            <set_value name="$tickertext.{2*4}" exact="''" />
+            <show_notification text="$tickertext" priority="2" sound="notification_warning" />
+            <write_to_logbook category="general" title="{1015,102}" text="$logtext" separator="{1001,120} + ' '" />
+          </actions>
+        </cue>
+
+        <!-- Fake version of md.Notifications.PlayerHackedControlPanel -->
+        <!-- TODO: Remove or replace, since original event doesn't exist any more -->
+        <cue name="NotificationTest_PlayerHackedControlPanel" instantiate="true" namespace="this">
+          <conditions>
+            <event_cue_signalled />
+          </conditions>
+          <actions>
+            <set_value name="$logtext" exact="['Inventory used up:', '', ware.inv_decryptionmodule.name, 1, ware.inv_magneticmaterial.name, 3, ware.inv_unstablecrystal.name, 2]" />
+            <set_value name="$tickertext" exact="$logtext.clone" />
+            <set_value name="$tickertext.{1}" operation="insert" exact="{1015,17}" />
+            <set_value name="$tickertext.{2}" operation="insert" exact="''" />
+            <resize_list list="$tickertext" count="2*4" />
+            <set_value name="$tickertext.{2*4 - 1}" exact="{1015,60}" />
+            <set_value name="$tickertext.{2*4}" exact="''" />
+            <show_notification text="$tickertext" />
+            <write_to_logbook category="general" title="{1015,17}" text="$logtext" />
+          </actions>
+        </cue>
+
+        <!-- Fake version of md.Boarding.MarineFight -->
+        <cue name="NotificationTest_Boarding_MarineFight" instantiate="true" namespace="this">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <set_value name="$RecentLostMarines" exact="[
+                   ]" />
+            <set_value name="$nummarines" exact="42" />
+
+            <set_value name="$logtext" exact="[]" />
+            <set_value name="$LostMarine" exact="false"/>
+            <do_all exact="$RecentLostMarines.count" counter="$i">
+              <do_if value="$RecentLostMarines.{$i}.count">
+                <set_value name="$LostMarine" exact="true"/>
+                <!--TODO? We're currently taking the text for the marine rank from the marine macros. Should it come from the unitmap?-->
+                <append_to_list name="$logtext" exact="$RecentLostMarines.{$i}.{1}.name"/>
+                <append_to_list name="$logtext" exact="$RecentLostMarines.{$i}.count" />
+              </do_if>
+            </do_all>
+            <substitute_text text="$NumMarinesText" source="{1015,164}">
+              <replace string="'$NUM$'" with="$nummarines"/>
+            </substitute_text>
+            <append_to_list name="$logtext" exact="$NumMarinesText" />
+            <append_to_list name="$logtext" exact="''" />
+
+
+            <set_value name="$tickertext" exact="$logtext.clone" />
+            <set_value name="$tickertext.{1}" operation="insert" exact="{1015,160} + {1001,120} + ' ' + (if $LostMarine then {1015,162} else {1015,161})" />
+            <set_value name="$tickertext.{2}" operation="insert" exact="''" />
+            <!-- If log entry is too long for message ticker, make a copy and truncate -->
+            <do_if value="$tickertext.count" min="2*4 + 1">
+              <resize_list list="$tickertext" count="2*4" />
+              <set_value name="$tickertext.{2*3 - 1}" exact="{1015,60}" />
+              <set_value name="$tickertext.{2*3}" exact="''" />
+              <!-- Restore last line -->
+              <set_value name="$tickertext.{2*4 - 1}" exact="$logtext.{$logtext.count - 1}" />
+              <set_value name="$tickertext.{2*4}" exact="$logtext.{$logtext.count}" />
+            </do_if>
+
+            <show_notification text="$tickertext" />
+            <write_to_logbook category="general" title="{1015,160} + {1001,120} + ' ' + (if $LostMarine then {1015,162} else {1015,161})" text="$logtext" separator="{1001,120} + ' '" />
+          </actions>
+        </cue>
+
+      </cues>
+    </cue>
+
+    <cue name="TestForDPS" instantiate="true">
+      <conditions>
+        <event_cue_signalled />
+      </conditions>
+      <actions>
+        <debug_text text="'Playership Damage Output: ' + player.ship.dps.primary"/>
+        <do_if value="player.ship.dps.primary gt 0">
+          <debug_text text="'Passed damage check'"/>
+        </do_if>
+      </actions>
+    </cue>
+
+    <cue name="ShowHints">
+      <cues>
+
+        <!-- Test hint positions (see parameters.xml "hintpositions") -->
+        <cue name="ShowHintPositions_v2" instantiate="true">
+          <conditions>
+            <event_cue_signalled />
+          </conditions>
+          <actions>
+            <do_all exact="15" counter="$i">
+              <show_help custom="'Position: ' + ($i - 1) + '\n Lorem ipsum et deliat.'" force="true" position="$i - 1" duration="2s" />
+            </do_all>
+          </actions>
+        </cue>
+
+        <cue name="ShowHintLong_v2" instantiate="true">
+          <conditions>
+            <event_cue_signalled />
+          </conditions>
+          <actions>
+            <show_help custom="'Lorem \033[weapon_charge_mk1] ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.'" position="5"/>
+          </actions>
+        </cue>
+
+        <cue name="ShowHintMulti_v2" instantiate="true">
+          <conditions>
+            <event_cue_signalled />
+          </conditions>
+          <actions>
+            <show_help_multi position="5" force="true" allowclose="true" >
+              <text line="501" />
+              <text line="502" />
+              <text line="504" />
+            </show_help_multi>
+            <show_help_multi position="5" force="true" allowclose="false">
+              <text line="505" />
+              <text line="506" />
+              <text line="507" />
+            </show_help_multi>
+          </actions>
+        </cue>
+
+        <cue name="ShowHintOnMenu_v2" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+            <!--event_ui_triggered/-->
+          </conditions>
+          <actions>
+            <do_if value="event.param == 'InteractMenu' and event.param3">
+              <set_value name="$object" exact="component.{event.param3}"/>
+              <debug_text text="'p1: ' + event.param + ' p2: ' + event.param2 + ' p3: ' + event.param3 + ' p3-class:`' + $object.class + '` p3-name:`' + $object.name + '`'"/>
+            </do_if>
+            <do_else>
+              <debug_text text="'p1: ' + event.param + ' p2: ' + event.param2 + ' p3: ' + event.param3"/>
+            </do_else>
+          </actions>
+        </cue>
+        
+        <cue name="ShowHint_Custom" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+            <!--event_ui_triggered screen="'MapMenu'" control="''"/-->
+          </conditions>
+          <delay exact="1s"/>
+          <actions>
+            <show_help custom="'AAA \033[weapon_charge_mk1]'" position="5"/>
+          </actions>
+        </cue>
+
+        <cue name="ShowHint_Remove" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <delay exact="1s"/>
+          <actions>
+            <remove_help all="true"/>
+            <show_help line="14101" position="13" width="256" force="true" timeout="false" comment="Press $INPUT_ACTION_TOGGLE_SCAN_MODE$ to activate SCAN MODE."/>
+          </actions>
+          <delay exact="3s"/>
+          <actions>
+            <remove_help line="[14000, 14101]"/>
+          </actions>
+        </cue>
+
+      </cues>
+    </cue>
+
+    <!--
+    <cue name="EcoReportTest" instantiate="true">
+      <conditions>
+        <check_any>
+          <event_resource_shortage />
+          <event_request_transporter />
+          <event_production_not_viable />
+        </check_any>
+      </conditions>
+      <actions>
+        <do_if value="event.name == 'event_resource_shortage'">
+          <debug_text text="player.age + ': %1(%2, owned by: %4) in %3 reporting shortage for wares %5, workforce: %6'.[event.object.knownname, event.object, event.object.cluster, event.object.owner, event.param, event.param2]"/>
+        </do_if>
+        <do_elseif value="event.name == 'event_request_transporter'">
+          <debug_text text="player.age + ': %1(%2, owned by: %4) in %3 requesting transporter for ware: %5, workforce: %6, priority: %7'.[event.object.knownname, event.object, event.object.cluster, event.object.owner, event.param, event.param2, event.param3]"/>
+        </do_elseif>
+        </do_else>
+      </actions>
+    </cue>
+    -->
+
+    <cue name="Effects">
+      <cues>
+        <cue name="Explosion_Shockwave" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+            <check_value value="player.ship"/>
+          </conditions>
+          <actions>
+            <add_effect object="player.ship" effect="'plotship_l_explosion_generator'"/>
+            <!--create_position name="$EffectPos" object="player.ship.sector" space="player.ship.zone" value="player.ship.position"/>
+            <add_effect object="player.ship.zone" effect="'plotship_l_explosion_generator'">
+              <position value="$EffectPos"/>
+            </add_effect-->
+          </actions>
+        </cue>
+
+        <cue name="Explosion_StationExplosions" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+            <check_value value="player.ship"/>
+          </conditions>
+          <actions>
+            <add_effect object="player.ship" effect="'ref_explosion_station_explosion01'"/>
+          </actions>
+        </cue>
+        
+      </cues>
+    </cue>
+
+    <cue name="Inventory" instantiate="true">
+      <conditions>
+        <event_cue_signalled />
+      </conditions>
+      <actions>
+        <set_value name="$entity" exact="player.entity" />
+        <do_if value="@player.target.isclass.ship and player.target.pilot">
+          <set_value name="$entity" exact="player.target.pilot" />
+        </do_if>
+        <add_inventory entity="$entity" ware="ware.inv_interfaceunit" exact="150" />
+        <add_inventory entity="$entity" ware="ware.inv_agidevice_02" exact="150" />
+        <add_inventory entity="$entity" ware="ware.inv_kyondevice_03" exact="150" />
+        <add_inventory entity="$entity" ware="ware.inv_majaglit" exact="150" />
+        <add_inventory entity="$entity" ware="ware.inv_programmablefieldarray" exact="150" />
+        <add_inventory entity="$entity" ware="ware.inv_securitydecryptionsystem" exact="150" />
+        <add_inventory entity="$entity" ware="ware.inv_decryptionmodule" exact="150" />
+        <add_inventory entity="$entity" ware="ware.inv_unstablecrystal" exact="10" />
+        <add_inventory entity="$entity" ware="ware.inv_securityslicer" exact="150" />
+        <add_inventory entity="$entity" ware="ware.inv_finemeal" exact="150" />
+      </actions>
+    </cue>
+
+    <cue name="ModInventory" instantiate="true">
+      <conditions>
+        <event_cue_signalled />
+      </conditions>
+      <actions>
+        <add_inventory entity="player.entity" ware="ware.modpart_enginefuelinjector_t1" exact="5" />
+        <add_inventory entity="player.entity" ware="ware.modpart_enginefuelinjector_t2" exact="5" />
+        <add_inventory entity="player.entity" ware="ware.modpart_enginefuelinjector_t3" exact="5" />
+        <add_inventory entity="player.entity" ware="ware.modpart_extendedfuelcontainer" exact="100" />
+        <add_inventory entity="player.entity" ware="ware.modpart_highenergycatalyst" exact="100" />
+        <add_inventory entity="player.entity" ware="ware.modpart_nividiumcrystallite" exact="100" />
+        <add_inventory entity="player.entity" ware="ware.modpart_shieldgeneratorcoil_t1" exact="5" />
+        <add_inventory entity="player.entity" ware="ware.modpart_shieldgeneratorcoil_t2" exact="5" />
+        <add_inventory entity="player.entity" ware="ware.modpart_nividiumoxide" exact="100" />
+        <add_inventory entity="player.entity" ware="ware.modpart_shieldgeneratorcoil_t3" exact="5" />
+        <add_inventory entity="player.entity" ware="ware.modpart_shipnanoweave_t1" exact="5" />
+        <add_inventory entity="player.entity" ware="ware.modpart_shipnanoweave_t2" exact="5" />
+        <add_inventory entity="player.entity" ware="ware.modpart_shipnanoweave_t3" exact="5" />
+        <add_inventory entity="player.entity" ware="ware.modpart_tuningsoftware" exact="100" />
+        <add_inventory entity="player.entity" ware="ware.modpart_weaponchamber_t1" exact="5" />
+        <add_inventory entity="player.entity" ware="ware.modpart_weaponchamber_t2" exact="5" />
+        <add_inventory entity="player.entity" ware="ware.modpart_weaponchamber_t3" exact="5" />
+      </actions>
+    </cue>
+
+    <cue name="PaintModInventory" instantiate="true">
+      <conditions>
+        <event_cue_signalled />
+      </conditions>
+      <actions>
+        <add_inventory entity="player.entity" ware="ware.paintmod_0001" exact="1" />
+        <add_inventory entity="player.entity" ware="ware.paintmod_0002" exact="1" />
+        <add_inventory entity="player.entity" ware="ware.paintmod_0003" exact="1" />
+        <add_inventory entity="player.entity" ware="ware.paintmod_0004" exact="1" />
+        <add_inventory entity="player.entity" ware="ware.paintmod_0005" exact="1" />
+        <add_inventory entity="player.entity" ware="ware.paintmod_0006" exact="1" />
+        <add_inventory entity="player.entity" ware="ware.paintmod_0007" exact="1" />
+        <add_inventory entity="player.entity" ware="ware.paintmod_0008" exact="1" />
+        <add_inventory entity="player.entity" ware="ware.paintmod_0009" exact="1" />
+        <add_inventory entity="player.entity" ware="ware.paintmod_0010" exact="1" />
+        <add_inventory entity="player.entity" ware="ware.paintmod_0011" exact="1" />
+        <add_inventory entity="player.entity" ware="ware.paintmod_0012" exact="1" />
+        <add_inventory entity="player.entity" ware="ware.paintmod_0013" exact="1" />
+        <add_inventory entity="player.entity" ware="ware.paintmod_0014" exact="1" />
+        <add_inventory entity="player.entity" ware="ware.paintmod_0015" exact="1" />
+        <add_inventory entity="player.entity" ware="ware.paintmod_0016" exact="1" />
+        <add_inventory entity="player.entity" ware="ware.paintmod_0017" exact="1" />
+        <add_inventory entity="player.entity" ware="ware.paintmod_0018" exact="1" />
+        <add_inventory entity="player.entity" ware="ware.paintmod_0019" exact="1" />
+      </actions>
+    </cue>
+
+    <cue name="DockObjectiveTest" instantiate="true">
+      <conditions>
+        <event_cue_signalled/>
+      </conditions>
+      <actions>
+        <find_station name="$Station" space="player.zone" />
+
+        <do_if value="$Station">
+          <find_object_component object="$Station" class="class.dockarea" name="$DockArea" />
+          <do_if value="$DockArea">
+            <debug_text text="'Destination is ' + $Station.knownname + ' in ' + $Station.zone.knownname"/>
+            <create_mission cue="DockObjectiveTest" name="'Dock at station'" description="'foo'" faction="faction.argon" type="missiontype.station">
+              <briefing>
+                <objective step="1" action="objective.flyto" object="$DockArea"/>
+              </briefing>
+            </create_mission>
+
+            <set_objective cue="DockObjectiveTest" step="1" action="objective.flyto" object="$DockArea"/>
+          </do_if>
+          <do_else>
+            <debug_text text="'no dock area'"/>
+            <cancel_cue cue="DockObjectiveTest"/>
+          </do_else>
+        </do_if>
+        <do_else>
+          <debug_text text="'no station'"/>
+          <cancel_cue cue="DockObjectiveTest"/>
+        </do_else>
+      </actions>
+      <cues>
+        <cue name="DockObjectiveTest_KeepAlive" instantiate="true">
+          <conditions>
+            <event_boarding_support_failed object="player.ship"/>
+          </conditions>
+        </cue>
+      </cues>
+    </cue>
+
+    <cue name="DebugObjectiveTarget">
+      <cues>
+        <cue name="DebugObjectiveTarget_Trigger" instantiate="true">
+          <conditions>
+            <event_object_signalled object="player.entity" param="'debug objective'" comment="arguments passed with param2" />
+          </conditions>
+          <actions>
+            <do_if value="typeof event.param2 == datatype.component">
+              <create_mission cue="DebugObjectiveTarget" name="'Objective Target Debugging'" faction="faction.player" type="missiontype.guidance">
+                <objective action="objective.find" object="event.param2" />
+              </create_mission>
+            </do_if>
+            <do_elseif value="typeof event.param2 == datatype.componentslot">
+              <create_mission cue="DebugObjectiveTarget" name="'Objective Target Debugging'" faction="faction.player" type="missiontype.guidance">
+                <objective action="objective.find" slot="event.param2" />
+              </create_mission>
+            </do_elseif>
+            <do_else>
+              <remove_mission cue="DebugObjectiveTarget" type="completed" />
+            </do_else>
+          </actions>
+        </cue>
+        <cue name="DebugObjectiveTarget_Cancel" instantiate="true">
+          <conditions>
+            <event_mission_aborted cue="DebugObjectiveTarget" />
+          </conditions>
+          <actions>
+            <remove_mission cue="DebugObjectiveTarget" type="aborted" />
+          </actions>
+        </cue>
+      </cues>
+    </cue>
+
+    <!-- Scripting / MissionDirector / F8 to reload cutscenes -->
+    <cue name="CutsceneNpc">
+      <cues>
+        <cue name="Cutscene_Npc_Monolog" instantiate="true" namespace="this">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <!--create_npc_template name="$engineertemplate" object="$Resupplier" macro="macro.character_argon_male_engineer_01_macro" role="entityrole.service" /-->
+            <!--create_cue_actor cue="Cutscene_Npc" actor="$NPC"/-->
+            <!-- without the 'macro' attribute, a random npc will be selected-->
+            <create_cue_actor cue="Cutscene_Npc_Monolog" name="$NPC" actor="$npctemplate" macro="macro.tutorial_character_commander_macro" />
+            <set_value name="$Event_Timeout" exact="10s"/>
+            <play_cutscene result="$CutsceneID" key="'ShowPilot'" targetmonitor="true" timeout="$Event_Timeout">
+              <!--interaction text="{30201,4}" param="$SignalLeakActor" param2="'accept_interaction'"/-->
+              <param name="npcref" object="$NPC" />
+            </play_cutscene>
+          </actions>
+          <cues>
+            <cue name="Cutscene_Npc_Monolog_Speak">
+              <delay exact="1s"/>
+              <actions>
+                <speak actor="$NPC" line="10404"/>
+              </actions>
+              <cues>
+                <cue name="Cutscene_Npc_Monolog_Speak2">
+                  <conditions>
+                    <event_speak_finished actor="$NPC"/>
+                  </conditions>
+                  <delay exact="500ms"/>
+                  <actions>
+                    <speak actor="$NPC" line="10503"/>
+                  </actions>
+                </cue>
+              </cues>
+            </cue>
+            <cue name="Cutscene_Npc_Monolog_Ended">
+              <conditions>
+                <event_cutscene_stopped key="'ShowPilot'"/>
+              </conditions>
+              <actions>
+                <debug_text text="'Monolog Ended'"/>
+              </actions>
+            </cue>
+          </cues>
+        </cue>
+
+        <cue name="Cutscene_Npc_Dialog" instantiate="true" namespace="this">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <create_cue_actor cue="Cutscene_Npc_Dialog" name="$NPC" actor="$npctemplate" macro="macro.character_boron_hq_mentor_macro">
+              <page exact="10201"/>
+            </create_cue_actor>
+            <create_cue_actor cue="Cutscene_Npc_Dialog" name="$NPC2" actor="$npctemplate" macro="macro.character_argon_male_plot_dal_buster_macro" />
+
+            <set_value name="$Event_Timeout" exact="15s"/>
+            <play_cutscene result="this.$CutsceneID" key="'ShowCharacterDialog'" targetmonitor="true" timeout="$Event_Timeout">
+              <param name="npcref"  object="$NPC" />
+              <param name="npcref2" object="$NPC2" />
+            </play_cutscene>
+          </actions>
+          <cues>
+
+            <cue name="Cutscene_Npc_Dialog_Started">
+              <conditions>
+                <event_cutscene_started key="'ShowCharacterDialog'"/>
+              </conditions>
+              <actions>
+                <cutscene_event key="'ShowCharacterDialog'" event="'TriggerSequence1Start'"/>
+              </actions>
+            </cue>
+            <cue name="Cutscene_Npc_Dialog_Speak">
+              <delay exact="1s"/>
+              <actions>
+                <speak actor="$NPC" line="30201203"/>
+              </actions>
+              <cues>
+                <cue name="Cutscene_Npc_Dialog_SpeakFinished">
+                  <conditions>
+                    <event_speak_finished actor="$NPC"/>
+                  </conditions>
+                  <delay exact="1s"/>
+                  <actions>
+                    <cutscene_event key="'ShowCharacterDialog'" event="'TriggerSequence1Stop'"/>
+                    <cutscene_event key="'ShowCharacterDialog'" event="'TriggerSequence2Start'"/>
+                  </actions>
+                  <cues>
+                    <cue name="Cutscene_Npc_Dialog_Speak2">
+                      <delay exact="1s"/>
+                      <actions>
+                        <speak actor="$NPC2" line="10403"/>
+                      </actions>
+                      <cues>
+                        <cue name="Cutscene_Npc_Dialog_SpeakFinished2">
+                          <conditions>
+                            <event_speak_finished actor="$NPC2"/>
+                          </conditions>
+                          <delay exact="1s"/>
+                          <actions>
+                            <!--cutscene_event key="'ShowCharacterDialog'" event="'TriggerSequence2Stop'"/-->
+                            <stop_cutscene key="'ShowCharacterDialog'"/>
+                            <debug_text text="'done'"/>
+                          </actions>
+                        </cue>
+                      </cues>
+                    </cue>
+                  </cues>
+                </cue>
+              </cues>
+            </cue>
+            <cue name="Cutscene_Npc_Dialog_Ended">
+              <conditions>
+                <event_cutscene_stopped key="'ShowPilot'"/>
+              </conditions>
+              <actions>
+                <debug_text text="'Dialog Ended'"/>
+              </actions>
+            </cue>
+          </cues>
+        </cue>
+
+
+        <cue name="Cutscene_BosoDefault_Dialog" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <do_if value="md.X4Ep1_Mentor_Subscriptions.Debug_Create_HQ_With_Mentors.state == cuestate.waiting">
+              <force_cue cue="md.X4Ep1_Mentor_Subscriptions.Debug_Create_HQ_With_Mentors"/>
+            </do_if>
+            <precache_hint object="md.$PersistentCharacters.$BosoTa"/>
+            <precache_hint object="md.$PersistentCharacters.$DalBusta"/>
+            <precache_hint object="md.X4Ep1_Mentor_Subscriptions.Start.$MentorRoom"/>
+            <play_cutscene key="'ShowCharacterDal'" targetmonitor="true" caption="{10002,23}" result="this.$CutsceneID">
+              <param name="mentorroom" object="md.X4Ep1_Mentor_Subscriptions.Start.$MentorRoom"/>
+              <param name="npcref" object="md.$PersistentCharacters.$BosoTa" />
+              <param name="npcref2" object="md.$PersistentCharacters.$DalBusta" />
+            </play_cutscene>
+          </actions>
+          <cues>
+            <cue name="Cutscene_BosoDefault_Dialog_Started">
+              <conditions>
+                <event_cutscene_started key="'ShowCharacterDal'"/>
+              </conditions>
+              <actions>
+                <cutscene_event key="'ShowCharacterDal'" event="'TriggerDefaultSequence'"/>
+              </actions>
+            </cue>
+            <cue name="Cutscene_BosoDefault_Dialog_Stop">
+              <delay exact="4s"/>
+              <actions>
+                <stop_cutscene cutscene="parent.$CutsceneID"/>
+              </actions>
+            </cue>
+          </cues>
+        </cue>
+
+        <cue name="Cutscene_BosoOrbit_Dialog" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            
+              
+            <do_if value="md.X4Ep1_Mentor_Subscriptions.Debug_Create_HQ_With_Mentors.state == cuestate.waiting">
+              <force_cue cue="md.X4Ep1_Mentor_Subscriptions.Debug_Create_HQ_With_Mentors"/>
+            </do_if>
+            <precache_hint object="md.$PersistentCharacters.$BosoTa"/>
+            <precache_hint object="md.$PersistentCharacters.$DalBusta"/>
+            <precache_hint object="md.X4Ep1_Mentor_Subscriptions.Start.$MentorRoom"/>
+            <play_cutscene key="'ShowCharacterDal'" targetmonitor="true" caption="{10002,23}" result="this.$CutsceneID">
+              <param name="mentorroom" object="md.X4Ep1_Mentor_Subscriptions.Start.$MentorRoom"/>
+              <param name="npcref" object="md.$PersistentCharacters.$BosoTa" />
+              <param name="npcref2" object="md.$PersistentCharacters.$DalBusta" />
+            </play_cutscene>
+          </actions>
+          <cues>
+            <cue name="Cutscene_BosoOrbit_Dialog_Started">
+              <conditions>
+                <event_cutscene_started key="'ShowCharacterDal'"/>
+              </conditions>
+              <actions>
+                <cutscene_event key="'ShowCharacterDal'" event="'TriggerOrbitSequence'"/>
+              </actions>
+            </cue>
+            <cue name="Cutscene_BosoOrbit_Dialog_Stop">
+              <delay exact="7s"/>
+              <actions>
+                <stop_cutscene cutscene="parent.$CutsceneID"/>
+              </actions>
+            </cue>
+          </cues>
+        </cue>
+
+        <cue name="Cutscene_Boso_Dialog" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <do_if value="md.X4Ep1_Mentor_Subscriptions.Debug_Create_HQ_With_Mentors.state == cuestate.waiting">
+              <force_cue cue="md.X4Ep1_Mentor_Subscriptions.Debug_Create_HQ_With_Mentors"/>
+            </do_if>
+            <precache_hint object="md.$PersistentCharacters.$BosoTa"/>
+            <precache_hint object="md.$PersistentCharacters.$DalBusta"/>
+            <precache_hint object="md.X4Ep1_Mentor_Subscriptions.Start.$MentorRoom"/>
+            <play_cutscene key="'ShowCharacterDal'" targetmonitor="true" caption="{10002,23}" result="this.$CutsceneID">
+              <param name="mentorroom" object="md.X4Ep1_Mentor_Subscriptions.Start.$MentorRoom"/>
+              <param name="npcref" object="md.$PersistentCharacters.$BosoTa" />
+              <param name="npcref2" object="md.$PersistentCharacters.$DalBusta" />
+            </play_cutscene>
+          </actions>
+          <cues>
+            <cue name="Cutscene_Boso_Dialog_Started">
+              <conditions>
+                <event_cutscene_started key="'ShowCharacterDal'"/>
+              </conditions>
+              <actions>
+                <cutscene_event key="'ShowCharacterDal'" event="'TriggerBosoTankSequence'"/>
+              </actions>
+            </cue>
+            <cue name="Cutscene_Boso_Dialog_Stop">
+              <delay exact="4s"/>
+              <actions>
+                <stop_cutscene cutscene="parent.$CutsceneID"/>
+              </actions>
+            </cue>
+          </cues>
+        </cue>
+
+        <cue name="Cutscene_Dal_Dialog" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <do_if value="md.X4Ep1_Mentor_Subscriptions.Debug_Create_HQ_With_Mentors.state == cuestate.waiting">
+              <force_cue cue="md.X4Ep1_Mentor_Subscriptions.Debug_Create_HQ_With_Mentors"/>
+            </do_if>
+            <precache_hint object="md.$PersistentCharacters.$BosoTa"/>
+            <precache_hint object="md.$PersistentCharacters.$DalBusta"/>
+            <precache_hint object="md.X4Ep1_Mentor_Subscriptions.Start.$MentorRoom"/>
+            <play_cutscene key="'ShowCharacterDal'" targetmonitor="true" caption="{10002,23}" result="this.$CutsceneID">
+              <param name="mentorroom" object="md.X4Ep1_Mentor_Subscriptions.Start.$MentorRoom"/>
+              <param name="npcref" object="md.$PersistentCharacters.$BosoTa" />
+              <param name="npcref2" object="md.$PersistentCharacters.$DalBusta" />
+            </play_cutscene>
+          </actions>
+          <cues>
+            <cue name="Cutscene_Dal_Dialog_Started">
+              <conditions>
+                <event_cutscene_started key="'ShowCharacterDal'"/>
+              </conditions>
+              <actions>
+                <cutscene_event key="'ShowCharacterDal'" event="'TriggerDalComputerSequence'"/>
+              </actions>
+            </cue>
+            <cue name="Cutscene_Dal_Dialog_Stop">
+              <delay exact="4s"/>
+              <actions>
+                <stop_cutscene cutscene="parent.$CutsceneID"/>
+              </actions>
+            </cue>
+          </cues>
+        </cue>
+
+        <cue name="Cutscene_Duke_Dialog" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+
+            <create_cue_actor name="$Duke" cue="Cutscene_Duke_Dialog" macro="character_paranid_plot_pirate_duke_macro">
+              <page exact="10351"/>
+            </create_cue_actor>
+
+            <play_cutscene key="'ShowPilot'" targetmonitor="true" caption="{10002,23}" result="this.$CutsceneID">
+              <param name="npcref" object="$Duke" />
+            </play_cutscene>
+          </actions>
+          <cues>
+            <cue name="Cutscene_Duke_Dialog_Started">
+              <conditions>
+                <event_cutscene_started key="'ShowPilot'"/>
+              </conditions>
+            </cue>
+            <cue name="Cutscene_Duke_Dialog_Stop">
+              <delay exact="4s"/>
+              <actions>
+                <stop_cutscene cutscene="parent.$CutsceneID"/>
+              </actions>
+            </cue>
+          </cues>
+        </cue>
+
+
+      </cues>
+    </cue>
+
+    <!-- Scripting / MissionDirector / F8 to reload cutscenes -->
+    <cue name="Cutscenes" comment="testing cutscenes">
+      <cues>
+
+        <cue name="Cutscene_flyby1" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <delay exact="2s"/>
+          <actions>
+            <do_if value="player.target">
+              <play_cutscene result="$CutsceneID" key="'Cutscene_flyby1'">
+                <param name="target_object" object="player.target"/>
+              </play_cutscene>
+            </do_if>
+            <do_else>
+              <debug_text text="'No target selected'"/>
+            </do_else>
+          </actions>
+          <force name="Cutscene_flyby1"/>
+        </cue>
+
+        <cue name="Cutscene_flyby2" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <delay exact="2s"/>
+          <actions>
+            <do_if value="player.target">
+              <play_cutscene result="$CutsceneID" key="'Cutscene_flyby2'">
+                <param name="target_object" object="player.target"/>
+              </play_cutscene>
+            </do_if>
+            <do_else>
+              <debug_text text="'No target selected'"/>
+            </do_else>
+          </actions>
+          <force name="Cutscene_flyby2"/>
+        </cue>
+
+        <cue name="Cutscene_orientation" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <delay exact="2s"/>
+          <actions>
+            <do_if value="player.target">
+              <play_cutscene result="$CutsceneID" key="'Cutscene_orientation'">
+                <param name="target_object" object="player.target"/>
+              </play_cutscene>
+            </do_if>
+            <do_else>
+              <debug_text text="'No target selected'"/>
+            </do_else>
+          </actions>
+          <force name="Cutscene_orientation"/>
+        </cue>
+
+        <cue name="Cutscene_pan1" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <delay exact="2s"/>
+          <actions>
+            <do_if value="player.target">
+              <play_cutscene result="$CutsceneID" key="'Cutscene_pan1'">
+                <param name="target_object" object="player.target"/>
+              </play_cutscene>
+            </do_if>
+            <do_else>
+              <debug_text text="'No target selected'"/>
+            </do_else>
+          </actions>
+          <force name="Cutscene_pan1"/>
+        </cue>
+
+        <cue name="Cutscene_pan2_target2player" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <delay exact="2s"/>
+          <actions>
+            <do_if value="player.target and player.ship">
+              <play_cutscene result="$CutsceneID" key="'Cutscene_pan2'">
+                <param name="ship1" object="player.target"/>
+                <param name="ship2" object="player.ship"/>
+              </play_cutscene>
+            </do_if>
+            <do_else>
+              <debug_text text="'No target selected'"/>
+            </do_else>
+          </actions>
+          <force name="Cutscene_pan2_target2player"/>
+        </cue>
+
+        <cue name="Cutscene_pan3" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <delay exact="2s"/>
+          <actions>
+            <do_if value="player.target">
+              <play_cutscene result="$CutsceneID" key="'Cutscene_panover'">
+                <param name="target_object" object="player.target"/>
+              </play_cutscene>
+            </do_if>
+            <do_else>
+              <debug_text text="'No target selected'"/>
+            </do_else>
+          </actions>
+          <force name="Cutscene_pan3"/>
+        </cue>
+
+        <cue name="Cutscene_singleobject" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <delay exact="2s"/>
+          <actions>
+            <do_if value="player.target">
+              <play_cutscene result="$CutsceneID" key="'Cutscene_singleobject'">
+                <param name="target_object" object="player.target"/>
+              </play_cutscene>
+            </do_if>
+            <do_else>
+              <debug_text text="'No target selected'"/>
+            </do_else>
+          </actions>
+          <force name="Cutscene_singleobject"/>
+        </cue>
+      </cues>
+    </cue>
+
+    <cue name="DroneControl">
+      <cues>
+
+        <cue name="DockedMenu_Observe">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <cues>
+            <cue name="DockedMenu_DroneModeChange" instantiate="true">
+              <conditions>
+                <check_any>
+                  <event_object_miningdronemode_changed object="player.ship"/>
+                  <event_object_transportdronemode_changed object="player.ship"/>
+                  <event_object_defencedronemode_changed object="player.ship"/>
+                </check_any>
+              </conditions>
+              <actions>
+                <debug_text text="'Dronemode:' + event.param"/>
+              </actions>
+            </cue>
+
+            <cue name="DroneStatusChange" instantiate="true">
+              <conditions>
+                <check_any>
+                  <event_object_miningdrones_armed object="player.ship"/>
+                  <event_object_miningdrones_disarmed object="player.ship"/>
+                </check_any>
+              </conditions>
+              <actions>
+                <debug_text text="event.name"/>
+              </actions>
+            </cue>
+
+          </cues>
+        </cue>
+
+        <cue name="ArmDrones" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <set_drone_armed object="player.ship" category="unitcategory.gascollector" armed="true"/>
+            <set_drone_armed object="player.ship" category="unitcategory.orecollector" armed="true"/>
+            <set_drone_armed object="player.ship" category="unitcategory.transport" armed="true"/>
+            <set_drone_armed object="player.ship" category="unitcategory.repair" armed="true"/>
+          </actions>
+        </cue>
+
+        <cue name="DisarmDrones" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <set_drone_armed object="player.ship" category="unitcategory.gascollector" armed="false"/>
+            <set_drone_armed object="player.ship" category="unitcategory.orecollector" armed="false"/>
+            <set_drone_armed object="player.ship" category="unitcategory.transport" armed="false"/>
+            <set_drone_armed object="player.ship" category="unitcategory.repair" armed="false"/>
+          </actions>
+        </cue>
+
+        <cue name="MiningDroneInfo" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <do_if value="player.ship">
+              <debug_text text="'miningdrone-count: ' + player.ship.units.{unitcategory.orecollector}.count"/>
+              <debug_text text="'miningdrone-mode: ' + player.ship.miningdronemode"/>
+              <debug_text text="'miningdrones-armed: ' + if player.ship.hasarmedminingdrones then 'true' else 'false'"/>
+            </do_if>
+          </actions>
+        </cue>
+      </cues>
+    </cue>
+
+    <cue name="ShipControl">
+      <cues>
+
+        <cue name="ShipSetTurrets1" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <set_value name="$ship" exact="player.ship"/>
+            <include_actions ref="md.LIB_Generic.Setup_Ship_Turrets_HoldFire"/>
+          </actions>
+        </cue>
+
+        <cue name="ShipSetTurrets2" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <set_value name="$ship" exact="player.ship"/>
+            <include_actions ref="md.LIB_Generic.Setup_Ship_Turrets_Defend"/>
+          </actions>
+        </cue>
+
+        <cue name="ShipAnyTurretsMining" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <set_value name="$weapons_all" exact="player.ship.turrets.operational.list"/>
+            <create_list name="$turretmodes"/>
+            <do_all exact="$weapons_all.count" counter="$i">
+              <do_if value="not $turretmodes.indexof.{$weapons_all.{$i}.mode}">
+                <append_to_list name="$turretmodes" exact="$weapons_all.{$i}.mode"/>
+              </do_if>
+            </do_all>
+            <do_if value="@$turretmodes.indexof.{weaponmode.mining}">
+              <debug_text text="'TurretsMining: true'"/>
+            </do_if>
+            <do_else>
+              <debug_text text="'TurretsMining: false'"/>
+            </do_else>
+          </actions>
+        </cue>
+
+      </cues>
+    </cue>
+
+    <cue name="NpcControl">
+      <cues>
+        <cue name="PilotToBack">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <signal_objects object="player.ship.pilot" param="'npc__leave_post'"/>
+          </actions>
+        </cue>
+      </cues>
+    </cue>
+
+    <cue name="Holomap">
+      <cues>
+
+        <cue name="HolomapZoom" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <set_holomap_zoom value="10000" instant="false" />
+          </actions>
+        </cue>
+
+        <cue name="HolomapFilterOn" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <!-- see menu_map.lua, config.mapfilterversion-table -->
+            <raise_lua_event name="'mapfilter'" param="'layer_trade;true'"/>
+            <raise_lua_event name="'mapfilter'" param="'layer_think;true'"/>
+            <raise_lua_event name="'mapfilter'" param="'layer_mining;true'"/>
+            <raise_lua_event name="'mapfilter'" param="'layer_other;true'"/>
+          </actions>
+        </cue>
+
+        <cue name="HolomapFilterOff" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <!-- see menu_map.lua, config.mapfilterversion-table -->
+            <raise_lua_event name="'mapfilter'" param="'layer_trade;false'"/>
+            <raise_lua_event name="'mapfilter'" param="'layer_think;false'"/>
+            <raise_lua_event name="'mapfilter'" param="'layer_mining;false'"/>
+            <raise_lua_event name="'mapfilter'" param="'layer_other;false'"/>
+          </actions>
+        </cue>
+
+        <cue name="HolomapText" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <add_holomap_text object="player.entity" text="'This is the player'"/>
+          </actions>
+        </cue>
+
+      </cues>
+    </cue>
+
+    <cue name="Stations">
+      <cues>
+
+        <cue name="TransferTargetStation2" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <do_if value="player.target.isclass.station">
+              <set_value name="$Station" exact="player.target"/>
+              <set_value name="$Faction" exact="faction.argon"/>
+              <include_actions ref="md.LIB_Generic.TransferStationOwnership"/>
+            </do_if>
+            <do_else>
+              <debug_text text="'No station selected'"/>
+            </do_else>
+          </actions>
+        </cue>
+
+        <cue name="BuildStation">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <create_station name="$station" macro="macro.station_gen_factory_base_01_macro" owner="faction.player" sector="player.sector" rawname="{20102, 2011}" state="componentstate.operational">
+              <safepos object="player.entity" z="10km"/>
+            </create_station>
+            <!-- phase 1 - extend station -->
+            <create_construction_sequence macros="[macro.prod_gen_hullparts_macro, macro.dockarea_arg_m_station_01_hightech_macro]" station="$station" comment="async calculation"/>
+          </actions>
+          <cues>
+            <cue name="BuildStation_UnderConstruction">
+              <conditions>
+                <event_object_construction_sequence_created object="$station" />
+              </conditions>
+              <actions>
+                <set_value name="$ConstructionSequence" exact="event.param" />
+                <do_if value="$ConstructionSequence">
+                  <apply_construction_sequence station="$station" sequence="$ConstructionSequence" />
+                  <!-- phase 2 - under construction / expand station-->
+                  <create_construction_sequence macros="[macro.prod_gen_smartchips_macro, macro.prod_gen_refinedmetals_macro]" station="$station" base="$station.plannedconstruction.sequence" comment="async calculation"/>
+                </do_if>
+              </actions>
+              <cues>
+                <cue name="BuildStation_UnderConstruction_Wait">
+                  <conditions>
+                    <event_object_construction_sequence_created object="$station" />
+                  </conditions>
+                  <actions>
+                    <set_value name="$ConstructionSequence" exact="event.param" />
+                    <do_if value="$ConstructionSequence">
+                      <set_value name="$BuildTask" exact="null"/>
+                      <add_build_to_expand_station object="$station.buildstorage" buildobject="$station" constructionplan="$ConstructionSequence" result="$BuildTask" />
+                    </do_if>
+                  </actions>
+                  <cues>
+                    <cue name="BuildStation_FillStorage">
+                      <conditions>
+                        <event_build_started object="$station.buildstorage"/>
+                      </conditions>
+                      <actions>
+                        <!-- fill buildstorage with needed wares -->
+                        <set_value name="$BuildProcessor" exact="$station.buildstorage.buildprocessor"/>
+                        <set_value name="$BuildWareAmounts" exact="$BuildProcessor.neededsequenceresources.table"/>
+                        <do_for_each name="$BuildWare" valuename="$BuildWareAmount" in="$BuildWareAmounts">
+                          <debug_text text="'Adding ' + $BuildWareAmount + ' of ' + $BuildWare + ' to buildstorage'"/>
+                          <add_cargo object="$station.buildstorage" ware="$BuildWare" exact="$BuildWareAmount"/>
+                        </do_for_each>
+                      </actions>
+                    </cue>
+                  </cues>
+                </cue>
+              </cues>
+            </cue>
+            <cue name="Scenario2_Station_Selected" instantiate="true">
+              <conditions>
+                <event_ui_triggered screen="'MapMenu'" control="'selection_station'"/>
+                <check_value value="component.{event.param3} == $station"/>
+              </conditions>
+              <actions>
+                <debug_text text="'Selected construction-station on map'"/>
+              </actions>
+            </cue>
+            <cue name="Scenario2_Station_Teleport" instantiate="true">
+              <conditions>
+                <event_object_changed_object object="player.entity" newobject="$station"/>
+              </conditions>
+              <actions>
+                <show_help line="24001" position="15" duration="10s" log="true" width="256" force="true" comment="Welcome to the ..."/>
+              </actions>
+            </cue>
+          </cues>
+        </cue>
+
+        <cue name="DockedPlayerShipsToStorage" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <find_ship name="$DockedPlayerShips" space="player.galaxy"  trueowner="faction.player" multiple="true" docked="true" recursive="true"/>
+            <debug_text text="'Found: ' + $DockedPlayerShips.count"/>
+            <create_group groupname="$DockedPlayerShipsGroup"/>
+            <do_all exact="$DockedPlayerShips.count" counter="$i">
+              <request_store_ship object="$DockedPlayerShips.{$i}.station" ship="$DockedPlayerShips.{$i}"/>
+              <add_to_group groupname="$DockedPlayerShipsGroup" object="$DockedPlayerShips.{$i}"/>
+              <debug_text text="'Storage: ' + $DockedPlayerShips.{$i}.name + ' oid=' + $DockedPlayerShips.{$i}"/>
+            </do_all>
+          </actions>
+          <cues>
+            <!-- TODO: Currently no event signalling it arrived in storage -->
+            <!--cue name="Scenario2_DockedPlayerShipsToStorage_done" instantiate="true">
+              <conditions>
+                <event_object_docked group="$DockedPlayerShipsGroup"/>
+                <check_value value="event.param.isstorage"/>
+              </conditions>
+              <actions>
+                <debug_text text="'arrived in internal storage: ' + event.object + ' evt.param=' + event.param"/>
+              </actions>
+            </cue-->
+      </cues>
+    </cue>
+
+        <cue name="StoredPlayerShipsToDock" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <find_ship name="$DockedPlayerShips" space="player.galaxy" owner="faction.player" multiple="true" recursive="true" docked="true"/>
+            <debug_text text="'Found: ' + $DockedPlayerShips.count"/>
+            <create_group groupname="$StoragePlayerShipsGroup"/>
+            <do_all exact="$DockedPlayerShips.count" counter="$i">
+              <do_if value="$DockedPlayerShips.{$i}.dock.isstorage">
+                <request_retrieval queuedresult="$QueuedResult2" grantedresult="$GrantedResult2" ship="$DockedPlayerShips.{$i}"/>
+                <debug_text text="'Retrieving: ' + $DockedPlayerShips.{$i}.name + ' oid=' + $DockedPlayerShips.{$i} + '(queuedresult=' + $QueuedResult2 + ' grantedresult=' + $GrantedResult2 + ')'"/>
+                <add_to_group groupname="$StoragePlayerShipsGroup" object="$DockedPlayerShips.{$i}"/>
+              </do_if>
+            </do_all>
+          </actions>
+          <cues>
+            <!-- TODO: Currently no event signalling it arrived in storage -->
+            <cue name="StoredPlayerShipsToDock_done" instantiate="true">
+              <conditions>
+                <event_object_docked group="$StoragePlayerShipsGroup"/>
+                <!--check_value value="event.param.isstorage"/-->
+              </conditions>
+              <actions>
+                <debug_text text="'arrived on dock: ' + event.object + ' evt.param=' + event.param" comment="note that this already triggers while the dock is still opening/moving"/>
+                <remove_from_group group="$StoragePlayerShipsGroup" object="event.object"/>
+              </actions>
+            </cue>
+  </cues>
+        </cue>
+
+      </cues>
+    </cue>
+
+    <library name="DebugPrintValue" purpose="run_actions">
+      <params>
+        <param name="value" />
+        <param name="recursiondepth" default="2" />
+        <param name="indent" default="''" />
+        <param name="prefix" default="''" />
+        <param name="postfix" default="''" />
+      </params>
+      <actions>
+        <do_if value="$recursiondepth" min="1">
+          <do_if value="typeof $value == datatype.table">
+            <do_if value="$value.keys.count">
+              <debug_text text="$indent + $prefix + 'table['" context="false" />
+              <set_value name="$nextindent" exact="$indent + '  '" />
+              <do_for_each in="$value">
+                <run_actions ref="DebugPrintValue">
+                  <param name="recursiondepth" value="$recursiondepth - 1" />
+                  <param name="indent" value="$nextindent" />
+                  <param name="prefix" value="loop.key + ' = '" />
+                  <param name="value" value="loop.value" />
+                  <param name="postfix" value="','" />
+                </run_actions>
+              </do_for_each>
+              <debug_text text="$indent + ']' + $postfix" context="false" />
+              <return />
+            </do_if>
+          </do_if>
+          <do_elseif value="typeof $value == datatype.list">
+            <do_if value="$value.count and ($value.count gt 1 or typeof $value.{1} == datatype.table or typeof $value.{1} == datatype.list)" comment="Skip recursion for trivial content">
+              <debug_text text="$indent + $prefix + '['" context="false" />
+              <set_value name="$nextindent" exact="$indent + '  '" />
+              <do_for_each in="$value">
+                <run_actions ref="DebugPrintValue">
+                  <param name="recursiondepth" value="$recursiondepth - 1" />
+                  <param name="indent" value="$nextindent" />
+                  <param name="value" value="loop.element" />
+                  <param name="postfix" value="if loop.index == $value.count then '' else ','" />
+                </run_actions>
+              </do_for_each>
+              <debug_text text="$indent + ']' + $postfix" context="false" />
+              <return />
+            </do_if>
+          </do_elseif>
+        </do_if>
+        <debug_text text="$indent + $prefix + $value + $postfix" context="false" />
+      </actions>
+    </library>
+
+  </cues>
+</mdscript>

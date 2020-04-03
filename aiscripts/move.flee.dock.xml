@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="iso-8859-1" ?>
+<aiscript name="move.flee.dock" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="aiscripts.xsd">
+  <!--  
+  
+  Flee to dock. This script will find a nearby friendly station (in this zone) and if it has a free dock, this ship will boost there to dock
+  
+  Only allow for small ships (not l or xl size)
+  
+  -->
+  <params>
+    <param name="attacker" default="null" comment="the attacker we are fleeing from" />
+    <param name="panic" default="false" />
+    <param name="alreadydocked" default="this.ship.dock"/>
+    <param name="debugchance" default="0" />
+  </params>
+  <interrupts>
+    <handler ref="TargetInvalidHandler"/>
+  </interrupts>
+  <attention min="unknown">
+    <actions>
+
+      <do_if value="this.ship.isclass.[class.ship_xl, class.ship_l]">
+        <return value="false"/>
+      </do_if>
+
+      <do_if value="$alreadydocked">
+        <resume label="checkifsafe"/>
+      </do_if>
+
+      <label name="search" />
+      <find_station name="$stations" functional="true" space="this.zone" multiple="true" >
+        <match_relation_to object="this" relation="neutral" comparison="ge" />
+      </find_station>
+
+
+      <do_if value="not $stations.count">
+        <debug_text text="'no stations ' + $stations" chance="$debugchance" />
+        <return value="false "/>
+      </do_if>
+
+      <debug_text text="'found '+ $stations.count + ' potential targets, finding closest one.'" chance="$debugchance" />
+      <create_list name="$stationdists" exact="$stations.count" />
+      <do_all exact="$stations.count" counter="$i">
+        <set_value name="$stationdists.{$i}" exact="this.ship.distanceto.{$stations.{$i}}" />
+      </do_all>
+      <set_value name="$station" exact="$stations.{$stationdists.indexof.{$stationdists.min}}" />
+      <remove_value name="$stations"/>
+      <remove_value name="$stationdists"/>
+
+      <!-- Dock the drones -->
+      <run_script name="'lib.recall.subordinates'">
+        <param name="timeout" value="-1s" comment="recall drones"/>
+      </run_script>
+
+      <do_if value="$station">
+        <request_docking ship="this.ship" container="$station" queuedresult="$queuedresult" grantedresult="$grantedresult" />
+
+        <do_if value="this.ship.assigneddock.exists">
+          <get_docking_approach_pos position="$approachpos" rotation="$approachrot" dock="this.ship.assigneddock" ship="this.ship" />
+
+          <do_if value="this.attention ge attention.visible">
+            <debug_text text="'only set spline on high attention'" chance="$debugchance" />
+            <set_flight_control_model object="this.ship" flightcontrolmodel="flightcontrolmodel.spline" />
+          </do_if>
+
+          <!-- boost to it -->
+          <debug_text text="'move to approachpos'" chance="$debugchance" />
+          <move_to object="this.ship" destination="this.ship.assigneddock" forcesteering="false" finishonapproach="true" forceposition="false" forcerotation="false" boost="true" travel="true">
+            <position value="$approachpos" />
+            <rotation value="$approachrot" />
+            <interrupt_after_time time="10min"/>
+            <interrupt>
+              <conditions>
+                <event_object_destroyed object="$attacker" check="false"/>
+              </conditions>
+            </interrupt>
+          </move_to>
+        </do_if>
+        <do_else>
+          <remove_docking_request ship="this.ship" container="$station" immediate="true"/>
+          <return value="false"/>
+        </do_else>
+      </do_if>
+      <do_else>
+        <return value="false"/>
+      </do_else>
+
+      <label name="dock" />
+
+      <do_if value="not $attacker.isoperational">
+        <remove_docking_request ship="this.ship" container="$station" immediate="true"/>
+        <return value="true" />
+      </do_if>
+
+      <debug_text text="'dock at station %1'.[$station.knownname]" chance="$debugchance" />
+
+      <!-- NB: has to be a run_script because the Flee order is critical at this point. TODO: reevaluate and consider creating a DockAt order and an Undock order further below if Flee does not have to be critical. order.dock will also take care of cleaning up docking requests if docking fails -->
+      <run_script name="'order.dock'" result="$docked">
+        <param name="destination" value="$station"/>
+      </run_script>
+
+      <do_if value="not $docked">
+        <return value="false"/>
+      </do_if>
+
+      <label name="checkifsafe" />
+
+      <set_value name="$safechecks" exact="1"/>
+      <do_while value="($safechecks le 3) and $attacker.isoperational and (this.ship.distanceto.{$attacker} lt 15km)">
+        <set_value name="$safechecks" operation="add" exact="1"/>
+        <!-- if we are still not sure if it is safe after 3 waits, just risk it -->
+        <wait min="1min" max="2min">
+          <interrupt>
+            <conditions>
+              <check_any>
+                <event_object_destroyed object="$attacker" check="false"/>
+                <event_object_changed_zone object="$attacker" check="false"/>
+                <event_object_changed_zone object="this.ship" />
+              </check_any>
+            </conditions>
+          </interrupt>
+        </wait>
+        <debug_text text="'wait for %1 to go away'.[$attacker.knownname]" chance="$debugchance" />
+      </do_while>
+
+      <label name="undock" />
+      <run_script name="'move.undock'" />
+
+      <debug_text text="'stop running/hiding'" chance="$debugchance" />
+      <return value="true"/>
+
+    </actions>
+  </attention>
+  <on_abort>
+    <!-- must clean up docking request if we made one -->
+    <remove_docking_request ship="this.ship" container="@$station" immediate="true"/>
+  </on_abort>
+</aiscript>

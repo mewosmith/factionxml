@@ -1,0 +1,357 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mdscript name="Cover" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="md.xsd">
+  <cues>
+    <cue name="Debug" instantiate="true">
+      <conditions>
+        <check_any>
+          <event_cue_signalled cue="md.Setup.GameStart"/>
+          <event_game_loaded/>
+        </check_any>
+      </conditions>
+      <actions>
+        <set_value name="md.$CoverDebug" exact="0"/>
+      </actions>
+    </cue>
+
+    <!--#########################
+                Triggers
+        #########################-->
+
+    <!--event.param = [$object, $faction, $includeNPCs, $includeSubordinates]-->
+    <cue name="TriggerCover" instantiate="true">
+      <conditions>
+        <check_any>
+          <check_all>
+            <event_cue_signalled/>
+            <check_value value="event.param.{1}.owner != event.param.{2}"/>
+            <set_value name="$CoverParams" exact="event.param"/>
+          </check_all>
+          <check_all>
+            <event_object_signalled object="player.galaxy" param="'Cover'"/>
+            <check_value value="event.param2.{1}.owner != event.param2.{2}"/>
+            <set_value name="$CoverParams" exact="event.param2"/>
+          </check_all>
+        </check_any>
+      </conditions>
+      <actions>
+        <do_if value="not md.$CoveredObjects?">
+          <create_group groupname="md.$CoveredObjects"/>
+        </do_if>
+
+        <debug_text text="'Cover triggered for ' + $CoverParams.{1}.knownname + ' to become ' + $CoverParams.{2}" chance="@md.$CoverDebug"/>
+        <!--Signal to loose cover first, then set the new one-->
+        <signal_objects object="$CoverParams.{1}" param="'LoseCover'" param2="false"/>
+        <do_if value="$CoverParams.{1}.trueowner != $CoverParams.{2}">
+          <signal_cue_instantly cue="CoverInstance" param="$CoverParams"/>
+          <remove_value name="$CoverParams"/>
+        </do_if>
+      </actions>
+    </cue>
+
+    <!--Cover for the player entity (controlled ship cover is covered when player is onboard)-->
+    <!--event.param = [$faction]-->
+    <cue name="Player_TriggerCover" instantiate="true">
+      <conditions>
+        <event_cue_signalled/>
+        <check_value value="player.entity.owner != event.param.{1}"/>
+      </conditions>
+      <actions>
+        <debug_text text="'Cover triggered for player entity to become ' + event.param.{1}" chance="@md.$CoverDebug"/>
+        <signal_cue_instantly cue="Player_CoverInstance" param="event.param"/>
+      </actions>
+    </cue>
+
+    <!--#########################
+                Handling
+        #########################-->
+
+    <cue name="Player_CoverInstance" instantiate="true" namespace="this">
+      <conditions>
+        <event_cue_signalled/>
+      </conditions>
+      <actions>
+        <set_value name="$Faction" exact="event.param.{1}"/>
+        <set_value name="$Controlled" exact="null"/>
+        <set_value name="$Remote" exact="null"/>
+      </actions>
+      <cues>
+        <cue name="Player_SetCover">
+          <actions>
+            <do_if value="player.controlled">
+              <do_if value="player.entity.hascontext.{player.controlled}">
+                <set_value name="$Controlled" exact="player.controlled"/>
+                <signal_cue_instantly cue="TriggerCover" param="[$Controlled, $Faction, true, true]"/>
+              </do_if>
+              <do_else>
+                <set_value name="$Controlled" exact="player.occupiedship"/>
+                <signal_cue_instantly cue="TriggerCover" param="[$Controlled, $Faction, true, true]"/>
+                <set_value name="$Remote" exact="player.controlled"/>
+                <signal_cue_instantly cue="TriggerCover" param="[$Remote, $Faction, true, true]"/>
+              </do_else>
+            </do_if>
+
+            <debug_text text="'player entity cover set to ' + $Faction" chance="@md.$CoverDebug"/>
+            <set_cover_owner object="player.entity" faction="$Faction"/>
+          </actions>
+        </cue>
+
+        <cue name="Player_StartedControl" instantiate="true">
+          <conditions>
+            <event_player_started_control/>
+          </conditions>
+          <actions>
+            <do_if value="$Controlled.exists and not player.entity.hascontext.{$Controlled}">
+              <signal_objects object="$Controlled" param="'LoseCover'" param2="false"/>
+              <set_value name="$Controlled" exact="null"/>
+            </do_if>
+            <do_if value="player.entity.hascontext.{player.controlled}">
+              <set_value name="$Controlled" exact="player.controlled"/>
+              <debug_text text="'player started control of object: ' + $Controlled.knownname" chance="@md.$CoverDebug"/>
+              <signal_cue_instantly cue="TriggerCover" param="[$Controlled, $Faction, true, true]"/>
+              <do_if value="$Remote.exists">
+                <debug_text text="'stopped remote control: ' + $Remote.knownname" chance="@md.$CoverDebug"/>
+                <signal_objects object="$Remote" param="'LoseCover'" param2="false"/>
+                <set_value name="$Remote" exact="null"/>
+              </do_if>
+            </do_if>
+            <do_else>
+              <set_value name="$Remote" exact="player.controlled"/>
+              <debug_text text="'player started remote control of object: ' + $Remote.knownname" chance="@md.$CoverDebug"/>
+              <signal_cue_instantly cue="TriggerCover" param="[$Remote, $Faction, true, true]"/>
+            </do_else>
+
+            <do_if value="not $Controlled.exists">
+              <set_value name="$Controlled" exact="null"/>
+            </do_if>
+            <do_if value="not $Remote.exists">
+              <set_value name="$Remote" exact="null"/>
+            </do_if>
+          </actions>
+        </cue>
+
+        <!--@Owen Do we want cover to leave the object when the player leaves?-->
+        <cue name="Player_LeftObject" instantiate="true">
+          <conditions>
+            <event_object_changed_room object="player.entity"/>
+            <check_value value="event.param2.hascontext.{$Controlled}"/>
+            <check_value value="not event.param.hascontext.{$Controlled}"/>
+          </conditions>
+          <actions>
+            <debug_text text="'player left object: ' + $Controlled.knownname" chance="@md.$CoverDebug"/>
+            <signal_objects object="$Controlled" param="'LoseCover'" param2="false"/>
+            <set_value name="$Controlled" exact="null"/>
+          </actions>
+        </cue>
+
+        <cue name="Player_LoseCover">
+          <conditions>
+            <event_object_signalled object="player.entity" param="'LoseCover'" comment="event.param2 = was discovered"/>
+          </conditions>
+          <actions>
+            <debug_text text="'player lost cover due to ' + event.name" chance="@md.$CoverDebug"/>
+            <set_cover_owner object="player.entity"/>
+
+            <do_if value="$Controlled.exists">
+              <signal_objects object="$Controlled" param="'LoseCover'" param2="false"/>
+            </do_if>
+            <do_if value="$Remote.exists">
+              <signal_objects object="$Remote" param="'LoseCover'" param2="false"/>
+            </do_if>
+            <cancel_cue cue="Player_CoverInstance"/>
+          </actions>
+        </cue>
+      </cues>
+    </cue>
+
+    <!--event.param = [$object, $faction, $includeNPCs, $includeSubordinates]
+    Do not trigger from outside-->
+    <cue name="CoverInstance" instantiate="true" namespace="this" version="2">
+      <conditions>
+        <event_cue_signalled/>
+      </conditions>
+      <actions>
+        <set_value name="$Object" exact="event.param.{1}"/>
+        <do_if value="$Object.exists and $Object.isclass.[class.object, class.npc]">
+          <set_value name="$Faction" exact="event.param.{2}"/>
+          <set_value name="$IncludeNPCs" exact="$Object.isclass.object and event.param.{3}"/>
+          <set_value name="$IncludeSubordinates" exact="$Object.isclass.object and event.param.{4}"/>
+          <add_to_group groupname="md.$CoveredObjects" object="$Object"/>
+          <do_if value="$IncludeNPCs">
+            <create_group groupname="$Entities"/>
+          </do_if>
+        </do_if>
+        <do_else>
+          <debug_text text="'object not valid for cover: ' + $Object.knownname" chance="@md.$CoverDebug"/>
+          <cancel_cue cue="CoverInstance"/>
+        </do_else>
+      </actions>
+      <patch sinceversion="1">
+        <do_if value="not $Object.isoperational">
+          <debug_text text="'PATCH: covered object %s %s %s was already destroyed. cleaning up instance.'.[@$Object.idcode, @$Object.knownname, $Object]"/>
+          <cancel_cue cue="CoverInstance"/>
+        </do_if>
+      </patch>
+      <patch sinceversion="2" state="complete">
+        <!--Remove Subordinates group-->
+        <remove_value name="$Subordinates"/>
+      </patch>
+      <cues>
+        <cue name="SetCover">
+          <actions>
+            <do_if value="$IncludeNPCs">
+              <get_control_entities groupname="$Entities" object="$Object"/>
+              <do_all exact="$Entities.count" counter="$i" reverse="true">
+                <do_if value="$Entities.{$i}.isclass.nonplayer">
+                  <debug_text text="'cover set for control entity ' + $Entities.{$i}.knownname + ' to ' + $Faction" chance="@md.$CoverDebug"/>
+                  <set_cover_owner object="$Entities.{$i}" faction="$Faction"/>
+                </do_if>
+                <do_else>
+                  <remove_from_group group="$Entities" object="$Entities.{$i}" />
+                </do_else>
+              </do_all>
+            </do_if>
+            <do_if value="$IncludeSubordinates">
+              <do_for_each name="$Subordinate" in="$Object.subordinates">
+                <signal_cue_instantly cue="TriggerCover" param="[$Subordinate, $Faction, $IncludeNPCs, true]"/>
+              </do_for_each>
+            </do_if>
+
+            <debug_text text="'cover set for object ' + $Object.knownname + ' to ' + $Faction" chance="@md.$CoverDebug"/>
+            <set_cover_owner object="$Object" faction="$Faction"/>
+          </actions>
+        </cue>
+
+        <cue name="CheckNPCs" onfail="cancel">
+          <conditions>
+            <check_value value="$IncludeNPCs"/>
+          </conditions>
+          <cues>
+            <cue name="ControlEntityAdded" instantiate="true">
+              <conditions>
+                <event_control_entity_added object="$Object"/>
+                <check_value value="event.param.isclass.nonplayer" />
+              </conditions>
+              <actions>
+                <debug_text text="'control entity ' +  event.param.knownname + ' added to object ' + $Object.knownname + '. Setting cover to ' + $Faction" chance="@md.$CoverDebug"/>
+                <add_to_group groupname="$Entities" object="event.param"/>
+                <set_cover_owner object="event.param" faction="$Faction"/>
+              </actions>
+            </cue>
+
+            <cue name="ControlEntityLost" instantiate="true">
+              <conditions>
+                <event_control_entity_removed object="$Object"/>
+                <check_value value="$Entities.indexof.{event.param}"/>
+              </conditions>
+              <actions>
+                <debug_text text="'control entity ' +  event.param.knownname + ' removed from object ' + $Object.knownname + '. Resetting cover of entity'" chance="@md.$CoverDebug"/>
+                <remove_from_group group="$Entities" object="event.param"/>
+                <set_cover_owner object="event.param"/>
+              </actions>
+            </cue>
+          </cues>
+        </cue>
+
+        <cue name="CheckSubordinates" onfail="cancel">
+          <conditions>
+            <check_value value="$IncludeNPCs"/>
+          </conditions>
+          <cues>
+            <cue name="SubordinateAdded" instantiate="true">
+              <conditions>
+                <event_object_subordinate_added object="$Object"/>
+              </conditions>
+              <actions>
+                <debug_text text="'subordinate ' +  event.param.knownname + ' assigned to object ' + $Object.knownname + '. Setting cover to ' + $Faction" chance="@md.$CoverDebug"/>
+                <signal_cue_instantly cue="TriggerCover" param="[event.param, $Faction, $IncludeNPCs, true]"/>
+              </actions>
+            </cue>
+
+            <!--Covered subordinates shouldn't lose their cover when changing commander?-->
+          </cues>
+        </cue>
+
+        <cue name="CoveredObjectDestroyed">
+          <conditions>
+            <!--Object lost-->
+            <event_object_destroyed object="$Object"/>
+          </conditions>
+          <actions>
+            <debug_text text="'%s %s %s destroyed. cleaning up instance.'.[@$Object.idcode, @$Object.knownname, $Object]" chance="@md.$CoverDebug"/>
+            <cancel_cue cue="CoverInstance"/>
+          </actions>
+        </cue>
+
+        <!--TODO: Better conditions for losing cover-->
+        <cue name="LoseCover" instantiate="true">
+          <conditions>
+            <check_any>
+              <check_all>
+                <check_any>
+                  <!-- if we either:
+                          attack something belonging to our cover faction,
+                          or are attacked by something belonging to our cover faction. -->
+                  <event_object_attacked_object object="$Object"/>
+                  <event_object_attacked object="$Object"/>
+                </check_any>
+                <check_value value="event.param.owner == $Faction"/>
+              </check_all>
+              <event_scan_finished scanned="$Object"/>
+              <check_all>
+                <event_object_signalled object="$Object"/>
+                <check_any>
+                  <check_value value="event.param" exact="'LoseCover'" comment="event.param2 = was discovered"/>
+                  <check_all>
+                    <!-- correcting leftover instances where a ship might have been uncovered already but is still tracked by the CoverInstance -->
+                    <check_value value="event.param" exact="'CheckCoverFaction'" />
+                    <check_value value="event.param2 != $Faction"/>
+                    <!--<debug_text text="'%1 for %2 (%3, %4) with param = %8, param2 = %5, $Faction = %6 and owner = %7'.[event.name, $Object.knownname, $Object.idcode, $Object, event.param2, $Faction, $Object.owner, event.param]"/>-->
+                  </check_all>
+                </check_any>
+              </check_all>
+              <check_all>
+                <event_object_changed_true_owner object="$Object"/>
+                <check_value value="event.param != $Faction"/>
+              </check_all>
+            </check_any>
+          </conditions>
+          <actions>
+            <debug_text text="'object lost cover due to ' + event.name" chance="@md.$CoverDebug"/>
+            <set_value name="$Scanned" exact="event.name == 'event_scan_finished' or (event.name == 'event_object_signalled' and event.param2 == true)"/>
+            <!--If discovered, notifications here?-->
+
+            <do_if value="$Object.commander.exists and $Object.commander.coverowner">
+              <debug_text text="'squadron subordinate %s %s %s %s was discovered while in cover.\nsignalling commander %s %s %s %s.\nevent: %s'.[$Object.class, $Object.idcode, $Object.knownname, $Object, $Object.commander.class, $Object.commander.idcode, $Object.commander.knownname, $Object.commander, event.name]" chance="@md.$CoverDebug"/>
+              <signal_objects object="$Object.commander" param="'LoseCover'" param2="$Scanned"/>
+            </do_if>
+            <do_else>
+              <debug_text text="'%s %s %s %s was discovered while in cover.\nuncovering and propagating to subordinates.\nevent: %s'.[$Object.class, $Object.idcode, $Object.knownname, $Object, event.name]" chance="@md.$CoverDebug"/>
+              <do_if value="$Entities?">
+                <do_all exact="$Entities.count" counter="$i">
+                  <do_if value="$Entities.{$i}.coverowner">
+                    <set_cover_owner object="$Entities.{$i}"/>
+                  </do_if>
+                </do_all>
+              </do_if>
+
+              <do_if value="$Object == player.controlled or player.entity.hascontext.{$Object}">
+                <signal_objects object="player.entity" param="'LoseCover'" param2="$Scanned"/>
+              </do_if>
+
+              <set_cover_owner object="$Object"/>
+
+              <do_if value="$IncludeSubordinates">
+                <do_for_each name="$Subordinate" in="$Object.subordinates">
+                  <signal_objects object="$Subordinate" param="'LoseCover'" param2="$Scanned"/>
+                </do_for_each>
+              </do_if>
+
+              <remove_from_group group="md.$CoveredObjects" object="$Object"/>
+              <cancel_cue cue="CoverInstance"/>
+            </do_else>
+          </actions>
+        </cue>
+      </cues>
+    </cue>
+  </cues>
+</mdscript>

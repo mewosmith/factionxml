@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="iso-8859-1" ?>
+<aiscript name="order.mining.player" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="aiscripts.xsd" priority="2" version="1">
+  <!--
+  Wrapper script for player mining, starting mining.collect.ship  
+  -->
+  <order id="MiningPlayer" name="{1041, 351}" description="{1041, 352}" category="mining">
+    <params>
+      <param name="destination" required="true" type="position" text="{1041, 10027}" comment="Destination. Position: [space, position]. $destination with $radius defines the operational area where resources are looked for.">
+        <input_param name="class" value="class.sector"/>
+      </param>
+      <param name="radius" type="length" default="this.ship.maxradarrange" text="{1041, 10093}" advanced="true" comment="Radius"/>
+      <param name="ware" type="ware" text="{1041, 10144}" comment="Ware. Ware to mine.">
+        <input_param name="mining" value="$destination"/>
+        <input_param name="cancarry" value="this.ship"/>
+      </param>
+      <param name="secwares" type="list" default="[]" text="{1041, 10110}" advanced="true" comment="Secondary wares">
+        <input_param name="type" value="'ware'"/>
+        <input_param name="mining" value="$destination" />
+        <input_param name="cancarry" value="this.ship"/>
+      </param>
+      <param name="debugchance" type="bool" default="0" advanced="true" text="{1041, 10086}" comment="Print debug output">
+        <input_param name="truevalue" value="100"/>
+      </param>
+    </params>
+    <requires primarypurpose="purpose.mine"/>
+    <location object="$destination.{1}" position="$destination.{2}" radius="$radius" />
+  </order>
+  <interrupts>
+    <handler ref="SectorChangeHandler"/>
+  </interrupts>
+  <init>
+    <set_value name="$targetsector" exact="$destination.{1}"/>
+    <set_value name="$targetpos" exact="$destination.{2}"/>
+
+    <!-- debug_eco - start -->
+    <set_value name="$debug_eco" exact="0"/>
+    <set_value name="$time_started" exact="null"/>
+
+    <set_command command="command.freemining"/>
+  </init>
+  <attention min="unknown">
+    <actions>
+
+      <label name="start"/>
+
+      <do_if value="this.sector != $targetsector or this.ship.distanceto.[$targetsector, $targetpos] gt 10km">
+        <debug_text text="'%1 %2 (%3) moving long-distance to %4 in %5 %6.'.[this.ship.idcode, this.ship.knownname, this.ship, $targetpos, $targetsector.class, $targetsector]" chance="$debugchance"/>
+        <run_script name="'move.generic'">
+          <param name="destination" value="$targetsector"/>
+          <param name="position" value="$targetpos"/>
+          <!--<param name="endintargetzone" value="true"/>-->
+          <param name="debugchance" value="$debugchance"/>
+        </run_script>
+      </do_if>
+
+      <!-- zone here is an output var -->
+      <find_closest_resource ware="$ware" sector="$sector" position="$sectorpos" refobject="this.ship"/>
+      <debug_text text="'usable concentrations of %3 found in %4, %5m away from %1 %2.\n in radius? %6,\n input radius: %7m,\n effective radius: %8m.'.[this.ship.idcode, this.ship.knownname, $ware.name, $zone.knownname, this.ship.distanceto.{$zone}, this.ship.distanceto.{$zone} le ($radius + $zone.size / 2), $radius, $radius + $zone.size / 2]" chance="$debugchance"/>
+
+      <!-- remember that you are checking the distance to the center of the zone where the resource is in.
+            the resource could very well be at the edge of that zone towards you, but the center beyond radius. -->
+      <do_if value="$sector and this.ship.distanceto.[$sector, $sectorpos] le $radius">
+        <debug_text text="'%1 %2 proceeding to mine %3 at %4, %5.'.[this.ship.idcode, this.ship.knownname, $ware.name, $sector.knownname, $sector.cluster.knownname]" chance="$debugchance"/>
+        <set_command command="command.mining" param="$sector"/>
+        <run_script name="'order.mining.collect.ship'" result="$collectresult">
+          <param name="destination" value="[$sector, $sectorpos]"/>
+          <param name="ware" value="$ware" />
+          <param name="secwares" value="$secwares" />
+          <param name="debugchance" value="$debugchance" />
+
+          <!-- debug_eco -->
+          <param name="time_started" value="$time_started"/>
+          <param name="debug_eco" value="$debug_eco"/>
+        </run_script>
+        <run_script name="'lib.recall.subordinates'" />
+
+        <!-- debug_eco -->
+        <do_if value="this.$time_donemining?">
+          <debug_to_file name="'eco_report.csv'" directory="'mining'" text="'%1;travel_from_location;%2;%3;%4;%5'.[player.age, this.ship.knownname, this.ship, this.ship.owner, player.age - this.$time_donemining]" output="$debugchance" chance="$debug_eco"/>
+          <remove_value name="this.$time_donemining"/>
+        </do_if>
+      </do_if>
+      <do_else>
+        <debug_text text="'%1 %2 did not find any %3 within %4 meters of %5, %6, %7. aborting.'.[this.ship.idcode, this.ship.knownname, $ware.name, $radius, $sector.knownname, $sector.cluster.knownname]" chance="$debugchance"/>
+        <set_value name="$collectresult" exact="'no_resources'"/>
+      </do_else>
+
+      <do_if value="not ($collectresult == 'aborted')">
+        <do_if value="$ware.tags.indexof.{tag.liquid}">
+          <set_value name="$infomining" exact="{1015,24}" comment="Info: gas mining stopped" />
+        </do_if>
+        <do_else>
+          <set_value name="$infomining" exact="{1015,25}" comment="Info: mineral mining stopped" />
+        </do_else>
+
+        <do_if value="this.isplayerowned and not this.isclass.computer">
+          <do_if value="$collectresult != 'no_resources'">
+            <do_if value="not this.assignedcontrolled.nextorder and (not this.assignedcontrolled.commander or (this.assignedcontrolled.commander == player.occupiedship)) and notification.npc_await_orders.active">
+              <run_script name="'player.interaction'">
+                <param name="Line" value="10304" comment="Awaiting orders." />
+                <param name="MaxQueueDelay" value="10s"/>
+                <param name="caption" value="$infomining + ' - %s (%s)'.[this.assignedcontrolled.knownname, this.assignedcontrolled.idcode]" comment="Info: (24: gas, 25: mineral) mining stopped"/>
+                <param name="interactive" value="false"/>
+                <param name="debugchance" value="$debugchance"/>
+              </run_script>
+            </do_if>
+          </do_if>
+          <do_elseif value="this.shouldwarnplayer and notification.npc_order_not_complete.active">
+            <run_script name="'player.interaction'" sinceversion="1">
+              <param name="Line" value="10303" comment="Last order could not be completed."/>
+              <param name="MaxQueueDelay" value="10s"/>
+              <param name="caption" value="$infomining + ' - %s (%s)'.[this.assignedcontrolled.knownname, this.assignedcontrolled.idcode]" comment="Info: (24: gas, 25: mineral) mining stopped"/>
+              <param name="interactive" value="false"/>
+              <param name="debugchance" value="$debugchance"/>
+            </run_script>
+          </do_elseif>
+          <write_to_logbook category="general" title="$infomining" text="{1016, 93}.[this.assignedcontrolled.knownname, this.assignedcontrolled.idcode, $destination.{1}.knownname]" interaction="showonmap" object="this.assignedcontrolled" comment="%1 (%2) finished mining in sector %3."/>
+          <wait chance="0" />
+        </do_if>
+      </do_if>
+
+    </actions>
+  </attention>
+</aiscript>

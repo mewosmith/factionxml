@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="iso-8859-1" ?>
+<aiscript name="boarding.pod" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="aiscripts.xsd">
+  <params>
+    <param name="target" />
+    <param name="targetpos" />
+    <param name="targetrot" />
+    <param name="initialwaittime" />
+    <param name="operation" default="null" comment="Boarding operation"/>
+    <param name="debugchance" default="0"/>
+  </params>
+  <interrupts>
+    <handler ref="TargetInvalidHandler"/>
+  </interrupts>
+  <attention min="unknown">
+    <actions>
+      <set_command command="command.move" param="$target"/>
+
+      <set_value name="$startship" exact="this.ship" />
+      <do_if value="$operation and $target != $operation.boardee">
+        <debug_text text="'Target: ' + $target + ' is not the boarding operation target ' + $operation + ' - ' + $operation.boardee + ' ' + $operation.boardee.knownname" filter="error"/>
+      </do_if>
+      <do_if value="$operation">
+        <!--Fire a signal the MD Boarding script is waiting for-->
+        <signal_objects object="$target" param="$operation" param2="'boarding__podstarted'" param3="$startship"/>
+      </do_if>
+      
+      <wait exact="$initialwaittime" />
+
+      <move_to destination="$target" object="this.ship" flightbehaviour="flightbehaviour.default" uselocalhighways="false" finishonapproach="true" forcesteering="true" avoid="false">
+        <interrupt>
+          <conditions>
+            <event_object_approaching_waypoint object="$target" />
+          </conditions>
+        </interrupt>
+      </move_to>
+
+      <!-- Make sure that the target has default FCM -->
+      <set_to_default_flight_control_model object="$target" />
+      <!-- Disable my collision reaction with the target -->
+      <set_avoid_collisions object="this.ship" bigobjects="false" smallobjects="false" />
+      <disable_collision_response object="this.ship" />
+
+      <!-- find surface and move to it -->
+      <find_object_surface object="$target" posname="$targetpos" rotname="$targerrot" space="$target" chance="100" >
+        <position object="this.ship" />
+      </find_object_surface>
+      <!-- in case of no surface position -->
+      <do_if value="not @$targetpos">
+        <create_position name="$targetpos" space="$target" />
+        <debug_text text="'no target pos found on find_surface: %s'.[$targetpos]" />
+      </do_if>
+
+      <set_object_active object="this.ship" activate="true" />
+
+      <debug_text text="'moving to attach to target.'" chance="$debugchance"/>
+
+      <move_to destination="$target" object="this.ship" flightbehaviour="flightbehaviour.droneattach" uselocalhighways="false" forcesteering="true" abortpath="true" relativemovement="true">
+        <position value="$targetpos" />
+      </move_to>
+
+
+      <!-- attach it -->
+      <attach_object_to_target object="this.ship" target="$target" keepoffset="true" />
+
+      <wait min="100ms" max="250ms" />
+
+      <do_if value="$operation">
+        <!--Fire a signal the MD Boarding script is waiting for-->
+        <signal_objects object="$target" param="$operation" param2="'boarding__podattached'" param3="$startship"/>
+      </do_if>
+      <debug_text text="'Boarding done!! '" chance="$debugchance" />
+
+    </actions>
+  </attention>
+</aiscript>

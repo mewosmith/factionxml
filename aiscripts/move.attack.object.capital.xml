@@ -1,0 +1,741 @@
+<?xml version="1.0" encoding="iso-8859-1" ?>
+<aiscript name="move.attack.object.capital" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="aiscripts.xsd" version="9">
+  <!--
+
+  Move attack object capital
+  by Adrian
+  
+  Movement of a capital ship (made by pilot), 
+   * Small target (xs, s, m): try to stay close to the enemy target (3km) and at the same Y axis.
+   * Big target, continuosly move to him with an update time (30s or 5min for stations):
+    * With front mounted weapons (bullets and missiles): keep combat-range distance and aim at target
+    * * Normal turrets: First use a approach position, then move to the weakest target's quadrant and rotate with the our best quadrant.
+      Also periodically update the best quadrant, and the target's weakest
+  
+  Requires a target object as a parameter.
+  Optional parameter for an escort an object
+  Optional parameter for pursue distance:
+    - if escort: from escort to target
+    - if pursuetargets: from this to target
+  Optional parameter for pursue targets
+  -->
+  <params>
+    <param name="target" comment="The object to fight with" />
+    <param name="escort" comment="Objects to escort - stay at 'pursuedistance' and shoot enemies attacking this" />
+    <param name="pursuedistance" comment="Distance to pursue/escort (if pursuetargets true or 'escort' provided). Default: this.ship.maxradarrange" />
+    <param name="pursuetargets" comment="Pursue the target no matter what. Default: false" />
+    <param name="allowothertargets" comment="Whether the script shall keep running when all primary targets have been destroyed. Default: true" />
+    <param name="checkrelation" comment="Check may attack (faction enemy relation). Default: true" />
+    <param name="disable" default="false" comment="Instructs this ship to only try to disable the target or targets without destroying it."/>
+    <param name="disablehullpercentagethreshold" default="20" comment="If disable is set, this ship will stop firing if the hull of the target is at or below this percentage."/>
+    <param name="minrange" default="if @$target.iscapitalship or $target.isrealclass.station or $target.container.isrealclass.station then (this.ship.maxcombatrange.all * 0.6) else (this.ship.maxcombatrange.turrets * 0.6)" comment="Minimum distance we should try to maintain relative to the target. Default: this.ship.maxcombatrange.all * 0.6"/>
+    <param name="maxrange" default="if @$target.iscapitalship or $target.isrealclass.station or $target.container.isrealclass.station then (this.ship.maxcombatrange.all * 0.9) else (this.ship.maxcombatrange.turrets * 0.9)" comment="Maximum distance we should try to maintain relative to the target. Default: this.ship.maxcombatrange.all * 0.9"/>
+    <param name="maintaindistance" comment="If a carrier, use radar range instead of weapon range to determine range thresholds. Default: false"/>
+    <param name="boardingbehavior" comment="If not null, the behavior assigned to this ship while boarding primarytarget."/>
+    <param name="behaviortargetclasses" comment="Target classes associated with boardingbehavior. disablehullpercentagethreshold will be ignored if current target is a behavior target. (Otherwise, we could have a situation where the hull threshold is reached but the boarding phase threshold has not been reached thus stalling the boarding operation.)"/>
+    <param name="allowboost" default="true" comment="Allow use of boost while in combat."/>
+
+    <param name="radius" default="null" comment="disengage if target goes beyond this distance relative to radiusanchorpos in radiusanchorspace"/>
+    <param name="radiusanchorpos" default="null"/>
+    <param name="radiusanchorspace" default="null"/>
+
+    <param name="debugchance" default="0" />
+  </params>
+  <interrupts>
+    <handler ref="DisengageHandler"/>
+    <handler ref="TargetInvalidHandler"/>
+  </interrupts>
+  <init>
+    <set_value name="$iscarrier" exact="false"/>
+    <do_if value="this.assignedcontrolled.type == shiptype.carrier">
+      <do_for_each name="$locsub" in="this.assignedcontrolled.subordinates">
+        <do_if value="$locsub.isclass.ship_s and $locsub.primarypurpose == purpose.fight">
+          <set_value name="$iscarrier"/>
+          <break/>
+        </do_if>
+      </do_for_each>
+    </do_if>
+
+    <do_if value="not this.assignedcontrolled.dps.lasers.all and this.assignedcontrolled.dps.missiles.all">
+      <set_value name="$needsammo"/>
+    </do_if>
+    <set_value name="$skill_piloting" exact="this.skill.piloting"/>
+    <set_value name="$skill_morale" exact="this.skill.morale"/>
+    <do_if value="this.isplayerowned">
+      <set_value name="$skill_piloting" exact="15"/>
+      <set_value name="$skill_morale" exact="15"/>
+    </do_if>
+  </init>
+  <patch sinceversion="1">
+    <do_if value="not @$frontweapon" chance="[this.assignedcontrolled.combinedskill + 50, 100].min">
+      <!-- NB: if we are using a front-mounted weapon, we have to align with the target's y-plane. otherwise, we can fly above or below the target. some capital ships have turrets concentrated above or below their hulls. while design demands that capital ships align themselves to ecliptic, nothing stopping us from flying above or below the target. -->
+      <set_value name="$verticalquadrants" exact="[quadrant.up, quadrant.down]"/>
+      <set_value name="$verticalquadranttable" exact="table[]" />
+      <do_all exact="$verticalquadrants.count" counter="$i">
+        <set_value name="$verticalquadranttable.{$verticalquadrants.{$i}}" exact="this.ship.dps.turrets.{$verticalquadrants.{$i}}" />
+      </do_all>
+      <!-- best quadrant -->
+      <set_value name="$bestverticalquadrant" exact="$verticalquadranttable.keys.sorted.last"/>
+      <do_if value="$quadranttable.{$bestquadrant} gt $verticalquadranttable.{$bestverticalquadrant}">
+        <set_value name="$bestverticalquadrant" exact="null"/>
+      </do_if>
+      <debug_text text="'PATCH: %s %s %s %s has best vertical quadrant %s with dps %s.\n best quadrant: %s. best quadrant dps: %s'.[this.assignedcontrolled.class, this.assignedcontrolled.idcode, this.assignedcontrolled.knownname, this.assignedcontrolled, $bestverticalquadrant, @$verticalquadranttable.{$bestverticalquadrant}, $bestquadrant, $quadranttable.{$bestquadrant}]" filter="savegame"/>
+    </do_if>
+  </patch>
+  <patch sinceversion="2">
+    <do_if value="@$target.issurfaceelement and $target.container and $target.container.iscapitalship">
+      <debug_text text="'PATCH: target was a surface element on a capital ship. switching targets to capital ship.'" filter="savegame"/>
+      <set_value name="$target" exact="$target.container"/>
+    </do_if>
+  </patch>
+  <patch sinceversion="3">
+    <do_if value="not @$radius">
+      <set_value name="$radius" exact="null"/>
+      <set_value name="$radiusanchorpos" exact="null"/>
+      <set_value name="$radiusanchorspace" exact="null"/>
+    </do_if>
+  </patch>
+  <patch sinceversion="4">
+    <do_if value="$target.exists and not $target.isclass.defensible and not $target.container and not $target.isrealclass.station">
+      <debug_text text="'PATCH: cleared invalid target %s %s.'.[@$target.knownname, $target]" filter="savegame"/>
+      <set_value name="$target" exact="null"/>
+    </do_if>
+  </patch>
+  <patch sinceversion="5">
+    <do_if value="not this.assignedcontrolled.dps.lasers.all and this.assignedcontrolled.dps.missiles.all">
+      <set_value name="$needsammo"/>
+    </do_if>
+  </patch>
+  <patch sinceversion="6">
+    <set_value name="$allowboost" exact="true"/>
+  </patch>
+  <patch sinceversion="7">
+    <set_value name="$combinedskill" exact="this.assignedcontrolled.combinedskill"/>
+  </patch>
+  <patch sinceversion="8">
+    <set_value name="$maxeffectivecombatrange" exact="this.assignedcontrolled.maxcombatrange.all"/>
+    <do_if value="this.assignedcontrolled.dps.lasers.all">
+      <set_value name="$maxeffectivecombatrange" exact="this.assignedcontrolled.maxcombatrange.lasers.all"/>
+    </do_if>
+  </patch>
+  <patch sinceversion="9">
+    <set_value name="$skill_piloting" exact="this.skill.piloting"/>
+    <set_value name="$skill_morale" exact="this.skill.morale"/>
+    <do_if value="this.isplayerowned">
+      <set_value name="$skill_piloting" exact="15"/>
+      <set_value name="$skill_morale" exact="15"/>
+      <set_value name="$combinedskill" exact="100"/>
+    </do_if>
+  </patch>
+  <attention min="unknown">
+    <actions>
+      <do_if value="not $target.canbeattacked">
+        <debug_text text="'target cannot be attacked.'" chance="$debugchance" />
+        <resume label="finish" />
+      </do_if>
+
+      <set_value name="$combinedskill" exact="this.assignedcontrolled.combinedskill"/>
+      <do_if value="this.isplayerowned">
+        <set_value name="$combinedskill" exact="100"/>
+      </do_if>
+      <set_value name="$issmall" exact="$target.isclass.ship_xs or $target.isclass.ship_s or $target.isclass.ship_m" />
+      <set_value name="$isstation" exact="$target.isrealclass.station or @$target.container.isrealclass.station" />
+      <set_value name="$updatetime" exact="30s + ($isstation*5)min" />
+
+      <!-- calculate best quadrant to use against the target -->
+      <!-- NB: order in which quadrants are entered doesn't matter since they'll be sorted by dps except if two or more quadrants have the same dps. -->
+      <set_value name="$quadrants" exact="[quadrant.left, quadrant.right, quadrant.front]"/>
+      <set_value name="$quadranttable" exact="table[]" />
+
+      <!-- check this turrets -->
+      <do_all exact="$quadrants.count" counter="$i">
+        <set_value name="$quadranttable.{$quadrants.{$i}}" exact="this.ship.dps.turrets.{$quadrants.{$i}}" />
+      </do_all>
+      <!-- best quadrant -->
+      <set_value name="$bestquadrant" exact="$quadranttable.keys.sorted.last" />
+
+      <do_if value="not $disable">
+        <!-- if forward weapons are available, always manoeuver to orient forward weapons on big targets. -->
+        <do_if value="this.ship.dps.lasers.all">
+          <set_value name="$bestquadrant" exact="quadrant.front" />
+          <set_value name="$frontweapon" exact="1" />
+        </do_if>
+        <do_if value="this.ship.dps.missiles.all">
+          <set_value name="$bestquadrant" exact="quadrant.front" />
+          <set_value name="$frontweapon" exact="2" />
+        </do_if>
+      </do_if>
+
+      <do_if value="not @$frontweapon" chance="[$combinedskill + 50, 100].min">
+        <!-- NB: if we are using a front-mounted weapon, we have to align with the target's y-plane. otherwise, we can fly above or below the target. some capital ships have turrets concentrated above or below their hulls. while design demands that capital ships align themselves to ecliptic, nothing stopping us from flying above or below the target. -->
+        <set_value name="$verticalquadrants" exact="[quadrant.up, quadrant.down]"/>
+        <set_value name="$verticalquadranttable" exact="table[]" />
+        <do_all exact="$verticalquadrants.count" counter="$i">
+          <set_value name="$verticalquadranttable.{$verticalquadrants.{$i}}" exact="this.ship.dps.turrets.{$verticalquadrants.{$i}}" />
+        </do_all>
+        <!-- best quadrant -->
+        <set_value name="$bestverticalquadrant" exact="$verticalquadranttable.keys.sorted.last"/>
+        <do_if value="$quadranttable.{$bestquadrant} gt $verticalquadranttable.{$bestverticalquadrant}">
+          <set_value name="$bestverticalquadrant" exact="null"/>
+        </do_if>
+        <debug_text text="'%s %s %s %s has best vertical quadrant %s with dps %s.\n best quadrant: %s. best quadrant dps: %s'.[this.assignedcontrolled.class, this.assignedcontrolled.idcode, this.assignedcontrolled.knownname, this.assignedcontrolled, $bestverticalquadrant, @$verticalquadranttable.{$bestverticalquadrant}, $bestquadrant, $quadranttable.{$bestquadrant}]" chance="$debugchance"/>
+      </do_if>
+
+      <!-- these ranges are not used in the forward-mounted weapon cases -->
+      <do_if value="$iscarrier and $maintaindistance">
+        <set_value name="$minoperationalrange" exact="[this.assignedcontrolled.maxradarrange, $pursuedistance].min * 0.6"/>
+        <set_value name="$maxoperationalrange" exact="[this.assignedcontrolled.maxradarrange, $pursuedistance].min * 0.9"/>
+      </do_if>
+      <do_elseif value="@$frontweapon == 1">
+        <set_value name="$minoperationalrange" exact="[this.assignedcontrolled.maxcombatrange.lasers.all * 0.6, $minrange].min"/>
+        <set_value name="$maxoperationalrange" exact="[this.assignedcontrolled.maxcombatrange.lasers.all * 0.9, $maxrange].min"/>
+      </do_elseif>
+      <do_else>
+        <set_value name="$minoperationalrange" exact="$minrange"/>
+        <set_value name="$maxoperationalrange" exact="$maxrange"/>
+      </do_else>
+
+      <!-- calculate the target's weakest quadrant -->
+      <do_if value="$isstation">
+        <set_value name="$quadrants" exact="[quadrant.left, quadrant.right, quadrant.up, quadrant.down, quadrant.back, quadrant.front]" />
+      </do_if>
+      <do_else>
+        <set_value name="$quadrants" exact="[quadrant.left, quadrant.right, quadrant.back]" />
+      </do_else>
+      <set_value name="$targetquadranttable" exact="table[]" />
+
+      <!-- check this turrets -->
+      <do_all exact="$quadrants.count" counter="$i">
+        <set_value name="$targetquadranttable.{$quadrants.{$i}}" exact="@$target.dps.turrets.{$quadrants.{$i}}" />
+      </do_all>
+      <!-- weak quadrants -->
+      <set_value name="$weakquadrants" exact="$targetquadranttable.keys.sorted" />
+      <set_value name="$weakquadrant" exact="$weakquadrants.{1}" />
+
+      <debug_text text="'best quadrant %1, best vertical quadrant %2 (can be null), targets weak quadrant %3'.[$bestquadrant, @$bestverticalquadrant, $weakquadrant]" chance="$debugchance" />
+
+      <wait min="25ms" max="300ms" />
+
+      <debug_text text="this.knownname + ': attacking '+ $target.knownname +'!'" chance="$debugchance" />
+
+      <label name="fight"/>
+
+      <do_if value="@$target.zone.isclass.highway">
+        <!-- DisengageHandler will land us here. -->
+        <debug_text text="'target now in a highway. disengaging.'" chance="$debugchance"/>
+        <resume label="finish"/>
+      </do_if>
+
+      <!-- Repeat until target is dead or not enemy, and defence npc exists  -->
+      <do_while value="$target.canbeattacked and this.ship.defencenpc.exists">
+
+        <!-- Command action for the wait -->
+        <set_command_action commandaction="commandaction.attackingto" param="$target" />
+
+        <!-- relation check -->
+        <do_if value="($checkrelation and not this.ship.mayattack.{$target}) or @$target.dock">
+          <debug_text text="this.ship.name + ' is not enemy to ' + $target.knownname" chance="$debugchance"/>
+          <break />
+        </do_if>
+
+        <do_if value="$target.zone.isclass.highway">
+          <debug_text text="'target %1 (%2) entered a highway and we cannot pursue. Breaking off.'.[$target.knownname, $target]" chance="$debugchance" />
+          <break/>
+        </do_if>
+
+        <do_if value="$escort.exists">
+          <set_value name="$refobject" exact="$escort"/>
+        </do_if>
+        <do_else>
+          <set_value name="$refobject" exact="this.ship"/>
+        </do_else>
+
+        <!-- If the target is in a different sector, or is farther than pursuedistance (should normally be radar range), -->
+        <do_if value="this.sector != $target.sector or (not $pursuetargets and $refobject.distanceto.{$target} gt $pursuedistance)">
+          <!-- break off attack. implementation of pursuetargets moved to order.fight.attack.object. -->
+          <debug_text text="'target is either not in the same sector or not within 10 minutes travel time and i am not authorized to pursue. breaking off attack.\n  my sector: %s\n target sector: %s\n distance to target: %s\n max distance in 10 minutes: %s\n pursue distance: %s'.[$refobject.sector, $target.sector, $refobject.distanceto.{$target}, this.ship.maxspeed*600, $pursuedistance]" chance="$debugchance"/>
+          <break/>
+        </do_if>
+
+        <do_if value="$iscarrier and not this.ship.subordinates.count">
+          <debug_text text="'%s %s %s has no more subordinates. resuming attack as a regular destroyer.'.[this.ship.idcode, this.ship.knownname, this.ship]" chance="$debugchance"/>
+          <set_value name="$minoperationalrange" exact="$minrange"/>
+          <set_value name="$maxoperationalrange" exact="$maxrange"/>
+          <set_value name="$iscarrier" exact="false"/>
+        </do_if>
+
+        <!-- My own sector position -->
+        <create_position name="$mysectorpos" space="$target.sector" object="this.ship"/>
+        <!-- check the target's position relative to the sector in case we are dealing with a subcomponent. by default, positions are given relative to their parent. -->
+        <create_position name="$targetposition" space="$target.sector" object="$target"/>
+
+        <!-- CASE: Non-Small ship or far away -->
+        <do_if value="not $issmall">
+          <debug_text text="'Capital ship case'" chance="$debugchance" />
+
+          <!-- save the distance for future calculations -->
+          <set_value name="$distance" exact="this.ship.distanceto.[$target.sector, $targetposition]"/>
+
+          <!-- CASE: Front mounted weapons -->
+          <do_if value="$frontweapon?" >
+            <!-- worse captains will tend to move either closer or too far away.
+                  a good captain will try to shoot for 80-90% of max combat range.
+                  a really bad captain will go for 40-100% of max combat range.
+
+                  update: movethreshold_min is above aimdist min. so a bad captain will still be effective, but a lot more jittery.
+
+                  note: stuff like this should really go in init unless maxcombatrange will change at some point while the script is running.
+                  keeping this here and checking to see if we still have operational front-mounted lasers in case it changes over the battle. -->
+            <set_value name="$maxeffectivecombatrange" exact="this.assignedcontrolled.maxcombatrange.all"/>
+            <do_if value="this.assignedcontrolled.dps.lasers.all">
+              <set_value name="$maxeffectivecombatrange" exact="this.assignedcontrolled.maxcombatrange.lasers.all"/>
+            </do_if>
+            <set_value name="$aimdist" min="($maxeffectivecombatrange + this.assignedcontrolled.size / 2.0) * (0.4 * (1.0 + (($skill_piloting + $skill_morale)f / 30.0)))" max="($maxeffectivecombatrange + this.assignedcontrolled.size / 2.0) * (1.0 - (($skill_piloting + $skill_morale)f / 300.0))"/>
+            <set_value name="$movethreshold_min" exact="($maxeffectivecombatrange + (this.assignedcontrolled.size  / 2.0)) * 0.5"/>
+            <set_value name="$movethreshold_max" exact="$maxeffectivecombatrange + (this.assignedcontrolled.size  / 2.0)"/>
+            <debug_text text="'%1 has %2 pts in piloting and %3 pts in morale. aimdist: %4 min movethreshold: %5 max movethreshold: %6 combat range: %7'.[this.knownname, $skill_piloting, $skill_morale, $aimdist, $movethreshold_min, $movethreshold_max, $maxeffectivecombatrange]" chance="$debugchance"/>
+
+            <do_if value="$isstation and $debugchance">
+              <do_if value="$target.container">
+                <set_value name="$evalobject" exact="$target.container"/>
+              </do_if>
+              <do_else>
+                <set_value name="$evalobject" exact="$target"/>
+              </do_else>
+              <create_position name="$stationposition" space="$target.sector" object="$evalobject"/>
+              <debug_text text="'\n station pos rel sector: %1 \n station.position: %2 \n target pos rel sector: %3 \n target.position: %4'.[$stationposition, $evalobject.position, $targetposition, $target.position]" chance="0"/>
+              <remove_value name="$evalobject"/>
+            </do_if>
+
+            <!-- Always rotate to aim. How long depends on whether or not we are in a good position and captain skill. limit to morale? -->
+            <!-- look at target orientation
+                  if we are in a good position, pummel them. -->
+            <set_value name="$updatetime" min="30s" max="60s"/>
+            <!--<set_value name="$updatetime" min="(110 - $combinedskill)s" max="(120 - $combinedskill)s"/>-->
+
+            <!-- check if the object is in view. $target is already checked to be operational
+                  This check is mostly to see if we can aim at the target. Good threshold would be the minimum pitch limit of ships that will use this script.
+                  Note: vertical and horizontal in this case are both entire ranges.
+                    angular pitch/roll specified on the engine are only half of the entire ranges. -->
+            <check_object object="$target" result="$isinview">
+              <match_is_in_view_of vertical="110deg" horizontal="180deg" object="this.assignedcontrolled"/>
+            </check_object>
+            <debug_text text="'distance to target: %1. move threshold: %2. isinview: %3'.[$distance, $movethreshold_max, $isinview]" chance="$debugchance"/>
+
+            <!-- if:
+                  we are in a good position,
+                  and we can orient directly at the target,
+
+                  aim directly at the target, and go to MOVE STATE 2. -->
+            <do_if value="$distance le $movethreshold_max and $isinview">
+              <!--<create_position name="$aimpos" space="$target.sector" z="$target.speed" object="$target"/>-->
+              <create_position name="$aimpos" space="this.zone" object="$target"/>
+              <debug_text text="'Target is in range. Aiming directly at target. AIM 1'" chance="$debugchance"/>
+            </do_if>
+            <!-- if we are not in a good position, turn to the direction of the target, but on this y-plane.
+
+                  if we are NOT in a good position, this will then go to MOVE STATE 1.
+                  if we ARE in a good position, but cannot orient on to the target, this will go to MOVE STATE 2, which can deal with either AIM STATE. -->
+            <do_else>
+              <create_position name="$aimpos" space="this.zone" x="$targetposition.x" y="$mysectorpos.y" z="$targetposition.z" object="$target.sector"/>
+              <debug_text text="'Target is out of range. Aiming at general direction of target. AIM 2'" chance="$debugchance"/>
+            </do_else>
+
+            <create_orientation name="$rotation" orientation="look_at" refposition="$aimpos">
+              <position object="this.ship" />
+            </create_orientation>
+
+            <debug_text text="'%1 (%2) attacking %3 (%4) \n aiming at %5 \n Target is at %6 \n Target speed: %7'.[this.ship.knownname, this.ship, $target.knownname, $target, $aimpos, $target.position, @$target.speed]" chance="$debugchance"/>
+            <remove_value name="$aimpos"/>
+            <remove_value name="$isinview"/>
+
+            <!-- rotate to aim -->
+            <!-- problem: gets stuck if has to pitch beyond limit. if you're too far away, don't bother. align as if target is on the same y-plane as you are and go to the target position at target's y-plane. -->
+            <move_to destination="this.zone" object="this.ship" forcerotation="true" forceposition="false">
+              <position object="this.ship" z="10m" />
+              <rotation value="$rotation" />
+              <interrupt_after_time time="$updatetime"/>
+            </move_to>
+
+            <do_if value="not $target.canbeattacked or (this.sector != $target.sector)">
+              <break/>
+            </do_if>
+
+            <!-- if against a moving target, the position and distance should be updated since it could have changed since we started to aim. -->
+            <create_position name="$targetposition" space="$target.sector" object="$target"/>
+            <create_position name="$mysectorpos" space="$target.sector" object="this.ship"/>
+            <set_value name="$distance" exact="this.ship.distanceto.[$target.sector, $targetposition]"/>
+
+            <set_value name="$noabortpath"/>
+
+            <!-- STATE 1: big movement needed if:
+                            you are too far away,
+                            or you are too close. -->
+            <do_if value="$distance gt $movethreshold_max or $distance lt $movethreshold_min">
+              <!--<do_if value="$distance gt $movethreshold_max or $distance lt $movethreshold_min or not $isinview">-->
+              <!-- NB: if object is supplied but not space, position is resolved relative to object.parent! -->
+              <create_position name="$pos_yoffset" space="$target.sector" x="$targetposition.x" y="$mysectorpos.y" z="$targetposition.z"/>
+              <set_value name="$dist_horizontal" exact="this.ship.distanceto.[$target.sector, $pos_yoffset]"/>
+              <debug_text text="'\nhorizontal distance to target: %1\nabsolute distance to target: %2\naimdist: %3\nmy pos: %s\ntarget pos: %s\npos_yoffset: %s'.[$dist_horizontal, $distance, $aimdist, $mysectorpos, $targetposition, $pos_yoffset]" chance="$debugchance"/>
+
+              <!-- final position going to the target at combat range distance -->
+              <create_position name="$pos" space="$target.sector" z="$dist_horizontal - $aimdist" object="this.ship"/>
+              <create_position name="$idealpos" space="$target.sector" x="$pos.x" y="$targetposition.y" z="$pos.z" chance="$debugchance"/>
+              <get_safe_pos result="$pos" x="$pos.x" y="$targetposition.y" z="$pos.z" radius="this.ship.size/2.0" sector="$target.sector" ignored="this.ship" allowyaxis="false"/>
+              <debug_text text="'\n this position y: %1 \n target position y: %2 \n y offset: %3'.[$mysectorpos.y, $targetposition.y, $targetposition.y - this.ship.position.y]" chance="$debugchance"/>
+              <!-- if the closest safepos is still either too far or too close to the target, find a safepos on the other side of the target. -->
+              <do_if value="$target.distanceto.[$target.sector, $pos] gt $movethreshold_max or $target.distanceto.[$target.sector, $pos] lt $movethreshold_min">
+                <set_value name="$debug_oldpos" exact="$pos" chance="$debugchance"/>
+                <create_position name="$pos" space="$target.sector" z="$dist_horizontal + $aimdist" object="this.ship"/>
+                <create_position name="$idealpos" space="$target.sector" x="$pos.x" y="$targetposition.y" z="$pos.z" chance="$debugchance"/>
+                <get_safe_pos result="$pos" x="$pos.x" y="$targetposition.y" z="$pos.z" radius="this.ship.size/2.0" sector="$target.sector" ignored="this.ship" allowyaxis="false"/>
+                <do_if value="$target.distanceto.[$target.sector, $pos] gt $movethreshold_max" chance="$debugchance">
+                  <debug_text text="'moving past the target because pos is too far.\nold pos distance to target: %1\nnew pos distance to target: %2\nmax movethreshold: %3.\nadjusting.'.[$target.distanceto.[$target.sector, $debug_oldpos], $target.distanceto.[$target.sector, $pos], $movethreshold_max]"/>
+                </do_if>
+                <do_elseif value="$target.distanceto.[$target.sector, $pos] lt $movethreshold_min" chance="$debugchance">
+                  <debug_text text="'moving past the target because pos is too close.\nold pos distance to target: %1\nnew pos distance to target: %2\nmin movethreshold: %2.\nadjusting.'.[$target.distanceto.[$target.sector, $debug_oldpos], $target.distanceto.[$target.sector, $pos], $movethreshold_min]"/>
+                </do_elseif>
+                <remove_value name="$debug_oldpos"/>
+              </do_if>
+              <debug_text text="'%1 attacking %3 \n moving to %5. \n target at: %9 \n ideal pos: %4 \n present distance to target: %6 \n projected distance to target: %7 \n target distance to idealpos: %2 \n max range: %8 \n STATE 1'.[this.ship.knownname, $target.distanceto.[$target.sector, $idealpos], $target.knownname, $idealpos, $pos, this.ship.distanceto.{$target}, $target.distanceto.[$target.sector, $pos], $maxeffectivecombatrange, $targetposition]" chance="$debugchance"/>
+
+              <!--  noabortpath depends on whether we are moving into range or just repositioning. -->
+              <do_if value="$distance gt $movethreshold_max">
+                <set_value name="$case" exact="'1.1.1.1: cap v cap, front-mounted, big distance - approach'"/>
+                <set_value name="$noabortpath" exact="false"/>
+                <set_value name="$updatetime" exact="(((this.ship.distanceto.[$target.sector, $pos])f / [this.ship.maxspeed, 1m].max) / 2.0)s"/>
+              </do_if>
+              <do_else>
+                <set_value name="$case" exact="'1.1.1.2: cap v cap, front-mounted, big distance - retreat'"/>
+                <set_value name="$boost" chance="$allowboost * 100"/>
+                <set_value name="$noabortpath" exact="true"/>
+                <set_value name="$updatetime" exact="((this.ship.distanceto.[$target.sector, $pos])f / [this.ship.maxspeed, 1m].max)s * 2"/>
+              </do_else>
+              <debug_text text="'\n update time: %1 \n distance to pos: %2 \n max speed: %3'.[$updatetime, this.ship.distanceto.[$target.sector, $pos], this.ship.maxspeed]" chance="$debugchance"/>
+
+              <remove_value name="$pos_yoffset"/>
+              <remove_value name="$dist_horizontal"/>
+              <remove_value name="$idealpos" chance="$debugchance"/>
+            </do_if>
+
+            <!-- STATE 2: in range, stay here/moving sideways -->
+            <do_elseif value="$distance le $movethreshold_max and $distance ge $movethreshold_min" >
+              <set_value name="$case" exact="'1.1.2: cap v cap, front-mounted, maintain distance'"/>
+              <do_if value="$isstation">
+                <set_value name="$updatetime" min="20s" max="30s"/>
+              </do_if>
+              <do_else>
+                <set_value name="$updatetime" exact="[(($target.size * 0.5) / [@$target.speed, 1].max)s, 15s].min"/>
+              </do_else>
+              <debug_text text="'\n update time: %1 \n target size: %2 \n target speed: %3'.[$updatetime, $target.size, @$target.speed]" chance="$debugchance"/>
+
+              <!-- second check if within optimal range to see if we can fire.
+                    TODO: Review this when more final numbers are in. Vertical and horizontal values should both be less then the lowest IK of ALL weapons mounted on forward mounts of ALL ships that might use this script. -->
+              <check_line_of_sight name="$los" object="this.assignedcontrolled" target="$target"/>
+              <check_object object="$target" result="$isinview">
+                <match_is_in_view_of vertical="9deg" horizontal="9deg" object="this.assignedcontrolled"/>
+              </check_object>
+
+              <!-- if we are in a good position ... -->
+              <do_if value="$los and $isinview">
+                <debug_text text="'We are within range, and target is in view. Firing.'" chance="$debugchance"/>
+                <!-- captain can lose their nerve and stop firing to reposition sooner with lower morale. should normally top out at 12 morale for this particular check. -->
+                <set_value name="$time_waitend" exact="player.age + (($updatetime * 4) / (16 - $skill_morale))"/>
+                <debug_text text="'wait min duration: %s, wait max duration: %s'.[$time_waitend - player.age, $updatetime]" chance="$debugchance"/>
+                <!-- wait a bit ... -->
+                <wait exact="$updatetime">
+                  <interrupt>
+                    <conditions>
+                      <event_object_attacked object="this.assignedcontrolled"/>
+                      <check_value value="player.age ge $time_waitend"/>
+                    </conditions>
+                    <actions>
+                      <set_value name="$locdisrupted"/>
+                      <debug_text text="'attack disrupted'" chance="$debugchance"/>
+                    </actions>
+                  </interrupt>
+                </wait>
+                <!-- NB: ignoring movethreshold_min means that wa are allowing target to get very close. -->
+                <do_if value="not $locdisrupted? and @$target.canbeattacked and (this.assignedcontrolled.distanceto.{$target} le $movethreshold_max)">
+                  <!-- NB: LOS will be re-evaluated on loop-back assuming all other conditions hold. -->
+                  <debug_text text="'target: %s %s %s is still within range and we consider incoming fire to be negligible. holding position unless movement is necessary.'.[@$target.idcode, @$target.knownname, $target]" chance="$debugchance"/>
+                  <resume label="fight"/>
+                </do_if>
+                <remove_value name="$locdisrupted"/>
+                <remove_value name="$time_waitend"/>
+                <create_position name="$targetposition" space="$target.sector" object="$target"/>
+                <create_position name="$mysectorpos" space="$target.sector" object="this.assignedcontrolled"/>
+              </do_if>
+              <!-- ... then do short quick movements to realign y-planes if necessary and to avoid damage. -->
+              <!-- final position moving sidewise, only if target is station or this front weapon is missile launcher -->
+              <do_if value="not ($isstation or $frontweapon?)" chance="$combinedskill">
+                <get_safe_pos result="$pos" x="$mysectorpos.x" y="$targetposition.y" z="$mysectorpos.z" radius="this.ship.size/2.0" sector="$target.sector" directionobject="$target" allowyaxis="false"/>
+              </do_if>
+              <do_else>
+                <get_safe_pos result="$pos" x="$mysectorpos.x" y="$targetposition.y" z="$mysectorpos.z" max="this.ship.size" radius="this.ship.size/2.0" sector="$target.sector" directionobject="this.ship" direction="quadrant.right" direction2="quadrant.left" allowyaxis="false"/>
+              </do_else>
+              <debug_text text="'%1 (%2) attacking %3 (%4) \n moving to %5. \n Target is at %6. \n Target speed: %7 \n STATE 2'.[this.ship.knownname, this.ship, $target.knownname, $target, $pos, $targetposition, @$target.speed]" chance="$debugchance"/>
+              <set_value name="$noabortpath" exact="false"/>
+            </do_elseif>
+            <!-- STATE 3: too close, fly away -->
+            <do_else>
+              <set_value name="$case" exact="'1.1.3: cap v cap, front-mounted, retreat'"/>
+              <debug_text text="'%1 (%2) attacking %3 (%4) STATE 3 \n This may no longer be necessary.'.[this.ship.knownname, this.ship, $target.knownname, $target]" chance="$debugchance"/>
+              <!-- look away -->
+              <create_orientation name="$rotation" orientation="look_away" refobject="$target">
+                <position object="this.ship" />
+              </create_orientation>
+              <!-- rotate to look away from the target -->
+              <move_to destination="this.zone" abortpath="true" object="this.ship" forcerotation="true" forceposition="false">
+                <position object="this.ship" z="10m" />
+                <rotation value="$rotation" />
+                <interrupt_after_time time="5s" />
+              </move_to>
+              <create_position name="$mysectorpos" space="$target.sector" object="this.ship"/>
+              <!-- Go in opposite direction of target -->
+              <create_position name="$enemypos" space="this.ship" object="$target" />
+              <!-- combat range edge -->
+              <set_value name="$distfactor" exact="($maxeffectivecombatrange - $distance) / $distance " />
+              <!-- Final position in the oposite direction -->
+              <create_position name="$finalpos" space="$target.sector" x="$enemypos.x * -$distfactor" y="0" z="$enemypos.z * -$distfactor" object="this.ship"/>
+              <!-- final position going to the combat range edge -->
+              <get_safe_pos result="$pos" x="$finalpos.x" y="$targetposition.y" z="$finalpos.z" radius="this.ship.size/2.0" sector="$target.sector" allowyaxis="false" ignored="this.ship"/>
+              <debug_text text="'$distfactor %1 , distance %2, range %3, enemypos rel %4, $pos %5'.[$distfactor, $distance, $maxeffectivecombatrange, $enemypos, $pos]" chance="$debugchance"/>
+              <!--  big update time-->
+              <set_value name="$updatetime" min="70s" max="100s" />
+              <set_value name="$boost" chance="$allowboost * 100"/>
+
+              <remove_value name="$enemypos"/>
+              <remove_value name="$distfactor"/>
+              <remove_value name="$finalpos"/>
+            </do_else>
+            <remove_value name="$isinview"/>
+            <remove_value name="$los"/>
+          </do_if>
+          <!-- CASE: position around the target: side fire (left, right, up, down) -->
+          <do_else>
+            <!-- Carrier CASE -->
+            <do_if value="$iscarrier">
+              <set_value name="$case" exact="'1.2.1: cap v cap, no front-mounted, carrier'"/>
+              <do_if value="this.ship.distanceto.{$target} ge $minoperationalrange and this.ship.distanceto.{$target} le $maxoperationalrange">
+                <create_position name="$pos" space="$target.sector" z="$minoperationalrange  * 0.5" object="this.ship"/>
+              </do_if>
+              <do_else>
+                <set_value name="$tempdist" min="$minoperationalrange" max="$maxoperationalrange"/>
+                <create_position name="$pos" space="$target.sector" object="$target" max="$tempdist" />
+                <remove_value name="$tempdist"/>
+              </do_else>
+              <get_safe_pos result="$pos" directionobject="$target" x="$pos.x" y="($targetposition.y + $mysectorpos.y) / 2.0" z="$pos.z"  direction="$weakquadrant" radius="this.ship.size/2.0" sector="$target.sector" ignored="this.ship" allowyaxis="false"/>
+
+              <set_value name="$updatetime" exact="([this.ship.distanceto.[$target.sector, $pos] / [this.ship.maxspeed, 1].max, 3m].max)s"/>
+              <do_if value="$target.distanceto.[$target.sector, $pos] gt $maxoperationalrange or $target.distanceto.[$target.sector, $pos] lt $minoperationalrange">
+                <debug_text text="'%s %s plotted deploy position.\nmy distance to pos: %s\ntarget distance to pos: %s\nmin dist: %s\nmax dist: %s'.[this.ship.knownname, this.ship, this.ship.distanceto.[$target.sector, $pos], $target.distanceto.[$target.sector, $pos], $minoperationalrange, $maxoperationalrange]" chance="$debugchance"/>
+              </do_if>
+            </do_if>
+            <do_else>
+              <set_value name="$case" exact="'1.2.2: cap v cap, no front-mounted, normal'"/>
+
+              <do_if value="@$bestverticalquadrant">
+                <set_value name="$locyoffset" min="$minoperationalrange + $target.height/2.0" max="$maxoperationalrange + $target.height/2.0"/>
+                <set_value name="$locxoffset" min="-($target.width/2.0)" max="$target.width/2.0"/>
+                <set_value name="$loczoffset" min="-($target.length/2.0)" max="$target.length/2.0"/>
+                <debug_text text="'loc y offset: %sm. min range: %sm, max range: %sm'.[$locyoffset, $minoperationalrange, $maxoperationalrange]" chance="$debugchance"/>
+                <do_if value="@$bestverticalquadrant == quadrant.up">
+                  <set_value name="$locyoffset" exact="-$locyoffset"/>
+                </do_if>
+                <!-- NB: x and z provided only to prevent multiple ships from moving to the exact same position below the target -->
+                <!-- plotting an offset to an object relative to the sector spazzes out when the object is a surface element. -->
+                <create_position name="$pos" space="$target.sector" y="$targetposition.y + $locyoffset" x="$targetposition.x + $locxoffset" z="$targetposition.z + $loczoffset"/>
+                <debug_text text="'pre safepos: pos dist to target: %sm. best vertical quadrant: %s. within operational range? %s.\n destination y pos: %s\n target y pos: %s'.[@$target.distanceto.[$target.sector, $pos], @$bestverticalquadrant, ($target.distanceto.[$target.sector, $pos] le $maxoperationalrange), $pos.y, $targetposition.y]" chance="$debugchance"/>
+                <remove_value name="$locyoffset"/>
+                <remove_value name="$locxoffset"/>
+                <remove_value name="$loczoffset"/>
+
+                <get_safe_pos result="$pos" value="$pos" sector="$target.sector" radius="this.ship.size/2.0" ignored="this.ship" allowyaxis="false"/>
+              </do_if>
+              <do_else>
+                <get_safe_pos result="$pos" object="$target" min="$minoperationalrange" max="$maxoperationalrange" sector="$target.sector" direction="$weakquadrant" directionobject="$target" radius="this.ship.size/2.0" ignored="this.ship" allowyaxis="false"/>
+              </do_else>
+              <set_value name="$updatetime" exact="(this.assignedcontrolled.distanceto.[$target.sector, $pos] / [this.assignedcontrolled.maxspeed, 1m].max)s"/>
+              <debug_text text="'post safepos: pos dist to target: %sm. within operational range? %s.\n my y pos: %sm, target y pos: %s, destination y pos: %s'.[$target.distanceto.[$target.sector, $pos], ($target.distanceto.[$target.sector, $pos] le $maxoperationalrange), $mysectorpos.y, $targetposition.y, $pos.y]" chance="$debugchance"/>
+            </do_else>
+            <debug_text text="'%s plotting attack position %s meters away from the target. within operational range: %s'.[this.ship.knownname, $target.distanceto.[$target.sector, $pos], $target.distanceto.[$target.sector, $pos] le $maxoperationalrange]" chance="$debugchance"/>
+          </do_else>
+        </do_if>
+        <!-- CASE: Small ship -->
+        <do_else>
+          <set_value name="$case" exact="'2: cap v sm'"/>
+
+          <get_safe_pos result="$pos" object="$target" min="$minoperationalrange" max="$maxoperationalrange" sector="$target.sector" direction="$weakquadrant" directionobject="$target" radius="this.ship.size/2.0" ignored="this.ship"/>
+          <debug_text text="'%s %s %s attacking %s %s %s. moving to %s.\nresulting distance to target: %sm\nmin range: %sm\nmax range: %sm\nmax turret range: %sm'.[@this.assignedcontrolled.idcode, @this.assignedcontrolled.knownname, this.assignedcontrolled, @$target.idcode, @$target.knownname, $target, $pos, $target.distanceto.[$target.sector, $pos], $minoperationalrange, $maxoperationalrange, this.assignedcontrolled.maxcombatrange.turrets]" chance="$debugchance"/>
+        </do_else>
+
+        <!-- Skip next move if target not operational -->
+        <do_if value="not $target.canbeattacked or (this.sector != $target.sector)">
+          <break />
+        </do_if>
+
+        <!-- chance to update the best quadrant -->
+        <do_if value="(@$lastquadranttupdate lt player.age) and not @$frontweapon" chance="$combinedskill">
+          <set_value name="$lastquadranttupdate" exact="player.age + 30s" />
+          <debug_text text="'update best quadrant, right %1, left %2'.[this.ship.dps.turrets.{quadrant.right}, this.ship.dps.turrets.{quadrant.left}]" chance="$debugchance" />
+          <!-- our best quadrant -->
+          <do_if value="this.ship.dps.turrets.{quadrant.right} gt this.ship.dps.turrets.{quadrant.left}">
+            <set_value name="$bestquadrant" exact="quadrant.right" />
+          </do_if>
+          <do_else>
+            <set_value name="$bestquadrant" exact="quadrant.left" />
+          </do_else>
+          <!-- change the target's weak quadrant: the lower the skills, more chances to get a wrong quadrant -->
+          <do_any>
+            <set_value name="$weakquadrant" exact="$weakquadrants.random" weight="100 - $combinedskill"/>
+            <set_value name="$weakquadrant" exact="$weakquadrants.{1}" weight="$combinedskill"/>
+          </do_any>
+        </do_if>
+
+        <!-- NB: boost could already be set if we are trying to retreat from another capital ship. -->
+        <set_value name="$timetopos" exact="(this.ship.distanceto.[$target.sector, $pos] / [this.ship.maxspeed, 1m].max)s"/>
+        <do_if value="not $boost? and $allowboost and ($combinedskill ge 80)" chance="$combinedskill">
+          <do_if value="$timetopos gt 120s">
+            <set_value name="$travel"/>
+          </do_if>
+        </do_if>
+
+        <do_if value="$boost?">
+          <set_value name="$boost" exact="false"/>
+          <do_if value="this.assignedcontrolled.shieldpercentage gt 50">
+            <set_value name="$boost"/>
+            <set_value name="$updatetime" exact="(this.assignedcontrolled.boost.maxduration * (this.assignedcontrolled.shieldpercentage / 100.0) * 0.5)s"/>
+          </do_if>
+        </do_if>
+
+        <!-- Orientation: aim to target with the front -->
+        <do_if value="$bestquadrant" exact="quadrant.front">
+          <create_orientation name="$rotation" orientation="look_at" refobject="$target">
+            <position value="$pos" />
+          </create_orientation>
+        </do_if>
+        <!-- Orientation: aim to target with the left side -->
+        <do_elseif value="$bestquadrant" exact="quadrant.left">
+          <create_orientation name="$rotation" orientation="align_left" refobject="$target">
+            <position value="$pos" />
+          </create_orientation>
+        </do_elseif>
+        <!-- Orientation: aim to target with the right side-->
+        <do_elseif value="$bestquadrant" exact="quadrant.right">
+          <create_orientation name="$rotation" orientation="align_right" refobject="$target">
+            <position value="$pos" />
+          </create_orientation>
+        </do_elseif>
+        <!-- Default Orientation: use the current rotation (a small fast ship will be moving around) -->
+        <do_else>
+          <create_rotation name="$rotation" value="this.ship.rotation" />
+          <debug_text text="'the bestquadrant is not left nor right quadrant: %1. Using this rotation (equivalent to no rotaion)'.[$bestquadrant]" chance="$debugchance" />
+        </do_else>
+
+        <!-- Movement -->
+        <do_if value="this.ship.sector == $target.sector">
+          <create_position name="$pos" space="$target" value="$pos" object="$target.sector"/>
+          <set_value name="$time_startmove" exact="player.age" chance="$debugchance"/>
+          <debug_text text="'%s %s at %s, %s\nattacking %s %s at %s, %s.\ncase %s\ndistance to target: %sm\nideal distance: %sm\ndistance to pos: %sm\npresent position: %s\ngoing to pos: %s\nrotation: %s\nship combinedskill: %s\ntime to pos: %ss\nboost? %s\ntravel? %s \nbest quadrant %s'
+                      .[this.ship.knownname, this.ship, this.ship.sector.knownname, this.ship.zone.knownname, $target.knownname, $target, $target.sector.knownname, $target.zone.knownname, $case, this.ship.distanceto.{$target}, $target.distanceto.[$target, $pos], this.ship.distanceto.[$target, $pos], $mysectorpos, $pos, $rotation, $combinedskill, $timetopos, $boost?, $travel?, $bestquadrant]" chance="$debugchance"/>
+          <move_to destination="$target" abortpath="not @$noabortpath" object="this.ship" finishonapproach="false" forceposition="false" forcerotation="false" uselocalhighways="false" boost="@$boost" travel="@$travel">
+            <position value="$pos" />
+            <rotation value="$rotation" />
+            <interrupt_after_time time="$updatetime" />
+            <interrupt>
+              <conditions>
+                <event_object_destroyed object="$target"/>
+              </conditions>
+            </interrupt>
+          </move_to>
+          <debug_text text="'%s %s attacking %s %s.\nmovement finished after %ss\ntimetopos: %ss\nboost? %s\ntravel? %s'.[this.ship.knownname, this.ship, $target.knownname, $target, player.age - $time_startmove, $timetopos, $boost?, $travel?]" chance="$debugchance"/>
+          <do_if value="@$boost">
+            <debug_text text="'%s %s %s shield percentage after boost: %s'.[@this.assignedcontrolled.idcode, @this.assignedcontrolled.knownname, this.assignedcontrolled, this.assignedcontrolled.shieldpercentage]" chance="0"/>
+          </do_if>
+
+          <remove_value name="$pos"/>
+          <remove_value name="$rotation"/>
+          <remove_value name="$boost"/>
+          <remove_value name="$travel"/>
+          <!-- following reset here so they're available for debug query while in blocking action. -->
+          <remove_value name="$aimdist"/>
+          <remove_value name="$movethreshold_max"/>
+          <remove_value name="$movethreshold_min"/>
+
+          <do_if value="$needsammo? and not this.assignedcontrolled.ammostorage.missile.count">
+            <do_if value="not @this.$resupplier.isoperational and not @$localresupplier.isoperational and this.sector">
+              <find_ship name="$localresupplier" cansupplyclass="this.assignedcontrolled.class" owner="this.owner" space="this.sector"/>
+            </do_if>
+            <do_if value="not this.isplayerowned or @this.$resupplier.isoperational or @$localresupplier.isoperational">
+              <debug_text text="'%s %s %s out of ammo. moving to drydock for supplies.'.[this.assignedcontrolled.idcode, this.assignedcontrolled.knownname, this.assignedcontrolled]" chance="$debugchance"/>
+              <set_value name="$resupplier" exact="null"/>
+              <do_if value="@this.$resupplier.isoperational">
+                <set_value name="$resupplier" exact="this.$resupplier"/>
+              </do_if>
+              <do_elseif value="@$localresupplier.isoperational">
+                <set_value name="$resupplier" exact="$localresupplier"/>
+              </do_elseif>
+              <create_order id="'Resupply'" object="this.assignedcontrolled" immediate="true">
+                <param name="param_station" value="$resupplier"/>
+                <param name="internalorder" value="true"/>
+                <param name="debugchance" value="$debugchance"/>
+              </create_order>
+              <!-- cancel the attack order so we don't keep trying to attack in case resupply fails -->
+              <do_if value="(this.assignedcontrolled.nextorder.id != 'Board')">
+                <!-- if we are out of ammo, cannot attack, and are boarding, do not cancel the board order. situation is handled when that script initializes. -->
+                <cancel_order order="this.assignedcontrolled.nextorder"/>
+              </do_if>
+            </do_if>
+            <do_else>
+              <debug_text text="'player-owned ship %s %s %s out of ammo. sending notification and stopping attack.'.[this.assignedcontrolled.idcode, this.assignedcontrolled.knownname, this.assignedcontrolled]" chance="$debugchance"/>
+              <!-- INTERACTION: out of ammo. cannot attack. -->
+              <run_script name="'player.interaction'" result="$locresponse" sinceversion="5">
+                <param name="Line" value="5028" comment="Requesting instructions."/>
+                <param name="UIText" value="{1015, 35}.[this.ship.idcode, this.ship.name]" comment="Requesting Orders"/>
+                <param name="ConversationParam" value="'g_playerownedship_attacking_outofammo'"/>
+                <param name="MaxQueueDelay" value="10s"/>
+                <param name="caption" value="{1015, 43} + ' - %s (%s)'.[this.assignedcontrolled.knownname, this.assignedcontrolled.idcode]" comment="Out of ammo"/>
+                <param name="debugchance" value="$debugchance"/>
+              </run_script>
+              <do_if value="$locresponse != 'getammo' and this.assignedcontrolled.order">
+                <write_to_logbook category="general" title="{1015, 43}" text="{1016, 95}.[this.assignedcontrolled.knownname, this.assignedcontrolled.idcode]" interaction="showonmap" object="this.assignedcontrolled"/>
+                <do_if value="this.assignedcontrolled.order.id != 'Board'">
+                  <!-- if we are out of ammo, cannot attack, and are boarding, do not cancel the board order. situation is handled when that script initializes. -->
+                  <cancel_order order="this.assignedcontrolled.order"/>
+                </do_if>
+              </do_if>
+            </do_else>
+            <do_if value="@$locresponse != 'getammo'">
+              <create_order id="'Flee'" object="this.assignedcontrolled" immediate="true">
+                <param name="method" value="'boost'"/>
+                <param name="attacker" value="$target"/>
+                <param name="donotdrop" value="true"/>
+                <param name="deploydistraction" value="true"/>
+                <param name="log" value="false"/>
+                <param name="debugchance" value="$debugchance"/>
+              </create_order>
+            </do_if>
+            <remove_value name="$locresponse"/>
+          </do_if>
+        </do_if>
+        <do_else>
+          <resume label="fight"/>
+        </do_else>
+
+        <!-- wait in case the ship reaches the position very quickly -->
+        <wait min="2s" max="6s"/>
+
+      </do_while>
+
+      <label name="finish" />
+
+      <debug_text text="'Finishing: no-operational/ no-enemy/ target far away from escort'" chance="$debugchance" />
+
+      <!-- Stop the remaining movement -->
+      <stop_moving object="this.ship" />
+      <wait exact="100ms" />
+
+    </actions>
+  </attention>
+</aiscript>

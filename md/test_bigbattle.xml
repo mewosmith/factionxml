@@ -1,0 +1,271 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mdscript name="BigBattleTest" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="md.xsd">
+  <!--startzone: tzonecluster_b_sector07_zone08_macro-->
+  <cues>
+
+    <cue name="BigBattleTest" module="BigBattle">
+      <actions>
+        <!--Don't worry about 'space'-->
+        <find_zone name="$Start_Zone" macro="macro.zone002_cluster_01_sector001_macro" required="true"/>
+        <!--<find_zone name="$Start_Zone" space="player.galaxy" required="true">
+          <match_child class="class.station"/>
+        </find_zone>-->
+
+        <do_if value="player.zone != $Start_Zone">
+          <warp object="player.occupiedship" zone="$Start_Zone">
+            <safepos x="11297" y="12523" z="28994" radius="player.ship.size / 2"/>
+            <rotation yaw="-153deg" pitch="-10deg"/>
+          </warp>
+        </do_if>
+
+        <set_faction_relation faction="faction.scaleplate" otherfaction="faction.player" value="faction.scaleplate.relation.kill.max" />
+        <set_faction_relation faction="faction.scaleplate" otherfaction="faction.argon" value="faction.scaleplate.relation.kill.max" />
+
+      </actions>
+      <force name="A_BigBattle_Test"/>
+      <cues>
+        <cue name="BigBattleTest_Spawn">
+          <delay exact="1s"/>
+          <actions>
+            <find_station name="$NPC_Station" space="player.galaxy"/>
+            <!--<find_station name="$NPC_Station" space="$Start_Zone"/>-->
+            <create_station name="$Enemy_Station" macro="$NPC_Station.macro" owner="faction.scaleplate" zone="$Start_Zone">
+              <safepos x="3480.53" y="1938.19" z="15000" radius="$NPC_Station.size / 2"/>
+              <!--<buildsequence sequence="'a'" stage="1"/>
+              <buildsequence sequence="'b'" stage="3"/>
+              <buildsequence sequence="'c'" stage="4"/>-->
+            </create_station>
+
+            <create_cue_actor name="$defencemanager" cue="this">
+              <select faction="faction.scaleplate" tags="tag.defence"/>
+              <owner exact="faction.scaleplate" />
+            </create_cue_actor>
+            <assign_control_entity actor="$defencemanager" object="$Enemy_Station" post="controlpost.defence" transfer="true"/>
+            
+            <set_value name="$Num_Enemy_Squad_Wingmen" exact="6" />
+            <set_value name="$Num_Enemy_Squads_For_Station" exact="3" />
+            <set_value name="$Num_Enemy_Squads_For_Capship" exact="3" />
+            <set_value name="$Num_Enemy_Capships" exact="3" />
+            <set_value name="$Num_Allied_Squad_Wingmen" exact="3" />
+            <set_value name="$Num_Allied_Squads_For_Player_Ship" exact="3" />
+            <set_value name="$Num_Allied_Squads_For_Capship" exact="3" />
+            <set_value name="$Num_Allied_Capships" exact="3" />
+
+            <do_all exact="$Num_Enemy_Squads_For_Station">
+              <create_ship name="$Enemy_Leader" groupname="$Enemy_Ships" zone="$Start_Zone">
+                <select faction="faction.scaleplate" tags="[tag.fighter]" size="class.ship_s"/>
+                <pilot group="argon.pilot">
+                  <owner exact="faction.scaleplate"/>
+                  <page exact="10101"/>
+                </pilot>
+                <position x="6700" y="1400" z="20000" max="10km"/>
+              </create_ship>
+              <set_object_commander object="$Enemy_Leader" commander="$Enemy_Station" />
+              <create_order object="$Enemy_Leader" id="'Patrol'" default="true">
+                <param name="range" value="class.zone"/>
+                <param name="pursuetargets" value="true"/>
+              </create_order>
+              <do_all exact="$Num_Enemy_Squad_Wingmen">
+                <create_ship name="$Enemy_Follower" groupname="$Enemy_Ships" zone="$Start_Zone">
+                  <select faction="faction.scaleplate" tags="[tag.fighter]" size="class.ship_s"/>
+                  <pilot group="argon.pilot">
+                    <owner exact="faction.scaleplate"/>
+                    <page exact="10101"/>
+                  </pilot>
+                  <position object="$Enemy_Leader" max="5km"/>
+                </create_ship>
+                <set_object_commander object="$Enemy_Follower" commander="$Enemy_Leader" />
+                <create_order object="$Enemy_Follower" id="'Escort'">
+                  <param name="target" value="$Enemy_Leader" />
+                </create_order>
+              </do_all>
+            </do_all>
+
+            <set_value name="$get_xl" exact="0"/>
+            <do_all exact="$Num_Enemy_Capships">
+              <do_if value="$get_xl">
+                <create_ship name="$Enemy_Ship" groupname="$Enemy_Ships" zone="$Start_Zone">
+                  <select size="class.ship_xl" tags="[tag.military]" />
+                  <owner exact="faction.scaleplate" overridenpc="true"/>
+                  <pilot group="argon.pilot">
+                    <owner exact="faction.scaleplate"/>
+                    <page exact="10101"/>
+                  </pilot>
+                  <units>
+                    <unit category="unitcategory.defence" min="15" max="25" mk="1" />
+                  </units>
+                  <position x="6000" y="1400" z="18000" max="10km"/>
+                  <rotation yaw="6deg"/>
+                </create_ship>
+                <set_value name="$get_xl" exact="0"/>
+              </do_if>
+              <do_else>
+                <create_ship name="$Enemy_Ship" groupname="$Enemy_Ships" zone="$Start_Zone">
+                  <select size="class.ship_l" tags="[tag.military]" />
+                  <owner exact="faction.scaleplate" overridenpc="true"/>
+                  <pilot group="argon.pilot">
+                    <owner exact="faction.scaleplate"/>
+                    <page exact="10101"/>
+                  </pilot>
+                  <units>
+                    <unit category="unitcategory.defence" min="15" max="25" mk="1" />
+                  </units>
+                  <position x="6000" y="1400" z="18000" max="5km"/>
+                  <rotation yaw="6deg"/>
+                </create_ship>
+                <set_value name="$get_xl"/>
+              </do_else>
+              <create_order object="$Enemy_Ship" id="'Patrol'" default="true">
+                <param name="range" value="class.zone"/>
+                <param name="pursuetargets" value="true"/>
+              </create_order>
+
+              <do_all exact="$Num_Enemy_Squads_For_Capship">
+                <create_ship name="$Enemy_Leader" groupname="$Enemy_Ships" zone="$Start_Zone">
+                  <select faction="faction.scaleplate" tags="[tag.fighter]" size="class.ship_s"/>
+                  <pilot group="argon.pilot">
+                    <owner exact="faction.scaleplate"/>
+                    <page exact="10101"/>
+                  </pilot>
+                  <position object="$Enemy_Ship" max="5km"/>
+                </create_ship>
+                <set_object_commander object="$Enemy_Leader" commander="$Enemy_Ship" />
+                <create_order object="$Enemy_Leader" id="'Escort'">
+                  <param name="target" value="$Enemy_Ship"/>
+                </create_order>
+                <do_all exact="$Num_Enemy_Squad_Wingmen">
+                  <create_ship name="$Enemy_Follower" groupname="$Enemy_Ships" zone="$Start_Zone">
+                    <select faction="faction.scaleplate" tags="[tag.fighter]" size="class.ship_s"/>
+                    <pilot group="argon.pilot">
+                      <owner exact="faction.scaleplate"/>
+                      <page exact="10101"/>
+                    </pilot>
+                    <position object="$Enemy_Leader" min="2km" max="4km"/>
+                  </create_ship>
+                  <set_object_commander object="$Enemy_Follower" commander="$Enemy_Leader" />
+                  <create_order object="$Enemy_Follower" id="'Escort'">
+                    <param name="target" value="$Enemy_Leader" />
+                  </create_order>
+                </do_all>
+              </do_all>
+            </do_all>
+
+            <do_all exact="$Num_Allied_Squads_For_Player_Ship">
+              <create_ship name="$Allied_Leader" groupname="$Allied_Ships" zone="$Start_Zone">
+                <select faction="faction.argon" tags="[tag.fighter]" size="class.ship_s"/>
+                <pilot group="argon.pilot">
+                  <owner exact="faction.player"/>
+                  <page exact="10101"/>
+                </pilot>
+                <position object="player.occupiedship" max="5km"/>
+              </create_ship>
+              <set_object_commander object="$Allied_Leader" commander="player.occupiedship" />
+              <create_order object="$Allied_Leader" id="'Patrol'" default="true">
+                <param name="range" value="class.zone"/>
+                <param name="pursuetargets" value="true"/>
+              </create_order>
+              <do_all exact="$Num_Allied_Squad_Wingmen">
+                <create_ship name="$Allied_Follower" groupname="$Allied_Ships" zone="$Start_Zone">
+                  <select faction="faction.argon" tags="[tag.fighter]" size="class.ship_s"/>
+                  <pilot group="argon.pilot">
+                    <owner exact="faction.player"/>
+                    <page exact="10101"/>
+                  </pilot>
+                  <position object="$Allied_Leader" max="5km"/>
+                </create_ship>
+                <set_object_commander object="$Allied_Follower" commander="$Allied_Leader" />
+                <create_order object="$Allied_Follower" id="'Escort'">
+                  <param name="target" value="$Allied_Leader" />
+                </create_order>
+              </do_all>
+            </do_all>
+
+            <set_value name="$get_xl" exact="0"/>
+            <do_all exact="$Num_Allied_Capships">
+              <create_orientation name="$Orientation" refobject="$Enemy_Station" orientation="look_at">
+                <position object="player.occupiedship"/>
+              </create_orientation>
+              <do_if value="$get_xl">
+                <create_ship name="$Allied_Ship" groupname="$Allied_Ships" zone="$Start_Zone">
+                  <select size="class.ship_xl" tags="[tag.military]" />
+                  <owner exact="faction.player" overridenpc="true"/>
+                  <pilot group="argon.pilot">
+                    <owner exact="faction.player"/>
+                    <page exact="10101"/>
+                  </pilot>
+                  <units>
+                    <unit category="unitcategory.defence" min="15" max="25" mk="1" />
+                  </units>
+                  <position object="player.occupiedship" max="10km"/>
+                  <rotation value="$Orientation" />
+                </create_ship>
+                <set_value name="$get_xl" exact="0"/>
+              </do_if>
+              <do_else>
+                <create_ship name="$Allied_Ship" groupname="$Allied_Ships" zone="$Start_Zone">
+                  <select size="class.ship_l" tags="[tag.military]" />
+                  <owner exact="faction.player" overridenpc="true"/>
+                  <pilot group="argon.pilot">
+                    <owner exact="faction.player"/>
+                    <page exact="10101"/>
+                  </pilot>
+                  <units>
+                    <unit category="unitcategory.defence" min="15" max="25" mk="1" />
+                  </units>
+                  <position object="player.occupiedship" max="5km"/>
+                  <rotation value="$Orientation" />
+                </create_ship>
+                <set_value name="$get_xl"/>
+              </do_else>
+              <create_order object="$Allied_Ship" id="'Patrol'" default="true">
+                <param name="range" value="class.zone"/>
+                <param name="pursuetargets" value="true"/>
+              </create_order>
+
+              <do_all exact="$Num_Allied_Squads_For_Capship">
+                <create_ship name="$Allied_Leader" groupname="$Allied_Ships" zone="$Start_Zone">
+                  <select faction="faction.argon" tags="[tag.fighter]" size="class.ship_s"/>
+                  <pilot group="argon.pilot">
+                    <owner exact="faction.player"/>
+                    <page exact="10101"/>
+                  </pilot>
+                  <position object="player.container" max="5km"/>
+                </create_ship>
+                <set_object_commander object="$Allied_Leader" commander="$Allied_Ship" />
+                <create_order object="$Allied_Leader" id="'Escort'">
+                  <param name="target" value="$Allied_Ship"/>
+                </create_order>
+                <do_all exact="$Num_Allied_Squad_Wingmen">
+                  <create_ship name="$Allied_Follower" groupname="$Allied_Ships" zone="$Start_Zone">
+                    <select faction="faction.argon" tags="[tag.fighter]" size="class.ship_s"/>
+                    <pilot group="argon.pilot">
+                      <owner exact="faction.player"/>
+                      <page exact="10101"/>
+                    </pilot>
+                    <position object="$Allied_Leader" max="5km"/>
+                  </create_ship>
+                  <set_object_commander object="$Allied_Follower" commander="$Allied_Leader" />
+                  <create_order object="$Allied_Follower" id="'Escort'">
+                    <param name="target" value="$Allied_Leader" />
+                  </create_order>
+                </do_all>
+              </do_all>
+            </do_all>
+          </actions>
+        </cue>
+
+        <cue name="DestroyAll">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <destroy_group group="$Allied_Ships"/>
+            <destroy_group group="$Enemy_Ships"/>
+            <destroy_object object="$Enemy_Station"/>
+          </actions>
+        </cue>
+      </cues>
+    </cue>
+
+  </cues>
+</mdscript>

@@ -1,0 +1,9 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<actions>
+  <!-- 
+  This file defines objects or components that have been replaced and all occurences in savegames need to be patched to reflect the updated state.
+  Elements defined in the map file have to be specified with their full connection path relative to the root map macro.
+  Objects that are created independently from the universe map must be specified relative to the object macro to apply to all instances of that macro.
+  Macro names and paths should be all lowercase.
+  -->
+</actions>

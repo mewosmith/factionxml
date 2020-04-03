@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<entitytypes>
+  <entitytype id="officer" name="{20208,10401}" femalename="{20208,10402}" description="{20208,10403}" icon="pilot" platformpriority="default" />
+  <entitytype id="trader" name="{20208,10501}" femalename="{20208,10502}" description="{20208,10503}" icon="trader" platformpriority="default" />
+  <entitytype id="factionrepresentative" name="{20208,10601}" femalename="{20208,10602}" description="{20208,10603}" icon="factionrepresentative" platformpriority="default" />
+  <entitytype id="shadyguy" name="{20208,10801}" femalename="{20208,10802}" description="{20208,10803}" icon="shadyguy" platformpriority="default" />
+  <entitytype id="crowd" name="{20208,10901}" femalename="{20208,10902}" description="{20208,10903}" icon="pilot" platformpriority="default" />
+</entitytypes>

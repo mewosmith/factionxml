@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?>
+<aiscript name="order.wait.signal" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="aiscripts.xsd" version="4">
+  <!-- Wait with signal handling. -->
+  <order id="WaitForSignal" name="{1041, 111}" description="{1041, 112}" category="internal">
+    <params>
+      <!-- NB: by default this is NOT infinite. -->
+      <param name="timeout" type="time" default="1h" infinitevalue="0s" text="{1041, 10034}" comment="Duration">
+        <input_param name="min" value="0s" />
+        <input_param name="max" value="5h" />
+        <input_param name="step" value="30s" />
+      </param>
+      <param name="allowdocked" type="bool" default="false" advanced="true" text="{1041, 10121}" comment="Stay docked. only works for non capital ships. implementation is in orders.base."/>
+      <param name="allowparked" type="internal" default="false" comment="Stay parked. implementation is in orders.base."/>
+      <param name="releasesignal" type="internal" default="null" comment="Release signal. List: [param, param2]. Wait will be cancelled if a signal with $releasesignal.{1} as event.param and $releasesignal.{2} as event.param2 is sent to this.object. While event.param MUST be non-null, event.param2 may be null."/>
+      <param name="signaller" type="object" default="null" advanced="true" text="{1041, 10115}" comment="Signaller. object that will send releasesignal. Optional"/>
+      <param name="alignwithecliptic" type="internal" default="true" comment="Ship aligns with ecliptic before waiting. Only overridden if player just got up via orders.base"/>
+      <param name="debugchance" type="bool" default="0" advanced="true" text="{1041, 10086}" comment="Print debug output">
+        <input_param name="truevalue" value="100"/>
+      </param>
+    </params>
+    <requires>
+      <match shiptype="shiptype.lasertower" negate="true"/>
+    </requires>
+  </order>
+  <interrupts>
+    <handler ref="AttackHandler"/>
+    <handler ref="MissileLockHandler" />
+    <handler consume="false">
+      <conditions>
+        <check_any>
+          <check_all>
+            <event_object_signalled object="this.object" param="$releasesignal.{1}" param2="@$releasesignal.{2}"/>
+            <!-- bullet-proofing. to make sure that this handler does not respond to signals with null parameters. -->
+            <check_value value="@$releasesignal.{1}"/>
+          </check_all>
+          <check_all>
+            <!-- proceed when the player issues a new order. -->
+            <event_object_order_ready object="this.assignedcontrolled"/>
+            <check_value value="@$releasesignal.{1} == 'playerownedship_proceed'"/>
+            <check_value value="(event.param != this.assignedcontrolled.order) and (event.param != this.assignedcontrolled.defaultorder)"/>
+            <debug_text text="'WaitForSignal proceed: new order: ' + @event.param.id" debugchance="$debugchance"/>
+          </check_all>
+          <event_object_destroyed object="$signaller" check="false"/>
+          <event_object_changed_sector object="$signaller" check="false"/>
+          <event_object_changed_sector object="this.assignedcontrolled"/>
+        </check_any>
+      </conditions>
+      <actions>
+        <do_if value="event.name == 'event_object_signalled'">
+          <debug_text text="'%s %s cleared to proceed by %s %s.'.[this.ship.knownname, this.ship, @$signaller.knownname, $signaller]" chance="$debugchance"/>
+        </do_if>
+        <do_else>
+          <debug_text text="'%s %s, signaller of %s %s, was destroyed or is no longer in our sector. proceeding.'.[@$signaller.knownname, $signaller, this.ship.knownname, this.ship]" chance="$debugchance"/>
+        </do_else>
+        <do_if value="$releasesignal.{1} == 'playerownedship_proceed'">
+          <remove_value name="global.$Time_PlayerStoppedControl"/>
+        </do_if>
+        <do_if value="$signaller.pilot.$police_cleared.{this.assignedcontrolled}?">
+          <remove_value name="$signaller.pilot.$police_cleared.{this.assignedcontrolled}"/>
+        </do_if>
+        <do_if value="global.$WaitForSignalID? and global.$WaitForSignalID == this.assignedcontrolled.order">
+          <remove_value name="global.$WaitForSignalID"/>
+        </do_if>
+        <abort_called_scripts resume="end"/>
+      </actions>
+    </handler>
+  </interrupts>
+  <init>
+    <set_command command="command.wait"/>
+    <set_command_action commandaction="commandaction.standingby"/>
+
+    <set_value name="$starttime" exact="player.age"/>
+  </init>
+  <patch sinceversion="1">
+    <set_value name="$allowdocked" exact="false"/>
+    <set_value name="$allowparked" exact="false"/>
+  </patch>
+  <patch sinceversion="2">
+    <do_if value="$signaller == this.assignedcontrolled">
+      <signal_objects object="this.assignedcontrolled" param="$releasesignal.{1}" param2="@$releasesignal.{2}"/>
+    </do_if>
+  </patch>
+  <patch sinceversion="3">
+    <do_if value="(@this.assignedcontrolled.defaultorder.id == 'SupplyFleet') and $releasesignal.{1} == 'resupply_proceed'">
+      <set_tradeoffers_enabled object="this.assignedcontrolled" enabled="true"/>
+    </do_if>
+  </patch>
+  <patch sinceversion="4">
+    <do_if value="$signaller and (not this.sector or (this.sector != $signaller.sector) or (this.assignedcontrolled.distanceto.{$signaller} gt this.assignedcontrolled.maxradarrange))">
+      <do_if value="@this.assignedcontrolled.order.id == 'WaitForSignal'">
+        <debug_text text="'PATCH: signaller is out of sight or is in a different sector. skipping wait.'" filter="savegame"/>
+        <edit_order_param order="this.assignedcontrolled.order" param="'timeout'" value="1s"/>
+      </do_if>
+      <do_else>
+        <debug_text text="'waiting for signaller very far away but cannot skip wait due to order being: %s %s. should be WaitForSignal.'.[@this.assignedcontrolled.order.id, this.assignedcontrolled.order]" filter="error"/>
+      </do_else>
+    </do_if>
+  </patch>
+  <attention min="unknown">
+    <actions>
+      <do_if value="not @$releasesignal.{1}">
+        <debug_text text="'WaitForSignal called with no or invalid releasesignal. releasesignal: ' + @$releasesignal" filter="error"/>
+        <resume label="end"/>
+      </do_if>
+
+      <do_if value="@$signaller.isclass.destructible and not $signaller.isoperational">
+        <debug_text text="'signalling ship is no longer operational. skipping wait.'" chance="$debugchance"/>
+        <resume label="end"/>
+      </do_if>
+
+      <do_if value="$signaller.pilot.$police_cleared.{this.assignedcontrolled}?">
+        <debug_text text="'we were already released by %s %s, %s seconds ago while we were not listening. skipping wait.'.[$signaller.knownname, $signaller, player.age - $signaller.pilot.$police_cleared.{this.assignedcontrolled}]" chance="$debugchance"/>
+        <remove_value name="$signaller.pilot.$police_cleared.{this.assignedcontrolled}"/>
+        <resume label="end"/>
+      </do_if>
+
+      <do_if value="$signaller and (not this.sector or (this.sector != $signaller.sector) or (this.assignedcontrolled.distanceto.{$signaller} gt this.assignedcontrolled.maxradarrange))">
+        <!-- this can happen if ship is given an order to execute before doing this one. -->
+        <debug_text text="'signaller is out of sight or is in a different sector. skipping wait.'" chance="$debugchance"/>
+        <resume label="end"/>
+      </do_if>
+
+      <debug_text text="'%s %s %s waiting for signal: %s from %s %s %s (can be null).'.[this.assignedcontrolled.idcode, this.assignedcontrolled.knownname, this.assignedcontrolled, $releasesignal, @$signaller.idcode, @$signaller.knownname, @$signaller]" chance="$debugchance"/>
+
+      <stop_moving object="this.assignedcontrolled"/>
+
+      <do_if value="$alignwithecliptic and not this.zone.isclass.highway and not this.assignedcontrolled.dock">
+        <!-- this will align this ship to the ecliptic plane -->
+        <move_to object="this.assignedcontrolled" destination="this.zone" forceposition="false" forcerotation="true">
+          <position object="this.assignedcontrolled" z="5m"/>
+          <rotation pitch="0deg" yaw="this.assignedcontrolled.rotation.yaw" roll="0deg"/>
+          <interrupt_after_time time="0s"/>
+        </move_to>
+      </do_if>
+
+      <do_if value="$timeout">
+        <wait exact="$timeout"/>
+      </do_if>
+      <do_else>
+        <!-- wait until signal is sent. -->
+        <wait/>
+      </do_else>
+
+      <label name="end"/>
+
+      <set_order_syncpoint_reached order="this.ship.order" />
+
+      <apply_experience entity="this" experience="'ship_bored'" factor="[((player.age - $starttime) / 24h)f, 1.0].min"/>
+      <apply_experience object="this.assignedcontrolled" role="entityrole.service" experience="'ship_bored'" factor="[((player.age - $starttime) / 24h)f, 1.0].min"/>
+
+      <remove_value name="this.$haltedby"/>
+
+    </actions>
+  </attention>
+  <on_abort>
+    <do_if value="this.assignedcontrolled.exists">
+      <apply_experience entity="this" experience="'ship_bored'" factor="[((player.age - $starttime) / 24h)f, 1.0].min"/>
+      <apply_experience object="this.assignedcontrolled" role="entityrole.service" experience="'ship_bored'" factor="[((player.age - $starttime) / 24h)f, 1.0].min"/>
+    </do_if>
+
+    <remove_value name="this.$haltedby"/>
+  </on_abort>
+</aiscript>

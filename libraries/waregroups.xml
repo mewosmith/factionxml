@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- read XSD reference, when the XSD-file is there - xsi:noNamespaceSchemaLocation="defaults.xsd" -->
+<groups xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <!-- tradable ware groups -->
+  <group id="agricultural" name="{20215,101}" factoryname="{20215,104}" icon="be_upgrade_bio" tags="tradable" tier="5"/>
+  <group id="energy" name="{20215,201}" factoryname="{20215,204}" icon="be_upgrade_resource" tags="tradable" tier="1"/>
+  <group id="food" name="{20215,301}" factoryname="{20215,304}" icon="be_upgrade_food" tags="tradable" tier="6" />
+  <group id="gases" name="{20215,401}" factoryname="{20215,404}" icon="be_upgrade_resource" tags="tradable" />
+  <group id="hightech" name="{20215,501}" factoryname="{20215,504}" icon="be_upgrade_tech" tags="tradable" tier="3" />
+  <group id="ice" name="{20215,601}" factoryname="{20215,604}" icon="be_upgrade_resource" tags="tradable" />
+  <group id="minerals" name="{20215,701}" factoryname="{20215,704}" icon="be_upgrade_resource" tags="tradable" />
+  <group id="pharmaceutical" name="{20215,801}" factoryname="{20215,804}" icon="be_upgrade_pharma" tags="tradable" tier="7" />
+  <group id="refined" name="{20215,901}" factoryname="{20215,904}" icon="be_upgrade_refined" tags="tradable" tier="2" />
+  <group id="shiptech" name="{20215,1001}" factoryname="{20215,1004}" icon="be_upgrade_equipmenparts" tags="tradable" tier="4" />
+  <group id="weapontech" name="{20215,1101}" factoryname="{20215,1104}" icon="be_upgrade_tech" tags="tradable" tier="3" />
+  <group id="water" name="{20215,1201}" factoryname="{20215,1204}" icon="be_upgrade_refined" tags="tradable" tier="2" />
+  <!-- other ware groups -->
+  <group id="ships_argon" name="{20215,1301}" tags="buildable" />
+  <group id="ships_paranid" name="{20215,1401}" tags="buildable" />
+  <group id="ships_teladi" name="{20215,1501}" tags="buildable" />
+  <group id="ships_split" name="{20215,2501}" tags="buildable" />
+  <group id="drones" name="{20215,1601}" tags="buildable" />
+  <group id="countermeasures" name="{20215,1701}" tags="buildable" />
+  <group id="engines" name="{20215,1801}" tags="buildable" />
+  <group id="missiles" name="{20215,1901}" tags="buildable" />
+  <group id="shields" name="{20215,2001}" tags="buildable" />
+  <group id="software" name="{20215,2101}" tags="buildable" />
+  <group id="thrusters" name="{20215,2201}" tags="buildable" />
+  <group id="turrets" name="{20215,2301}" tags="buildable" />
+  <group id="weapons" name="{20215,2401}" tags="buildable" />
+</groups>

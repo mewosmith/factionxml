@@ -1,0 +1,1638 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mdscript name="LIB_Generic" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="md.xsd">
+  <cues>
+
+    <!-- input: this.$RewardObject-list, output: this.$RewardText -->
+    <library name="GenerateRewardText">
+      <actions>
+        <set_value name="this.$RewardText" exact="''"/>
+
+        <!-- multiple modparts or multiple ships? -->
+        <set_value name="$modpartcount" exact="0"/>
+        <set_value name="$shipcount" exact="0"/>
+        <do_all exact="this.$RewardObject.count" counter="$ri">
+          <do_if value="typeof this.$RewardObject.{1} == datatype.ware">
+            <set_value name="$modpartcount" operation="add"/>
+          </do_if>
+          <do_elseif value="typeof @$Definition.$RewardObject.{1} == datatype.table">
+            <do_if value="@$Definition.$RewardObject.{$ri}.$macro and @$Definition.$RewardObject.{$ri}.$loadout">
+              <set_value name="$shipcount" operation="add"/>
+            </do_if>
+          </do_elseif>
+        </do_all>
+
+        <!-- multiple xxx reward-text -->
+        <do_if value="$shipcount gt 1">
+          <set_value name="this.$RewardText" exact="if this.$RewardText == '' then {30002,2002} else this.$RewardText + '\n' + {30002,2002}"/>
+        </do_if>
+        <do_if value="$modpartcount gt 1">
+          <set_value name="this.$RewardText" exact="if this.$RewardText == '' then {30002,2001} else this.$RewardText + '\n' + {30002,2001}"/>
+        </do_if>
+
+        <!-- exact reward -->
+        <do_all exact="this.$RewardObject.count" counter="$ri">
+          <do_if value="typeof this.$RewardObject.{$ri} == datatype.ware">
+            <do_if value="this.$RewardObject.{$ri}.ispaintmod">
+              <substitute_text text="this.$RewardObjText" source="{30004,10001}" comment="Paint mod: $MODNAME$">
+                <replace string="'$MODNAME$'" with="this.$RewardObject.{$ri}.name"/>
+              </substitute_text>
+              <set_value name="this.$RewardText" exact="if this.$RewardText == '' then this.$RewardObjText else this.$RewardText + '\n' + this.$RewardObjText"/>
+            </do_if>
+            <do_else>
+              <set_value name="this.$RewardText" exact="if this.$RewardText == '' then this.$RewardObject.{$ri}.name else this.$RewardText + '\n' + this.$RewardObject.{$ri}.name"/>
+            </do_else>
+          </do_if>
+          <do_elseif value="typeof this.$RewardObject.{$ri} == datatype.table">
+            <do_if value="this.$RewardObject.{$ri}.$macro and this.$RewardObject.{$ri}.$loadout">
+              <set_value name="$RewardShipTmp" exact="this.$RewardObject.{$ri}"/>
+              <!-- shipname reward-description -->
+              <set_value name="this.$RewardText" exact="if this.$RewardText == '' then $shipmacro.name else this.$RewardText + '\n' + $shipmacro.name"/>
+
+              <!-- pilot reward-description -->
+              <do_if value="$RewardShipTmp.$pilot">
+                <do_if value="$RewardShipTmp.$pilot.{3} ge 12">
+                  <set_value name="this.$RewardText" exact="this.$RewardText + '\n- ' + readtext.{20208}.{30101} + readtext.{1001}.{120} + ' ' + readtext.{20208}.{50601}" comment="5* elite"/>
+                </do_if>
+                <do_elseif value="$RewardShipTmp.$pilot.{3} ge 9">
+                  <set_value name="this.$RewardText" exact="this.$RewardText + '\n- ' + readtext.{20208}.{30101} + readtext.{1001}.{120} + ' ' + readtext.{20208}.{50501}" comment="4* veteran"/>
+                </do_elseif>
+                <do_elseif value="$RewardShipTmp.$pilot.{3} ge 6">
+                  <set_value name="this.$RewardText" exact="this.$RewardText + '\n- ' + readtext.{20208}.{30101} + readtext.{1001}.{120} + ' ' + readtext.{20208}.{50301}" comment="3* specialist"/>
+                </do_elseif>
+                <do_else>
+                  <set_value name="this.$RewardText" exact="this.$RewardText + '\n- ' + readtext.{20208}.{30101}"/>
+                </do_else>
+              </do_if>
+
+              <!-- bulk crew reward-description -->
+              <do_if value="$RewardShipTmp.$bulkcrew.{2} == 'argon_military_crew' or $RewardShipTmp.$bulkcrew == 'argon_freighter_crew'">
+                <set_value name="this.$RewardText" exact="this.$RewardText + '\n- ' + readtext.{20208}.{20103} + readtext.{1001}.{120} + ' ' + $RewardShipTmp.$bulkcrew.{1} + 'x ' + readtext.{20208}.{50201}"/>
+              </do_if>
+              <do_elseif value="$RewardShipTmp.$bulkcrew.{2} == 'argon_veteran_military_crew' or $RewardShipTmp.$bulkcrew == 'argon_veteran_freighter_crew'">
+                <set_value name="this.$RewardText" exact="this.$RewardText + '\n- ' + readtext.{20208}.{20103} + readtext.{1001}.{120} + ' ' + $RewardShipTmp.$bulkcrew.{1} + 'x ' + readtext.{20208}.{50501}"/>
+              </do_elseif>
+              <do_elseif value="$RewardShipTmp.$bulkcrew.{2} == 'argon_elite_military_crew' or $RewardShipTmp.$bulkcrew == 'argon_elite_freighter_crew'">
+                <set_value name="this.$RewardText" exact="this.$RewardText + '\n- ' + readtext.{20208}.{20103} + readtext.{1001}.{120} + ' ' + $RewardShipTmp.$bulkcrew.{1} + 'x ' + readtext.{20208}.{50601}"/>
+              </do_elseif>
+
+              <!-- cargo reward description -->
+              <do_all exact="$RewardShip.$cargo.count" counter="$ci" comment="display ware-reward">
+                <set_value name="this.$RewardText" exact="this.$RewardText + '\n- ' + $RewardShipTmp.$cargo.{$ci}.{1} + 'x ' + $RewardShipTmp.$cargo.{$ci}.{2}"/>
+              </do_all>
+              <do_all exact="$RewardShipTmp.$mods.count" counter="$ci" comment="display mod-reward">
+                <set_value name="this.$RewardText" exact="this.$RewardText + '\n- ' + $RewardShipTmp.$mods.{$ci}"/>
+              </do_all>
+
+              <remove_value name="$RewardShipTmp"/>
+            </do_if>
+          </do_elseif>
+        </do_all>
+
+      </actions>
+    </library>
+
+    <!-- input: $LevelUI, $Reputation -->
+    <library name="CalculateReputation">
+      <actions>
+        <!-- see https://www.egosoft.com:8444/confluence/display/X/Faction+Relations -->
+        <set_value name="$FactionRelationUI"    exact="$LevelUI"/>
+        <do_if value="$FactionRelationUI lt 0">
+          <set_value name="$FactionRelationUI"  exact="-$FactionRelationUI"/>
+        </do_if>
+
+        <!-- calculate relation-value -->
+        <do_if value="$FactionRelationUI == 25">
+          <set_value name="$FactionRelation" exact="0.32"/>
+        </do_if>
+        <do_elseif value="$FactionRelationUI == 15">
+          <set_value name="$FactionRelation" exact="0.032"/>
+        </do_elseif>
+        <do_elseif value="$FactionRelationUI == 5">
+          <set_value name="$FactionRelation" exact="0.0032"/>
+        </do_elseif>
+        <do_elseif value="$FactionRelationUI lt 5">
+          <set_value name="$FactionRelation" exact="$FactionRelationUI * 0.00064"/>
+        </do_elseif>
+        <do_else>
+          <set_value name="$FactionRelation" exact="10^($FactionRelationUI/10.0)/1000.0"/>
+        </do_else>
+
+        <debug_text text="'Level: ' + $LevelUI + ' Reputation: ' + $FactionRelation" chance="$DebugChance"/>
+
+      </actions>
+    </library>
+
+    <!-- input: $Level, $DropLevels output: $ReputationDrop -->
+    <library name="CalculateReputationDrop">
+      <actions>
+        <set_value name="$LevelUI"  exact="$Level"/>
+        <include_actions ref="md.LIB_Generic.CalculateReputation" comment="input: $Level, output: $ReputationDrop"/>
+        <set_value name="$FactionRelationNow"  exact="$FactionRelation" comment="backup, before overwrite"/>
+
+        <set_value name="$LevelUI"  exact="[-30, $Level - $DropLevels].max" comment="abs-clamped"/>
+        <set_value name="$LevelDrop"  exact="$Level - $DropLevels"/>
+        <include_actions ref="md.LIB_Generic.CalculateReputation" comment="input: $Level, output: $ReputationDrop"/>
+
+        <!-- abs difference to drop down -->
+        <do_if value="$Level ge 0 and $LevelDrop lt 0">
+          <set_value name="$ReputationDrop"  exact="$FactionRelationNow + $FactionRelation"/>
+        </do_if>
+        <do_elseif value="($FactionRelationNow - $FactionRelation) gt 0">
+          <set_value name="$ReputationDrop"  exact="$FactionRelationNow - $FactionRelation"/>
+        </do_elseif>
+        <do_else>
+          <set_value name="$ReputationDrop"  exact="$FactionRelation - $FactionRelationNow"/>
+        </do_else>
+      </actions>
+    </library>
+
+    <!-- Input: $Skills (e.g. table[{skilltype.engineering} = 4, {skilltype.morale} = 3] ), output: $SkillStars (e.g. table[{skilltype.engineering} = Icons, {skilltype.morale} = Icons] )-->
+    <library name="GenerateSkillStars">
+      <actions>
+        <set_value name="$SkillStars" exact="table[]"/>
+        <do_all exact="$Skills.keys.count" counter="$i">
+          <set_value name="$SkillsKey" exact="$Skills.keys.{$i}"/>
+          <set_value name="$SkillStars.{$SkillsKey}" exact="''"/>
+          <set_value name="$SkillStarsKey" exact="$SkillStars.keys.{$i}"/>
+          <!-- Full stars -->
+          <set_value name="$FullStarsCounter" exact="($Skills.{$SkillsKey} / 3)i"/>
+          <do_all exact="$FullStarsCounter">
+            <set_value name="$SkillStars.{$SkillStarsKey}" exact="$SkillStars.{$SkillStarsKey} + '\033[menu_star_04]'"/>
+          </do_all>
+          <!-- 1/3 and 2/3 star -->
+          <set_value name="$Frac" exact="$Skills.{$SkillsKey} % 3"/>
+          <do_if value="$Frac == 1">
+            <set_value name="$SkillStars.{$SkillStarsKey}" exact="$SkillStars.{$SkillStarsKey} + '\033[menu_star_02]'"/>
+          </do_if>
+          <do_elseif value="$Frac == 2">
+            <set_value name="$SkillStars.{$SkillStarsKey}" exact="$SkillStars.{$SkillStarsKey} + '\033[menu_star_03]'"/>
+          </do_elseif>
+          <!-- Empty stars -->
+          <set_value name="$EmptyStarsCounter" exact="0"/>
+          <do_while value="($FullStarsCounter + [$Frac,1].min + $EmptyStarsCounter) lt 5">
+            <set_value name="$EmptyStarsCounter" operation="add"/>
+            <set_value name="$SkillStars.{$SkillStarsKey}" exact="$SkillStars.{$SkillStarsKey} + '\033[menu_star_01]'"/>
+          </do_while>
+        </do_all>
+        <!-- remove temporaries -->
+        <remove_value name="$SkillsKey"/>
+        <remove_value name="$SkillStarsKey"/>
+        <remove_value name="$Frac"/>
+        <remove_value name="$FullStarsCounter"/>
+        <remove_value name="$EmptyStarsCounter"/>
+      </actions>
+    </library>
+
+    <!--Saved to $Exlosives. Requires $Zone, $SelectedTarget, $MinSpawn, $MaxSpawn, $ExplosiveOwner -->
+    <library name="PlaceMinefield" comment="Friend/Foe Mines which also track opponents in their 1000 radius up to 1500 distance">
+      <actions>
+        <do_if value="$SelectedTarget">
+          <create_position name="$Position" space="$SelectedTarget"/>
+          <do_if value="$SelectedTarget.isclass.zone" comment="allow slight deviations since the space is contested by other faction minefields too">
+            <set_value name="$X" min="-15km" max="15km"/>
+            <set_value name="$Y" min="-3km"  max="3km"/>
+            <set_value name="$Z" min="-15km" max="15km"/>
+            <set_value name="$Position" exact="position.[$X, $Y, $Z]"/>
+          </do_if>
+          <do_else>
+            <set_value name="$Position" exact="$SelectedTarget.position"/>
+          </do_else>
+          <set_value name="$MaxDistance" exact="4km"/>
+          <do_all min="$MinSpawn" max="$MaxSpawn" counter="$c">
+            <do_if value="$c % 5 == 0"  comment="Increase the distance for greater minefields, + 1km every 5 mines">
+              <set_value name="$MaxDistance" exact="$MaxDistance + 1km"/>
+            </do_if>
+            <create_object groupname="$Explosives" macro="macro.weapon_gen_mine_03_macro" zone="if $SelectedTarget.isclass.zone then $SelectedTarget else $SelectedTarget.zone" owner="$ExplosiveOwner" comment="static mine with tracking and friend-foe detection">
+              <safepos max="$MaxDistance" value="$Position"/>
+            </create_object>
+          </do_all>
+        </do_if>
+        <remove_value name="$X"/>
+        <remove_value name="$Y"/>
+        <remove_value name="$Z"/>
+        <remove_value name="$Position"/>
+      </actions>
+    </library>
+
+    <!--Saved to $Exlosives. Requires $Zone, $SelectedTarget, $MinSpawn, $MaxSpawn, $ExplosiveOwner -->
+    <library name="PlaceMinefieldIndiscriminative" comment="Mines without FriendFoe Detection">
+      <actions>
+        <do_if value="$SelectedTarget">
+          <create_position name="$Position" space="$SelectedTarget"/>
+          <do_if value="$SelectedTarget.isclass.zone" comment="allow slight deviations since the space is contested by other faction minefields too">
+            <set_value name="$X" min="-15km" max="15km"/>
+            <set_value name="$Y" min="-3km"  max="3km"/>
+            <set_value name="$Z" min="-15km" max="15km"/>
+            <set_value name="$Position" exact="position.[$X, $Y, $Z]"/>
+          </do_if>
+          <do_else>
+            <set_value name="$Position" exact="$SelectedTarget.position"/>
+          </do_else>
+          <do_all min="$MinSpawn" max="$MaxSpawn">
+            <do_any>
+              <set_value name="$MacroToSpawn" exact="macro.weapon_gen_mine_02_macro" comment="Tracking"/>
+              <set_value name="$MacroToSpawn" exact="macro.weapon_gen_mine_01_macro" comment="Stationary"/>
+            </do_any>
+            <create_object groupname="$Explosives" macro="$MacroToSpawn" zone="if $SelectedTarget.isclass.zone then $SelectedTarget else $SelectedTarget.zone" owner="$ExplosiveOwner">
+              <safepos max="5km" value="$Position"/>
+            </create_object>
+          </do_all>
+        </do_if>
+        <remove_value name="$X"/>
+        <remove_value name="$Y"/>
+        <remove_value name="$Z"/>
+        <remove_value name="$Position"/>
+        <remove_value name="$MacroToSpawn"/>
+      </actions>
+    </library>
+
+    <!--Saved to $Exlosives. Requires $SelectedTarget, $MinSpawn, $MaxSpawn, $ExplosiveOwner -->
+    <library name="PlaceRiggedAsteroids">
+      <actions>
+        <do_if value="$SelectedTarget">
+          <create_position name="$Position" space="$SelectedTarget"/>
+          <do_if value="$SelectedTarget.isclass.zone" comment="allow slight deviations since the space is contested by other faction minefields too">
+            <set_value name="$X" min="-15km" max="15km"/>
+            <set_value name="$Y" min="-3km"  max="3km"/>
+            <set_value name="$Z" min="-15km" max="15km"/>
+            <set_value name="$Position" exact="position.[$X, $Y, $Z]"/>
+          </do_if>
+          <do_else>
+            <set_value name="$Position" exact="$SelectedTarget.position"/>
+          </do_else>
+          <do_all min="$MinSpawn" max="$MaxSpawn">
+            <create_object groupname="$Explosives" macro="macro.env_ast_ore_m_explosive_03_macro" zone="if $SelectedTarget.isclass.zone then $SelectedTarget else $SelectedTarget.zone" owner="$ExplosiveOwner" comment="rigged asteroid">
+              <safepos max="5km" value="$Position"/>
+            </create_object>
+          </do_all>
+        </do_if>
+        <remove_value name="$X"/>
+        <remove_value name="$Y"/>
+        <remove_value name="$Z"/>
+        <remove_value name="$Position"/>
+      </actions>
+    </library>
+
+    <!--Saved to $Exlosives. Requires $SelectedTarget, $MinSpawn, $MaxSpawn, $ExplosiveOwner -->
+    <library name="PlaceLasertowerfield">
+      <actions>
+        <do_if value="$SelectedTarget">
+          <do_all min="$MinSpawn" max="$MaxSpawn">
+            <do_any>
+              <set_value name="$MacroToSpawn" exact="macro.ship_gen_s_lasertower_01_a_macro"/>
+              <set_value name="$MacroToSpawn" exact="macro.ship_gen_xs_lasertower_01_a_macro"/>
+            </do_any>
+
+            <create_ship groupname="$Explosives" macro="$MacroToSpawn" zone="if $SelectedTarget.isclass.zone then $SelectedTarget else $SelectedTarget.zone">
+              <owner exact="$ExplosiveOwner" overridenpc="true"/>
+              <pilot>
+                <select race="race.drone"/>
+              </pilot>
+              <safepos max="5km" object="$SelectedTarget"/>
+            </create_ship>
+          </do_all>
+
+          <!--do_all exact="$Explosives.count" counter="$i">
+            <set_object_foe_list object="$Explosives.{$i}" factions="[faction.player, $Faction]" comment="only works for seeker-mines"/>
+          </do_all-->
+        </do_if>
+
+      </actions>
+    </library>
+
+    <!-- input: $Sector, output: $LocalExitPoints -->
+    <library name="FindSectorExitPoints">
+      <actions>
+        <!-- find exits from this sector  -->
+        <find_object name="$LocalExitPoints" class="[class.gate, class.highwayentrygate]" space="$Sector" multiple="true"/>
+
+        <!-- remove local-highways from the list -->
+        <do_all exact="$LocalExitPoints.count" reverse="true" counter="$i">
+          <do_if value="$LocalExitPoints.{$i}.isclass.highwayentrygate and $LocalExitPoints.{$i}.highway.islocalhighway">
+            <remove_value name="$LocalExitPoints .{$i}" />
+          </do_if>
+        </do_all>
+        <debug_text text="'LocalExitPoints: ' + $LocalExitPoints" chance="$DebugChance"/>
+      </actions>
+    </library>
+
+    <!-- input: $Sector, output: $LocalEntryPoints -->
+    <library name="FindSectorEntryPoints">
+      <actions>
+        <!-- find entrances into this sector  -->
+        <find_object name="$LocalEntryPoints" space="$Sector" multiple="true">
+          <match_any>
+            <match class="[class.highwayexitgate, class.highwayentrygate]"/>
+            <match class="class.gate" active="true"/>
+          </match_any>
+        </find_object>
+
+        <!-- remove local-highways from the list -->
+        <do_all exact="$LocalEntryPoints.count" reverse="true" counter="$i">
+          <do_if value="@$LocalEntryPoints.{$i}.highway.islocalhighway">
+            <remove_value name="$LocalEntryPoints.{$i}" />
+          </do_if>
+        </do_all>
+        <debug_text text="'LocalEntryPoints' + $LocalEntryPoints" chance="@$DebugChance"/>
+      </actions>
+    </library>
+
+    <library name="FindNearestObjectFromList">
+      <!-- Expensive DistanceTo which works with objects in different clusters -->
+      <!-- INPUT:   $DistanceFrom (default: player.entity), $DistanceToList,
+                    $UselocalHighways (true/false, default: false), $Keep_Lib_ObjectsWithDistance (default: false)
+           OUTPUT:  $Out_ObjectsByDistance (list), $Out_ClosestObject (object) -->
+      <actions>
+        <set_value name="$DistanceFrom"                 exact="if $DistanceFrom? then $DistanceFrom else player.entity"/>
+        <set_value name="$UselocalHighways"             exact="if $UselocalHighways? then $UselocalHighways else false"/>
+        <set_value name="$Keep_Lib_ObjectsWithDistance" exact="if $Keep_Lib_ObjectsWithDistance? then $Keep_Lib_ObjectsWithDistance else false"/>
+
+        <set_value name="$Lib_ObjectsWithDistance" exact="table[]"/>
+
+        <do_all exact="$DistanceToList.count" counter="$s">
+          <set_value name="$DistanceTo"   exact="$DistanceToList.{$s}"/>
+          <include_actions ref="md.LIB_Generic.DistanceAcrossClusters"/>
+          <set_value name="$Lib_ObjectsWithDistance.{$DistanceTo}" exact="$DistanceTotal"/>
+        </do_all>
+        <set_value name="$Out_ObjectsByDistance"  exact="$Lib_ObjectsWithDistance.keys.sorted"/>
+        <set_value name="$Out_ClosestObject"      exact="$Out_ObjectsByDistance.{1}"/>
+        <do_if value="not $Keep_Lib_ObjectsWithDistance">
+          <remove_value name="$Lib_ObjectsWithDistance"/>
+        </do_if>
+      </actions>
+    </library>
+
+    <library name="DistanceAcrossClusters">
+      <!-- Expensive DistanceTo which works with objects in different clusters -->
+      <!-- INPUT:   $DistanceFrom, $DistanceTo, $UselocalHighways (true/false)
+           OUTPUT:  $DistanceTotal -->
+      <actions>
+        <do_if value="if $UselocalHighways? then $UselocalHighways else false">
+          <get_global_path multiple="true" component="$LIB_pathComponents" uselocalhighways="true">
+            <start object="$DistanceFrom"/>
+            <end object="$DistanceTo"/>
+          </get_global_path>
+        </do_if>
+        <do_else>
+          <get_global_path multiple="true" component="$LIB_pathComponents" uselocalhighways="false">
+            <start object="$DistanceFrom"/>
+            <end object="$DistanceTo"/>
+          </get_global_path>
+        </do_else>
+
+        <!-- calculate distanceTo but skip false distance calculations made by sector changes -->
+        <set_value name="$LIB_wayPointLast"   exact="$DistanceFrom"/>
+        <set_value name="$DistanceTotal"  exact="0"/>
+        <set_value name="$SkipDistance" exact="false" comment="set to true on entering gates until they are left"/>
+
+        <do_all exact="$LIB_pathComponents.count" counter="$pc">
+          <set_value name="$component" exact="$LIB_pathComponents.{$pc}"/>
+
+          <!-- Skip Distances to Highways, Highway Exits and inbetween Gates-->
+          <do_if value="not ( $component.isclass.{class.highway} or
+                              $component.isclass.{class.highwayexitgate} or
+                              $SkipDistance)">
+            <set_value name="$DistanceTotal" exact="$LIB_wayPointLast.distanceto.{$component}" operation="add"/>
+          </do_if>
+
+          <do_if value="$component.isclass.{class.gate}" comment="toggle on entering/exiting gates">
+            <set_value name="$SkipDistance" exact="not $SkipDistance"/>
+          </do_if>
+
+          <set_value name="$LIB_wayPointLast" exact="$component"/>
+        </do_all>
+        <remove_value name="$LIB_wayPointLast"/>
+        <remove_value name="$LIB_pathComponents"/>
+      </actions>
+    </library>
+
+
+    <!-- Returns the nearest station by distance, but using highways it might be faster to reach others
+      input: $Faction 
+      input optional: $TargetLocation (default: player.entity), $UselocalHighways (default: false)
+      output: $SuitableStation
+    -->
+    <library name="FindNearestStationForFaction">
+      <actions>
+        <set_value name="$SuitableStation"    exact="null"/>
+        <include_actions ref="md.LIB_Generic.FindStationsForFactionByDistance"/>
+        <do_if value="$Out_StationsByDistance.count">
+          <set_value name="$SuitableStation"    exact="$Out_StationsByDistance.{1}"/>
+        </do_if>
+        <remove_value name="$Out_StationsByDistance"/>
+      </actions>
+    </library>
+
+    <!-- Returns statiosn by distance, but using highways it might be faster to reach others
+      input: $Faction 
+      input optional: $TargetLocation (default: player.entity), $UselocalHighways (default: false)
+      output: $Out_StationsByDistance
+    -->
+    <library name="FindStationsForFactionByDistance">
+      <actions>
+        <set_value name="$SuitableStation"    exact="null"/>
+        <set_value name="$Lib_TargetLocation" exact="if $TargetLocation? then $TargetLocation else player.entity"/>
+        <set_value name="$UselocalHighways" exact="if $UselocalHighways? then $UselocalHighways else false"/>
+        <set_value name="$DebugChance" exact="if $DebugChance? then $DebugChance else 0" comment="avoid errors"/>
+        <set_value name="$Out_StationsByDistance" exact="table[]"/>
+
+        <find_station_by_true_owner name="$Lib_SuitableStations" space="player.galaxy" faction="$Faction" multiple="true">
+          <!-- One of those stations is the nearest -->
+          <match_any>
+            <match_content checkoperational="true">
+              <match_dock size="tag.dock_s"/>
+            </match_content>
+            <match_content checkoperational="true">
+              <match_dock size="tag.dock_m"/>
+            </match_content>
+            <match_content checkoperational="true">
+              <match_dock size="tag.dock_l"/>
+            </match_content>
+            <match_content checkoperational="true">
+              <match_dock size="tag.dock_xl"/>
+            </match_content>
+          </match_any>
+        </find_station_by_true_owner>
+        <do_if value="$Lib_SuitableStations.count">
+
+          <!-- Populate $Lib_StationsWithDistance and sort it -->
+          <set_value name="$Lib_StationsWithDistance" exact="table[]"/>
+          <do_all exact="$Lib_SuitableStations.count" counter="$s">
+            <set_value name="$station" exact="$Lib_SuitableStations.{$s}"/>
+
+            <set_value name="$DistanceFrom"     exact="$Lib_TargetLocation"/>
+            <set_value name="$DistanceTo"       exact="$station"/>
+            <include_actions ref="md.LIB_Generic.DistanceAcrossClusters" comment="INPUT: $DistanceFrom, $DistanceTo, $UselocalHighways (true/false) OUTPUT: $DistanceTotal"/>
+
+            <set_value name="$Lib_StationsWithDistance.{$station}" exact="$DistanceTotal"/>
+          </do_all>
+
+          <set_value name="$Out_StationsByDistance" exact="$Lib_StationsWithDistance.keys.sorted"/>
+          <set_value name="$SuitableStation"    exact="$Out_StationsByDistance.{1}"/>
+
+          <remove_value name="$Lib_StationsWithDistance"/>
+        </do_if>
+        <remove_value name="$Lib_SuitableStations"/>
+      </actions>
+    </library>
+
+    <!-- input: $Faction, output: $NearestEnemySector -->
+    <library name="FindNearestEnemySectorForFaction">
+      <actions>
+        <!-- Find all enemy factions -->
+        <get_factions_by_relation result="$LibEnemies" relation="enemy" faction="$Faction"/>
+        <!-- Search outwards from player position -->
+        <find_cluster_in_range distances="$LibClustersInGalaxy" object="player.entity" multiple="true"/>
+        <set_value name="$LibClusters" exact="$LibClustersInGalaxy.keys.sorted"/>
+        <set_value name="$NearestEnemySector" exact="null"/>
+        <do_if value="$LibEnemies.count">
+          <do_all exact="$LibClusters.count" counter="$c">
+            <find_sector name="$LibSectors" space="$LibClusters.{$c}" multiple="true"/>
+            <do_all exact="$LibSectors.count" counter="$s">
+              <do_all exact="$LibEnemies.count" counter="$e">
+                <do_if value="$LibSectors.{$s}.owner == $LibEnemies.{$e}">
+                  <set_value name="$NearestEnemySector" exact="$LibSectors.{$s}"/>
+                  <break/>
+                </do_if>
+              </do_all>
+              <do_if value="$NearestEnemySector != null">
+                <break/>
+              </do_if>
+            </do_all>
+            <do_if value="$NearestEnemySector != null">
+              <break/>
+            </do_if>
+          </do_all>
+          <!-- If no enemy factions own sectors, choose a sector at random -->
+          <do_if value="$NearestEnemySector == null">
+            <set_value name="$NearestEnemySector" exact="$LibClusters.random"/>
+            <debug_text text="'No enemy factions own sectors. $NearestEnemySector set to random sector.'"/>
+          </do_if>
+        </do_if>
+        <!-- If no enemy factions exist, choose a sector at random -->
+        <do_else>
+          <set_value name="$NearestEnemySector" exact="$LibClusters.random"/>
+          <debug_text text="'No enemies found. $NearestEnemySector set to random sector.'"/>
+        </do_else>
+        <!-- remove temporaries -->
+        <remove_value name="$LibClustersInGalaxy"/>
+        <remove_value name="$LibClusters"/>
+        <remove_value name="$LibSectors"/>
+        <remove_value name="$LibEnemies"/>
+      </actions>
+    </library>
+
+    <!-- input: nothing, output: $crystalcluster -->
+    <library name="FindCrystalsNearPlayer">
+      <actions>
+        <create_list name="this.$Ranges"/>
+        <append_to_list name="this.$Ranges" exact="[0km,5km]"/>
+        <append_to_list name="this.$Ranges" exact="[5km,10km]"/>
+        <append_to_list name="this.$Ranges" exact="[10km,25km]"/>
+
+        <!-- find from nearby to further away (if nothing found nearby) -->
+        <do_all exact="this.$Ranges.count" counter="$ri">
+          <!--debug_text text="'searchrange min=' + this.$Ranges.{$ri}.{1} + ' max=' + this.$Ranges.{$ri}.{2}"/-->
+          <find_object groupname="this.$asteroids" class="[class.asteroid]" space="player.sector" multiple="true">
+            <match_distance min="this.$Ranges.{$ri}.{1}" max="this.$Ranges.{$ri}.{2}" space="player.sector" object="player.entity"/>
+          </find_object>
+          <!--debug_text text="this.$asteroids"/-->
+
+          <!-- found asteroids, see if some of these have crystals -->
+          <do_all exact="this.$asteroids.count" counter="$ai">
+            <find_object_component groupname="$crystalcluster" object="this.$asteroids.{$ai}" class="[class.crystal]" append="true">
+            </find_object_component>
+            <do_if value="$crystalcluster.count gt 3">
+              <break comment="break inner loop"/>
+            </do_if>
+          </do_all>
+          <clear_group group="this.$asteroids"/>
+          <do_if value="$crystalcluster.count gt 3" comment="break outer loop">
+            <break/>
+          </do_if>
+        </do_all>
+
+        <!-- remove down to more reasonable amount-->
+        <do_while value="$crystalcluster.count gt 2">
+          <remove_from_group group="$crystalcluster" object="$crystalcluster.{$crystalcluster.count}"/>
+        </do_while>
+        <!--debug_text text="'Crystalclusters: ' + $crystalcluster.count"/-->
+      </actions>
+    </library>
+
+
+    <!-- Find a shipmacro which can transport the specified cargo
+      input: $shipcargo = [[2500, ware.nividium]], $Faction, output: $shipmacro
+    -->
+    <library name="FindShipMacroForCargo" purpose="run_actions">
+      <params>
+        <param name="shipcargo"/>
+        <param name="Faction"/>
+      </params>
+      <actions>
+        <!-- find a ship which can transport the reward-cargo in sufficient quantities -->
+        <!-- TODO: Currently only supports 1 cargo-entry, extend that -->
+        <get_ship_definition macro="$shipmacros" faction="$Faction" tags="[$shipcargo.{1}.{2}.transporttag]" multiple="true"/>
+        <shuffle_list list="$shipmacros" comment="randomize results"/>
+        <do_all exact="$shipmacros.count" counter="$mi">
+          <set_value name="$cargoware" exact="$shipcargo.{1}.{2}"/>
+          <set_value name="$cargoamount" exact="$shipcargo.{1}.{1}"/>
+          <do_if value="$shipmacros.{$mi}.cargo.{$cargoware}.max ge $cargoamount">
+            <return value="$shipmacros.{$mi}"/>
+          </do_if>
+        </do_all>
+        <return value="null"/>
+      </actions>
+    </library>
+
+
+    <!-- Input: $Faction, output: $EnemyFaction - finds a random (arch)enemy of the specified faction -->
+    <library name="DetermineEnemyFaction">
+      <actions>
+        <set_value name="$EnemyFaction" exact="null"/>
+        <create_list name="this.$EnemyFactions"/>
+        <do_all exact="lookup.faction.count" counter="$Counter">
+          <do_if value="not lookup.faction.{$Counter}.isvisitor">
+            <do_if value="lookup.faction.{$Counter}.hasrelation.kill.{this.$Faction} or 
+                          lookup.faction.{$Counter}.hasrelation.enemy.{this.$Faction}">
+              <do_if value="lookup.faction.{$Counter}.isactive">
+                <append_to_list name="this.$EnemyFactions" exact="lookup.faction.{$Counter}"/>
+              </do_if>
+            <do_else>
+              <debug_text text="'Disregarding: ' + lookup.faction.{$Counter}" chance="$DebugChance"/>
+            </do_else>
+            </do_if>
+          </do_if>
+        </do_all>
+        <do_if value="this.$EnemyFactions.count" min="1">
+          <set_value name="$EnemyFaction" exact="this.$EnemyFactions.random"/>
+          <debug_text text="'Selected ' + $EnemyFaction + ' from ' + this.$EnemyFactions" chance="$DebugChance"/>
+        </do_if>
+        <do_else>
+          <debug_text text="'No enemy faction selected!'" chance="$DebugChance"/>
+        </do_else>
+        <!-- remove temporaries -->
+        <remove_value name="this.$EnemyFactions"/>
+      </actions>
+    </library>
+
+    <!-- input: $Ship, $Faction to transfer to (see boarding.xml) -->
+    <library name="TransferShipOwnership" purpose="run_actions">
+      <params>
+        <param name="Ship"/>
+        <param name="Faction"/>
+      </params>
+      <actions>
+        <!-- change faction of personel on-board the seized ship -->
+        <get_control_entities object="$Ship" groupname="$ControlEntities"/>
+        <do_all exact="$ControlEntities.count" counter="$Counter">
+          <do_if value="$ControlEntities.{$Counter}.isclass.npc">
+            <abort_scripts entity="$ControlEntities.{$Counter}"/>
+            <set_owner object="$ControlEntities.{$Counter}" faction="$Faction"/>
+          </do_if>
+          <do_elseif value="$ControlEntities.{$Counter}.isclass.computer">
+            <!--For computers, abort their scripts, set the owner and re-assign-->
+            <abort_scripts entity="$ControlEntities.{$Counter}"/>
+            <set_value name="$Post" exact="$ControlEntities.{$Counter}.controlpost"/>
+            <dismiss_control_entity object="$Ship" actor="$ControlEntities.{$Counter}"/>
+            <set_owner object="$ControlEntities.{$Counter}" faction="$Faction"/>
+            <!--Re-assign to start scripts again-->
+            <assign_control_entity actor="$ControlEntities.{$Counter}" object="$Ship" post="$Post"/>
+          </do_elseif>
+        </do_all>
+        <cease_fire object="$Ship"/>
+        <clear_group group="$ControlEntities"/>
+      </actions>
+    </library>
+
+    <!-- input: $Station, $Faction -->
+    <library name="TransferStationOwnership">
+      <actions>
+        <do_if value="$Station.isclass.station and $Station.owner != $Faction">
+
+          <!-- notification if player was involved -->
+          <do_if value="$Station.owner == faction.player or $Faction == faction.player">
+            <show_notification text="{1015,906}" sound="notification_warning" comment="station ownership transferred"/>
+          </do_if>
+
+          <!-- first release subordinates from station-control -->
+          <set_value name="$Subordinates" exact="$Station.subordinates"/>
+          <do_all exact="$Subordinates.count" counter="$i">
+            <set_value name="$Subordinate" exact="$Subordinates.{$i}"/>
+            <create_order object="$Subordinate" id="'AssignCommander'" immediate="true">
+              <param name="commander" value="null" />
+            </create_order>
+          </do_all>
+          <clear_list list="$Station.subordinates"/>
+
+          <!-- transfer money from station back to owner (before we transfer ownership) -->
+          <do_if value="$Station.money gt 0">
+            <transfer_money from="$Station" to="$Station.owner" amount="$Station.money" comment="Money station has"/>
+          </do_if>
+          <do_if value="$Station.buildstorage.money gt 0">
+            <transfer_money from="$Station.buildstorage" to="$Station.owner" amount="$Station.buildstorage.money" comment="Money for station construction"/>
+          </do_if>
+
+          <!-- transfer ownership of station itself -->
+          <set_owner object="$Station" faction="$Faction"/>
+          <set_known object="$Station" known="true"/>
+
+          <!-- transfer control-entities -->
+          <get_control_entities object="$Station" groupname="$ControlEntities"/>
+          <set_value name="$HasManager" exact="false"/>
+          <set_value name="$HasShiptrader" exact="false"/>
+          <do_all exact="$ControlEntities.count" counter="$Counter">
+            <!--debug_text text="$Counter + '. ' + $ControlEntities.{$Counter}.name + ' post: \'' + $ControlEntities.{$Counter}.controlpost +'\''" chance="$DebugChance"/-->
+            <set_value name="$Post" exact="$ControlEntities.{$Counter}.controlpost"/>
+            <do_if value="$ControlEntities.{$Counter}.isclass.npc">
+              <abort_scripts entity="$ControlEntities.{$Counter}"/>
+              <set_owner object="$ControlEntities.{$Counter}" faction="$Faction"/>
+              <initialise_control_entity actor="$ControlEntities.{$Counter}"/>
+            </do_if>
+            <do_elseif value="$ControlEntities.{$Counter}.isclass.computer">
+              <!--For computers, abort their scripts, set the owner and re-assign-->
+              <abort_scripts entity="$ControlEntities.{$Counter}"/>
+              <dismiss_control_entity object="$Station" actor="$ControlEntities.{$Counter}"/>
+              <set_owner object="$ControlEntities.{$Counter}" faction="$Faction"/>
+              <!--Re-assign to start scripts again-->
+              <assign_control_entity actor="$ControlEntities.{$Counter}" object="$Station" post="$Post"/>
+            </do_elseif>
+
+            <do_if value="$Post == controlpost.manager">
+              <set_value name="$HasManager" exact="true"/>
+            </do_if>
+            <do_elseif value="$Post == controlpost.shiptrader">
+              <set_value name="$HasShiptrader" exact="true"/>
+            </do_elseif>
+          </do_all>
+
+          <!-- Station needs a manager to function -->
+          <do_if value="not $HasManager or not $HasShiptrader">
+            <signal_objects object="player.galaxy" param="'init station'" param2="$Station" param3="false"/>
+          </do_if>
+
+          <remove_value name="$HasManager"/>
+          <remove_value name="$HasShiptrader"/>
+
+          <!-- set ownership of "irrelevant" station-npc's (which are currently also player-owned) -->
+
+        </do_if>
+      </actions>
+    </library>
+
+    <!-- wrapper around TransferStationOwnership (which forces parameters to exist) -->
+    <library name="TransferStationOwnershipLib">
+      <params>
+        <param name="Station" comment="Station to transfer ownership of"/>
+        <param name="Faction" comment="New owner"/>
+      </params>
+      <actions>
+        <include_actions ref="md.LIB_Generic.TransferStationOwnership" comment="input: $Station, $Faction"/>
+      </actions>
+    </library>
+
+    <library name="CheckStationMatches" purpose="run_actions">
+      <params>
+        <param name="Station"/>
+        <param name="StationSpecs"/>
+        <param name="DefenceStation" default="false"/>
+        <param name="DebugChance"/>
+      </params>
+      <actions>
+        <do_if value="$StationSpecs and $Station and $Station.isoperational">
+          <set_value name="$stationmatches" exact="true"/>
+
+          <!--Check the relativly cheap storage levels before looking at the contained components-->
+          <do_if value="$stationmatches and $StationSpecs.$solidstorage? and (typeof $StationSpecs.$solidstorage).isnumeric and $StationSpecs.$solidstorage gt 0">
+            <debug_text text="'Checking if station has enough solid storage. Requires: ' + $StationSpecs.$solidstorage + ' - has ' + $Station.cargo.capacity.solid" chance="$DebugChance"/>
+            <do_if value="$Station.cargo.capacity.solid lt $StationSpecs.$solidstorage">
+              <set_value name="$stationmatches" exact="false"/>
+            </do_if>
+          </do_if>
+
+          <do_if value="$stationmatches and $StationSpecs.$containerstorage? and (typeof $StationSpecs.$containerstorage).isnumeric and $StationSpecs.$containerstorage gt 0">
+            <debug_text text="'Checking if station has enough container storage. Requires: ' + $StationSpecs.$containerstorage + ' - has ' + $Station.cargo.capacity.container" chance="$DebugChance"/>
+            <do_if value="$Station.cargo.capacity.container lt $StationSpecs.$containerstorage">
+              <set_value name="$stationmatches" exact="false"/>
+            </do_if>
+          </do_if>
+
+          <do_if value="$stationmatches and $StationSpecs.$liquidstorage? and (typeof $StationSpecs.$liquidstorage).isnumeric and $StationSpecs.$liquidstorage gt 0">
+            <debug_text text="'Checking if station has enough liquid storage. Requires: ' + $StationSpecs.$liquidstorage + ' - has ' + $Station.cargo.capacity.liquid" chance="$DebugChance"/>
+            <do_if value="$Station.cargo.capacity.liquid lt $StationSpecs.$liquidstorage">
+              <set_value name="$stationmatches" exact="false"/>
+            </do_if>
+          </do_if>
+
+          <do_if value="$stationmatches and $StationSpecs.$containedmacros? and $StationSpecs.$containedmacros.count">
+            <do_all exact="$StationSpecs.$containedmacros.count" counter="$gtt_i">
+              <set_value name="this.$MacroDef" exact="$StationSpecs.$containedmacros.{$gtt_i}"/>
+              <do_if value="this.$MacroDef.{1} gt 0" comment="Check that the definition wants a positive amount">
+                <assert value="typeof this.$MacroDef.{2} == datatype.macro" text="'Invalid macro definition. ' + this.$MacroDef.{2} + ' is not a macro.'"/>
+                <do_if value="typeof this.$MacroDef.{2} == datatype.macro">
+                  <find_object_component name="$ResultComponents" object="$Station" macro="this.$MacroDef.{2}" multiple="true"/>
+                  <debug_text text="'Checking if station has macro: ' + this.$MacroDef.{2} + '. Requires: ' + this.$MacroDef.{1} + ' - has ' + $ResultComponents.count" chance="$DebugChance"/>
+                  <do_if value="$ResultComponents.count lt this.$MacroDef.{1}">
+                    <set_value name="$stationmatches" exact="false"/>
+                    <break/>
+                  </do_if>
+                </do_if>
+              </do_if>
+            </do_all>
+          </do_if>
+
+          <do_if value="$stationmatches and $StationSpecs.$containedclasses? and $StationSpecs.$containedclasses.count">
+            <do_all exact="$StationSpecs.$containedclasses.count" counter="$gtt_i">
+              <set_value name="this.$ClassDef" exact="$StationSpecs.$containedclasses.{$gtt_i}"/>
+              <do_if value="this.$ClassDef.{1} gt 0" comment="Check that the definition wants a positive amount">
+                <assert value="typeof this.$ClassDef.{2} == datatype.class" text="'Invalid class definition. ' + this.$ClassDef.{2} + ' is not a class.'"/>
+                <do_if value="typeof this.$ClassDef.{2} == datatype.class">
+                  <find_object_component name="$ResultComponents" object="$Station" class="this.$ClassDef.{2}" multiple="true"/>
+                  <debug_text text="'Checking if station has class: ' + this.$ClassDef.{2} + '. Requires: ' + this.$ClassDef.{1} + ' - has ' + $ResultComponents.count" chance="$DebugChance"/>
+                  <do_if value="$ResultComponents.count lt this.$ClassDef.{1}">
+                    <set_value name="$stationmatches" exact="false"/>
+                    <break/>
+                  </do_if>
+                </do_if>
+              </do_if>
+            </do_all>
+          </do_if>
+
+          <do_if value="$stationmatches and $StationSpecs.$products? and $StationSpecs.$products.count">
+            <do_all exact="$StationSpecs.$products.count" counter="$gtt_i">
+              <set_value name="this.$ProductDef" exact="$StationSpecs.$products.{$gtt_i}"/>
+              <do_if value="this.$ProductDef.{1} gt 0" comment="Check that the definition wants a positive amount">
+                <assert value="typeof this.$ProductDef.{2} == datatype.ware" text="'Invalid product definition. ' + this.$ProductDef.{2} + ' is not a ware.'"/>
+                <do_if value="typeof this.$ProductDef.{2} == datatype.ware">
+                  <find_object_component name="$ResultComponents" object="$Station" multiple="true">
+                    <match_products wares="this.$ProductDef.{2}"/>
+                  </find_object_component>
+                  <debug_text text="'Checking if station has production: ' + this.$ProductDef.{2} + '. Requires: ' + this.$ProductDef.{1} + ' - has ' + $ResultComponents.count" chance="$DebugChance"/>
+                  <do_if value="$ResultComponents.count lt this.$ProductDef.{1}">
+                    <set_value name="$stationmatches" exact="false"/>
+                    <break/>
+                  </do_if>
+                </do_if>
+              </do_if>
+            </do_all>
+          </do_if>
+        </do_if>
+        <do_else>
+          <set_value name="$stationmatches" exact="false" comment="missing $StationSpecs parameter or station not operational = no match"/>
+        </do_else>
+        <return value="$stationmatches"/>
+      </actions>
+    </library>
+
+    <!--Saved to $shipmatches. Requires $currentship, $shipequip-list, $shipwares-table, $shipammo-table, $shipmods-list -->
+    <library name="CheckShipMatches">
+      <actions>
+
+        <!-- check equipment (engines, shield, thrusters, ...) -->
+        <do_if value="$shipmatches and @$shipequip and $shipequip.count">
+          <check_object object="$currentship" result="$resultval">
+            <match_loadout macros="$shipequip"/>
+          </check_object>
+          <do_if value="not $resultval">
+            <set_value name="$shipmatches" exact="false"/>
+            <debug_text text="$currentship.knownname + ' not matching (loadout)'" chance="$DebugChance"/>
+          </do_if>
+        </do_if>
+
+        <!-- check wares (energycells, ... )-->
+        <do_if value="$shipmatches and @$shipwares">
+          <set_value name="$shipwares_ware" exact="null"/>
+          <do_all exact="$shipwares.keys.count" counter="$WareCounter">
+            <set_value name="$shipwares_ware" exact="$shipwares.keys.{$WareCounter}"/>
+            <do_if value="$currentship.cargo.{$shipwares_ware}.count lt $shipwares.{$shipwares_ware}">
+              <set_value name="$shipmatches" exact="false"/>
+              <debug_text text="'wares not matching (loadout)'" chance="$DebugChance"/>
+              <break/>
+            </do_if>
+          </do_all>
+          <remove_value name="$shipwares_ware"/>
+        </do_if>
+
+        <!-- check ammo (flares, satellites, ... )-->
+        <do_if value="$shipmatches and @$shipammo">
+          <set_value name="$shipammomacro" exact="null"/>
+          <do_all exact="$shipammo.keys.count" counter="$AmmoCounter">
+            <set_value name="$shipammomacro" exact="$shipammo.keys.{$AmmoCounter}"/>
+            <do_if value="$currentship.ammostorage.{$shipammomacro}.count lt $shipammo.{$shipammomacro}">
+              <set_value name="$shipmatches" exact="false"/>
+              <debug_text text="'ammo not matching (loadout)'" chance="$DebugChance"/>
+              <break/>
+            </do_if>
+          </do_all>
+          <remove_value name="$shipammomacro"/>
+        </do_if>
+
+        <!-- check mods -->
+        <do_if value="$shipmatches and @$shipmods">
+          <do_all exact="$shipmods.count" counter="$ModCounter">
+            <set_value name="$shipmods_ware" exact="$shipmods.{$ModCounter}"/>
+
+            <debug_text text="'Checking mod ' + $shipmods_ware.name" chance="$DebugChance"/>
+
+            <do_if value="$shipmods_ware.isequipmentmod">
+              <do_if value="$shipmods_ware.isenginemod">
+                <!--engine-->
+                <do_if value="not $currentship.hasenginemod.{$shipmods_ware}">
+                  <debug_text text="'missing enginemod: ' + $shipmods_ware" chance="$DebugChance"/>
+                  <set_value name="$shipmatches" exact="false"/>
+                  <break/>
+                </do_if>
+              </do_if>
+              <do_elseif value="$shipmods_ware.isweaponmod">
+                <!--weapon-->
+                <do_if value="not $currentship.hasweaponmod.{$shipmods_ware}">
+                  <debug_text text="'missing weaponmod: ' + $shipmods_ware" chance="$DebugChance"/>
+                  <set_value name="$shipmatches" exact="false"/>
+                  <break/>
+                </do_if>
+              </do_elseif>
+              <do_elseif value="$shipmods_ware.isshipmod">
+                <!--ship-->
+                <do_if value="not $currentship.hasshipmod.{$shipmods_ware}">
+                  <debug_text text="'missing shipmod: ' + $shipmods_ware" chance="$DebugChance"/>
+                  <set_value name="$shipmatches" exact="false"/>
+                  <break/>
+                </do_if>
+              </do_elseif>
+              <do_elseif value="$shipmods_ware.isshieldmod">
+                <!--shield-->
+                <do_if value="not $currentship.hasshieldmod.{$shipmods_ware}">
+                  <debug_text text="'missing shieldmod: ' + $shipmods_ware" chance="$DebugChance"/>
+                  <set_value name="$shipmatches" exact="false"/>
+                  <break/>
+                </do_if>
+              </do_elseif>
+            </do_if>
+            <do_else>
+              <debug_text text="'Non-equipment-mod in equipmentmod list! (ignoring)'" chance="$DebugChance"/>
+            </do_else>
+          </do_all>
+        </do_if>
+      </actions>
+    </library>
+
+    <!--TODO @Owen Replace library with one using build plots and construction plans-->
+    <!--<library name="Build_Npc_Station">
+      <params>
+        <param name="BuildZone" comment="zone in which to build the station"/>
+        <param name="BuildPosition" comment="position to build the station (relative to buildzone)"/>
+        <param name="BuildRotation" comment="rotation to build the station (relative to buildzone)"/>
+        <param name="BuildMacro" comment="what station to build"/>
+        <param name="BuildPlanList" comment="Buildplan"/>
+        <param name="UpgradePlanList" comment="Upgradeplan (can be null)"/>
+        <param name="Faction" comment="Faction for which the station is"/>
+        <param name="CheatResourcesPercent" comment="Cheat resources (0=none, 100=all)"/>
+        <param name="Delay" default="1s"/>
+        <param name="debugchance" default="0" />
+      </params>
+      <delay exact="$Delay"/>
+    </library>-->
+
+
+    <!-- ship formation 
+      - First ship in the group will be the group-leader, running the script 'leaderorder' 
+      - First ship (group-leader) can have an optional leader (e.g. a station )
+      - All other ships will be set to follow the group-leader, running the order 'followerorder'
+      - The group will fly in the specified formation, with the specified distance 
+        - some formations require different parameters, we only support 'distance' and ignore the rest
+    -->
+    <library name="Setup_ShipGroup_Formation">
+      <params>
+        <param name="group" comment="A group of ships"/>
+        <param name="formation" comment="The formation we want the group to fly"/>
+        <param name="formation_distance" default="null" comment="reasonable distance between ships"/>
+        <param name="leaderorder" default="null" comment="order the leader of the group will execute (e.g. 'Patrol' "/>
+        <param name="leadercommander" default="null" comment="optional, commander for the group-leader (e.g. a station)"/>
+        <param name="followerorder" default="null" comment="order the followers in the group will execute (e.g. 'Follow') "/>
+        <!--param name="leader" comment="In the future we probably want to set who is the leader"-->
+      </params>
+      <actions>
+
+        <do_all exact="$group.count" counter="$fi">
+
+          <!-- Loop over all ships in the group, 1st one will be the leader -->
+          <do_if value="$fi==1" comment="formation">
+            <set_value name="$TheLeader" exact="$group.{$fi}"/>
+
+            <do_if value="$leadercommander">
+              <debug_text text="'setting groupleader-commander'"/>
+              <set_object_commander commander="$leadercommander" object="$TheLeader"  />
+            </do_if>
+
+          </do_if>
+          <do_else>
+
+            <!-- setup relation between groupmembers -->
+            <set_object_commander commander="$TheLeader" object="$group.{$fi}"  />
+
+            <!-- set follower script -->
+            <do_if value="$followerorder">
+              <create_order object="$group.{$fi}" id="$followerorder">
+                <param name="target" value="$TheLeader"/>
+              </create_order>
+            </do_if>
+          </do_else>
+
+          <!-- set leader-order -->
+          <do_if value="$leaderorder">
+
+            <do_if value="$leaderorder" exact="'Patrol'">
+              <!-- For patrol-scripts in the plot we usually want to patrol the zone (not the sector!)-->
+              <create_order object="$TheLeader" id="$leaderorder" default="true">
+                <param name="space" value="$TheLeader.zone"/>
+              </create_order>
+            </do_if>
+            <do_else>
+              <create_order object="$TheLeader" id="$leaderorder"/>
+            </do_else>
+          </do_if>
+
+          <!-- figure out parameter for the formation-call -->
+          <do_if value="$formation_distance">
+            <set_value name="$dist" exact="$formation_distance"/>
+          </do_if>
+          <do_else>
+            <set_value name="$dist" exact="$TheLeader.size"/>
+          </do_else>
+
+          <do_if value="$fi gt 1">
+            <!-- formation -->
+            <do_if value="$formation">
+              <create_formation leader="$TheLeader" follower="$group.{$fi}" formation="formationshape.{$formation}" param="$dist"/>
+            </do_if>
+            <do_else>
+              <debug_text text="'No ship-formation specified!'"/>
+            </do_else>
+          </do_if>
+
+
+        </do_all>
+      </actions>
+    </library>
+
+    <!-- input: $ship, sets all turrets to hold fire -->
+    <library name="Setup_Ship_Turrets_HoldFire">
+      <actions>
+        <do_if value="@$ship">
+          <set_value name="$weapons_all" exact="$ship.turrets.operational.list"/>
+          <do_all exact="$weapons_all.count" counter="$i">
+            <set_weapon_mode weapon="$weapons_all.{$i}" weaponmode="weaponmode.holdfire"/>
+          </do_all>
+        </do_if>
+      </actions>
+    </library>
+
+    <!-- input: $ship, sets all turrets to hold fire -->
+    <library name="Setup_Ship_Turrets_Defend">
+      <actions>
+        <do_if value="@$ship">
+          <set_value name="$weapons_all" exact="$ship.turrets.operational.list"/>
+          <do_all exact="$weapons_all.count" counter="$i">
+            <set_weapon_mode weapon="$weapons_all.{$i}" weaponmode="weaponmode.defend"/>
+          </do_all>
+        </do_if>
+      </actions>
+    </library>
+
+    <!-- input: $InitialMap exact=[macro.cluster_xxx_sector00x_macro, macro.cluster_yyy_sector00y_macro, ...], $UncoverShipyardsAndWharfs(optional), $UncoverTradeStations(optional), $UncoverAllStations(optional), $UncoverStationFaction(optional) -->
+    <library name="UncoverMap_SectorsAndGates">
+      <actions>
+        <find_sector name="$InitialMapSectors" macro="$InitialMap" multiple="true"/>
+        <do_all exact="$InitialMapSectors.count" counter="$i">
+          <set_value name="$Sector" exact="$InitialMapSectors.{$i}"/>
+          <!-- sector -->
+          <set_known object="$Sector" known="true"/>
+          <set_known object="$Sector.cluster" known="true"/>
+          <!-- gates -->
+          <find_object name="$Gates" class="class.gate" space="$Sector" multiple="true"/>
+          <do_all exact="$Gates.count" counter="$g">
+            <do_if value="($Gates.{$g}.destination) and ($InitialMapSectors.indexof.{$Gates.{$g}.destination.sector})">
+              <set_known object="$Gates.{$g}" known="true"/>
+            </do_if>
+          </do_all>
+          <!-- stations -->
+          <set_value name="$FactionList" exact="[]"/>
+          <do_if value="$UncoverStationFaction?">
+            <append_to_list name="$FactionList" exact="$UncoverStationFaction"/>
+          </do_if>
+          <do_if value="$UncoverAllStations?">
+            <find_station name="$UncoverStations" space="$Sector" multiple="true" owner="$FactionList"/>
+          </do_if>
+          <do_else>
+            <do_if value="$UncoverShipyardsAndWharfs?">
+              <find_station name="$UncoverStations" space="$Sector" shipyard="true" owner="$FactionList" multiple="true" append="true"/>
+              <find_station name="$UncoverStations" space="$Sector" wharf="true"    owner="$FactionList" multiple="true" append="true"/>
+            </do_if>
+            <do_if value="$UncoverTradeStations?">
+              <find_station name="$UncoverStations" space="$Sector" tradestation="true" owner="$FactionList" multiple="true" append="true"/>
+            </do_if>
+          </do_else>
+          <do_if value="$UncoverStations?">
+            <do_all exact="$UncoverStations.count" counter="$us">
+              <set_known object="$UncoverStations.{$us}" known="true" updatesnapshot="true"/>
+            </do_all>
+          </do_if>
+        </do_all>
+        <remove_value name="$InitialMapSectors"/>
+      </actions>
+    </library>
+
+
+
+
+    <library name="ApproachObject_Handler">
+      <!-- IN: $ApproachTarget, $ApproachDistance, $SuccessSignalCue (will be signalled on successful approach) -->
+      <params>
+        <param name="ApproachObject" default="player.entity"/>
+        <param name="ApproachTarget"/>
+        <param name="ApproachDistance" default="5km"/>
+        <param name="SuccessSignalCue"/>
+        <param name="FailureSignalCue" default="null"/>
+      </params>
+      <cues>
+        <cue name="ApproachObject_Initialise">
+          <actions>
+            <debug_text text="this" chance="if $CueDebugChance? then $CueDebugChance else 0"/>
+            <do_if value="$ApproachObject.sector == $ApproachTarget.sector">
+              <signal_cue cue="ApproachObject_Activate_Trigger"/>
+            </do_if>
+          </actions>
+        </cue>
+
+        <cue name="ApproachObject_Failed">
+          <conditions>
+            <check_any>
+              <event_object_destroyed object="$ApproachObject"/>
+              <event_object_destroyed object="$ApproachTarget"/>
+            </check_any>
+          </conditions>
+          <actions>
+            <do_if value="$FailureSignalCue">
+              <signal_cue cue="$FailureSignalCue"/>
+            </do_if>
+            <cancel_cue cue="ApproachObject_Activate_Trigger"/>
+          </actions>
+        </cue>
+
+        <cue name="ApproachObject_Activate_Trigger">
+          <conditions>
+            <check_any>
+              <event_object_changed_sector object="$ApproachObject" sector="$ApproachTarget.sector"/>
+              <event_cue_signalled/>
+            </check_any>
+          </conditions>
+          <cues>
+
+            <cue name="ApproachObject_Deactivate_Trigger">
+              <conditions>
+                <event_object_changed_sector object="$ApproachObject" previous="$ApproachTarget.sector"/>
+              </conditions>
+              <actions>
+                <reset_cue cue="ApproachObject_Activate_Trigger"/>
+              </actions>
+            </cue>
+
+            <cue name="ApproachObject_Success" checkinterval="3s">
+              <conditions>
+                <check_all>
+                  <check_value value="$ApproachObject.exists"/>
+                  <check_value value="$ApproachObject.distanceto.{$ApproachTarget}" max="$ApproachDistance"/>
+                  <check_value value="$ApproachObject.sector == $ApproachTarget.sector"/>
+                </check_all>
+              </conditions>
+              <actions>
+                <signal_cue_instantly cue="$SuccessSignalCue" param="$ApproachTarget"/>
+                <cancel_cue cue="parent"/>
+              </actions>
+            </cue>
+
+          </cues>
+        </cue>
+
+      </cues>
+    </library>
+
+    <!-- Approach specified sector/position (todo: and stay inside for specified time, so you can't quickly boost through the area) -->
+    <library name="ApproachLocation_Handler">
+      <!-- IN: $ApproachObject, $ApproachSector, $ApproachOffset, $ApproachDistance, $SuccessSignalCue (will be signalled on successful approach) -->
+      <params>
+        <param name="ApproachObject" default="player.entity" comment="object we require to be within [ApproachSector,ApproachOffset]"/>
+        <param name="ApproachSector"/>
+        <param name="ApproachOffset"/>
+        <param name="ApproachDistance" default="5km"/>
+        <!--param name="ApproachDuration" default="5s"/-->
+        <param name="SuccessSignalCue"/>
+      </params>
+      <cues>
+
+        <cue name="ApproachLocation_Initialise">
+          <actions>
+            <debug_text text="this" chance="if $CueDebugChance? then $CueDebugChance else 0"/>
+            <do_if value="$ApproachObject.sector == $ApproachSector">
+              <signal_cue cue="ApproachLocation_Activate_Trigger"/>
+            </do_if>
+          </actions>
+        </cue>
+
+        <cue name="ApproachLocation_Activate_Trigger">
+          <conditions>
+            <check_any>
+              <event_object_changed_sector object="$ApproachObject" sector="$ApproachSector"/>
+              <event_cue_signalled/>
+            </check_any>
+          </conditions>
+          <cues>
+
+            <cue name="ApproachLocation_Deactivate_Trigger">
+              <conditions>
+                <event_object_changed_sector object="$ApproachObject" previous="$ApproachSector"/>
+              </conditions>
+              <actions>
+                <reset_cue cue="ApproachLocation_Activate_Trigger"/>
+              </actions>
+            </cue>
+
+            <cue name="ApproachLocation_Success" checkinterval="3s">
+              <conditions>
+                <check_all>
+                  <check_value value="($ApproachObject.exists) and ($ApproachObject.sector == $ApproachSector)"/>
+                  <check_value value="$ApproachObject.distanceto.[$ApproachSector, $ApproachOffset]" max="$ApproachDistance"/>
+                </check_all>
+              </conditions>
+              <actions>
+                <signal_cue cue="$SuccessSignalCue"/>
+                <cancel_cue cue="parent"/>
+              </actions>
+            </cue>
+
+          </cues>
+        </cue>
+      </cues>
+    </library>
+
+    <library name="WarpBetweenObjects">
+      <params>
+        <param name="FromObject"/>
+        <param name="ToObject"/>
+        <param name="Distance01"  comment="range [0,1] where 0 is location of FromObject and 1 is location of ToObject"/>
+        <param name="WarpGroup"   comment="the objects to warp"/>
+      </params>
+      <actions>
+        <assert value="$FromObject.sector == $ToObject.sector" comment="parameter validation"/>
+        <set_value name="$DistanceFromTo" exact="$FromObject.distanceto.{$ToObject} * $Distance01"/>
+
+        <create_position name="$TargetOrigin" object="$ToObject" space="$FromObject.zone"/>
+        <create_orientation name="$Rotation" orientation="look_at" refposition="$TargetOrigin">
+          <position  object="$FromObject" space="$FromObject.zone"/>
+        </create_orientation>
+
+        <create_position name="$Location" x="$FromObject.position.x + sin($Rotation.yaw) * $DistanceFromTo" y="0" z="$FromObject.position.z + cos($Rotation.yaw) * $DistanceFromTo"/>
+
+        <debug_text text="'Distance=' + $FromObject.distanceto.{$ToObject} + ' Distance01=' + $DistanceFromTo + ' BetweenPosition: ' + $Location + ' cos(yaw)=' + cos($Rotation.yaw) + ' sin(yaw)=' + sin($Rotation.yaw)"/>
+
+        <do_all exact="$WarpGroup.count" counter="$i">
+          <warp object="$WarpGroup.{$i}" zone="$FromObject.zone">
+            <position x="$Location.x" y="$Location.y" z="$Location.z"/>
+            <safepos radius="$WarpGroup.{$i}.size"/>
+          </warp>
+          <debug_text text="'Warping: ' + $WarpGroup.{$i}.knownname + ' to-sector=' + $WarpGroup.{$i}.sector.knownname"/>
+        </do_all>
+
+      </actions>
+    </library>
+
+    <!-- input: $position, $mindist, $maxdist, output: $position (modified) -->
+    <library name="CreatePositionEclipticNearFar">
+      <actions>
+        <set_value name="this.$Yaw" min="0deg" max="360deg" />
+        <set_value name="this.$SpawnDistance" min="$mindist" max="$maxdist"/>
+        <set_value name="$position" exact="position.[$position.x + sin(this.$Yaw) * this.$SpawnDistance, $position.y, $position.z + cos(this.$Yaw) * this.$SpawnDistance]"/>
+        <remove_value name="this.$Yaw"/>
+        <remove_value name="this.$SpawnDistance"/>
+      </actions>
+    </library>
+
+    <library name="ReachedSector">
+      <params>
+        <param name="TargetObject" default="player.entity" comment="object we require to be within $TargetSector"/>
+        <param name="TargetSector"/>
+        <param name="SuccessSignalCue"/>
+        <param name="FailureSignalCue" default="null"/>
+      </params>
+      <cues>
+        <cue name="In_Sector_Start">
+          <actions>
+            <do_if value="$TargetObject.sector == $TargetSector">
+              <signal_cue cue="In_Sector_Check"/>
+            </do_if>
+          </actions>
+        </cue>
+        <cue name="In_Sector_Check">
+          <conditions>
+            <check_any>
+              <event_cue_signalled/>
+              <event_object_changed_sector object="$TargetObject" sector="$TargetSector"/>
+            </check_any>
+          </conditions>
+          <actions>
+            <do_if value="event.name == 'event_object_changed_sector'">
+              <signal_cue_instantly cue="$SuccessSignalCue" param="event.param2"/>
+            </do_if>
+            <do_else>
+              <signal_cue_instantly cue="$SuccessSignalCue"/>
+            </do_else>
+            <cancel_cue cue="Target_Destroyed"/>
+          </actions>
+        </cue>
+        <cue name="Target_Destroyed">
+          <conditions>
+            <event_object_destroyed object="$TargetObject"/>
+          </conditions>
+          <actions>
+            <do_if value="$FailureSignalCue != null">
+              <signal_cue cue="$FailureSignalCue"/>
+            </do_if>
+            <cancel_cue cue="In_Sector_Check"/>
+          </actions>
+        </cue>
+      </cues>
+    </library>
+
+    <library name="LeftSector">
+      <params>
+        <param name="TargetObject" default="player.entity" comment="object we require to be within $TargetSector"/>
+        <param name="TargetSector"/>
+        <param name="SuccessSignalCue"/>
+        <param name="FailureSignalCue" default="null"/>
+      </params>
+      <cues>
+        <cue name="Left_Sector_Start">
+          <actions>
+            <do_if value="$TargetObject.sector != $TargetSector">
+              <signal_cue cue="Left_Sector_Check"/>
+            </do_if>
+          </actions>
+        </cue>
+        <cue name="Left_Sector_Check">
+          <conditions>
+            <check_any>
+              <event_cue_signalled/>
+              <event_object_changed_sector object="$TargetObject" previous="$TargetSector"/>
+            </check_any>
+          </conditions>
+          <actions>
+            <do_if value="event.name == 'event_object_changed_sector'">
+              <signal_cue_instantly cue="$SuccessSignalCue" param="event.param2"/>
+            </do_if>
+            <do_else>
+              <signal_cue_instantly cue="$SuccessSignalCue"/>
+            </do_else>
+            <cancel_cue cue="Left_Sector_Target_Destroyed"/>
+          </actions>
+        </cue>
+        <cue name="Left_Sector_Target_Destroyed">
+          <conditions>
+            <event_object_destroyed object="$TargetObject"/>
+          </conditions>
+          <actions>
+            <do_if value="$FailureSignalCue != null">
+              <signal_cue cue="$FailureSignalCue"/>
+            </do_if>
+            <cancel_cue cue="Left_Sector_Check"/>
+          </actions>
+        </cue>
+      </cues>
+    </library>
+
+    <library name="TakeoverStations" namespace="this">
+      <params>
+        <param name="Stations"/>
+        <param name="TargetFaction"/>
+        <param name="Chance" default="100" comment="Every station has a Chance % chance to be picked"/>
+        <param name="Delay" default="[30s]"/>
+        <param name="SuccessSignalCue"/>
+        <param name="RandomCount" default="0" comment="0 means ALL are picked, otherwise randomly(!) picks RandomCount stations from the list"/>
+      </params>
+      <actions>
+        <set_value name="$CurCount" exact="0"/>
+      </actions>
+      <cues>
+        <cue name="TakeoverStations_Delayed" onfail="cancel">
+          <conditions>
+            <check_value value="$Stations.count"/>
+          </conditions>
+          <delay exact="$Delay.random"/>
+          <actions>
+            <debug_text text="'Transferring ' + $Stations.{$Stations.count}.knownname + ' to ' + $TargetFaction.name"/>
+
+            <do_if value="$RandomCount == 0">
+              <!-- Go through all stations with a chance of $Chance %-->
+              <do_if value="true" chance="$Chance">
+                <set_owner object="$Stations.{$Stations.count}" faction="$TargetFaction" overridenpc="true"/>
+                <do_all exact="$Stations.{$Stations.count}.subordinates.count" counter="$j">
+                  <set_owner object="$Stations.{$Stations.count}.subordinates.{$j}" faction="$TargetFaction" overridenpc="true"/>
+                </do_all>
+              </do_if>
+              <resize_list list="$Stations" count="$Stations.count - 1"/>
+              <do_if value="$Stations.count">
+                <reset_cue cue="TakeoverStations_Delayed"/>
+              </do_if>
+            </do_if>
+            <do_else>
+              <!-- pick up to $RandomCount station (with a chance of $Chance %) -->
+              <do_if value="true" chance="$Chance">
+                <set_value name="$SelectedStation" exact="$Stations.random"/>
+                <set_owner object="$SelectedStation" faction="$TargetFaction" overridenpc="true"/>
+                <do_all exact="$SelectedStation.subordinates.count" counter="$j">
+                  <set_owner object="$SelectedStation.subordinates.{$j}" faction="$TargetFaction" overridenpc="true"/>
+                </do_all>
+                <remove_from_list name="$Stations" exact="$SelectedStation"/>
+              </do_if>
+              <set_value name="$CurCount" operation="add"/>
+              <do_if value="($CurCount lt $RandomCount)">
+                <reset_cue cue="TakeoverStations_Delayed"/>
+              </do_if>
+            </do_else>
+
+            <do_if value="$SuccessSignalCue? and (($Stations.count == 0) or ($RandomCount and ($CurCount ge $RandomCount)))" >
+              <signal_cue cue="$SuccessSignalCue"/>
+            </do_if>
+          </actions>
+        </cue>
+      </cues>
+    </library>
+
+    <!-- can't make a station invulnerable by setting it's minhull, instead loop over all components-->
+    <library name="SetStationMinHull" purpose="run_actions">
+      <params>
+        <param name="Station"/>
+        <param name="MinHullPercent" comment="0-100"/>
+      </params>
+      <actions>
+        <do_if value="$Station">
+          <find_object_component object="$Station" name="$StationModules" class="class.module" multiple="true" checkoperational="true" />
+          <do_all exact="$StationModules.count" counter="$m">
+            <set_object_min_hull object="$StationModules.{$m}" exact="$MinHullPercent"/>
+          </do_all>
+        </do_if>
+      </actions>
+    </library>
+
+    <!--
+    ===== Object Invincibility Manager =====
+    Request for an object to have a minhull value, making it invincible.
+    Provide a cue as the 'requester'. If that cue is no longer complete/active, the request is lost. You can also manually signal for the request to be removed.
+    If an object has no more active requesters, it will become vulnerable again.-->
+    <cue name="ObjectInvincibilityManager" namespace="this">
+      <actions>
+        <!--$ObjectTable
+        key = object
+        value = list of requester cues-->
+        <set_value name="$ObjectTable" exact="table[]"/>
+        <set_value name="$DebugChance" exact="0"/>
+
+        <!--TODO @Owen - a group for invincible stations to set min hull of new modules?-->
+      </actions>
+      <cues>
+        <cue name="ObjectInvincibilityManager_Cull" instantiate="true" checkinterval="5s">
+          <conditions>
+            <check_value value="$ObjectTable.keys.count"/>
+          </conditions>
+          <actions>
+            <include_actions ref="ObjectInvincibilityManager_CheckRequests"/>
+          </actions>
+        </cue>
+
+        <cue name="ObjectInvincibilityManager_CheckRequestSignal">
+          <conditions>
+            <event_cue_signalled cue="ObjectInvincibilityManager"/>
+            <check_value value="event.param == 'check_requests'"/>
+          </conditions>
+          <actions>
+            <include_actions ref="ObjectInvincibilityManager_CheckRequests"/>
+          </actions>
+        </cue>
+
+        <library name="ObjectInvincibilityManager_CheckRequests">
+          <actions>
+            <do_for_each name="$Object" valuename="$RequesterCues" in="$ObjectTable" reverse="true">
+              <do_if value="$Object.exists">
+                <do_for_each name="$RequesterCue" in="$RequesterCues" reverse="true">
+                  <do_if value="$RequesterCue.state != cuestate.complete and $RequesterCue.state != cuestate.active">
+                    <remove_from_list name="$RequesterCues" exact="$RequesterCue"/>
+                  </do_if>
+                </do_for_each>
+                <do_if value="$RequesterCues.count == 0">
+                  <!--No requester cues. Make vulnerable-->
+                  <debug_text text="'Invincible object ' + $Object + ' ' + $Object.knownname + ' has no more requester cues. Setting to vulnerable.'" chance="$DebugChance"/>
+                  <do_if value="$Object.isrealclass.station">
+                    <run_actions ref="md.LIB_Generic.SetStationMinHull">
+                      <param name="Station" value="$Object"/>
+                      <param name="MinHullPercent" value="0"/>
+                    </run_actions>
+                  </do_if>
+                  <do_else>
+                    <set_object_min_hull object="$Object" exact="0"/>
+                  </do_else>
+
+                  <!--Remove from table-->
+                  <remove_value name="$ObjectTable.{$Object}"/>
+                </do_if>
+              </do_if>
+              <do_else>
+                <assert value="$Object.exists" text="'Object which was supposed to be invincible no longer exists. Requester cues: ' + $RequesterCues + ' [Owen]'"/>
+                <!--Remove from table-->
+                <remove_value name="$ObjectTable.{$Object}"/>
+              </do_else>
+            </do_for_each>
+          </actions>
+        </library>
+      </cues>
+    </cue>
+
+    <library name="RequestObjectInvincibility" purpose="run_actions">
+      <params>
+        <param name="Object"/>
+        <param name="RequesterCue"/>
+        <param name="DebugChance" default="0"/>
+      </params>
+      <actions>
+        <set_value name="$Manager" exact="md.LIB_Generic.ObjectInvincibilityManager"/>
+        <do_if value="$Object.exists">
+          <do_if value="typeof $RequesterCue == datatype.cue">
+            <do_if value="$RequesterCue.state == cuestate.active or $RequesterCue.state == cuestate.complete">
+              <!--Add request to the manager's $ObjectTable-->
+              <do_if value="not $Manager.$ObjectTable.{$Object}?">
+                <set_value name="$Manager.$ObjectTable.{$Object}" exact="[$RequesterCue]"/>
+              </do_if>
+              <do_else>
+                <append_to_list name="$Manager.$ObjectTable.{$Object}" exact="$RequesterCue"/>
+              </do_else>
+              <debug_text text="'Added invincibility request for ' + $Object + ' ' + $Object.knownname + ' by cue ' + $RequesterCue" chance="$DebugChance"/>
+              <!--Set object min hull-->
+              <do_if value="$Object.isclass.station">
+                <run_actions ref="md.LIB_Generic.SetStationMinHull">
+                  <param name="Station" value="$Object"/>
+                  <param name="MinHullPercent" value="42"/>
+                </run_actions>
+              </do_if>
+              <do_else>
+                <set_object_min_hull object="$Object" exact="42"/>
+              </do_else>
+            </do_if>
+            <do_else>
+              <assert value="$RequesterCue.state == cuestate.active or $RequesterCue.state == cuestate.complete" text="'Requester cue ' + $RequesterCue + ' is of state ' + $RequesterCue.state + ' which is not allowed. Active or Complete only. [Owen]'"/>
+            </do_else>
+          </do_if>
+          <do_else>
+            <assert value="typeof $RequesterCue == datatype.cue" text="'Requested cue is not of type cue [Owen]'"/>
+          </do_else>
+        </do_if>
+        <do_else>
+          <assert value="$Object.exists" text="'Object does not exist [Owen]'"/>
+        </do_else>
+      </actions>
+    </library>
+
+    <!--Warning: This does not ensure vulnerability. Another cue may have requested it for the same object-->
+    <library name="RequestObjectVulnerability" purpose="run_actions">
+      <params>
+        <param name="Object"/>
+        <param name="RequesterCue"/>
+        <param name="DebugChance" default="0"/>
+      </params>
+      <actions>
+        <set_value name="$Manager" exact="md.LIB_Generic.ObjectInvincibilityManager"/>
+        <do_if value="typeof $RequesterCue == datatype.cue">
+          <!--Attempt to remove request from manager-->
+          <do_if value="$Manager.$ObjectTable.{$Object}?">
+            <do_if value="$Manager.$ObjectTable.{$Object}.indexof.{$RequesterCue}">
+              <!--Only remove one matching request in case the same cue was used several times (which may not be a good idea in the first place)-->
+              <remove_from_list name="$Manager.$ObjectTable.{$Object}" exact="$RequesterCue" multiple="false"/>
+              <debug_text text="'Removed invincibility request for ' + $Object + ' ' + $Object.knownname + ' by cue ' + $RequesterCue" chance="$DebugChance"/>
+            </do_if>
+            <do_else>
+              <assert value="$Manager.$ObjectTable.{$Object}.indexof.{$RequesterCue}" text="'Manager does not have a request for object ' + $Object + ' ' + $Object.knownname + ' by cue ' + $RequesterCue + ' [Owen]'"/>
+            </do_else>
+          </do_if>
+          <do_else>
+            <assert value="$Manager.$ObjectTable.{$Object}?" text="'Manager does not have reference to object ' + $Object + ' ' + $Object.knownname + ' [Owen]'"/>
+          </do_else>
+        </do_if>
+        <do_else>
+          <assert value="typeof $RequesterCue == datatype.cue" text="'Requested cue is not of type cue [Owen]'"/>
+        </do_else>
+        
+        <!--Signal the manager to check if the object still has any requesting cues-->
+        <signal_cue_instantly cue="$Manager" param="'check_requests'"/>
+      </actions>
+    </library>
+
+    <library name="SetObjectOwner" purpose="run_actions">
+      <params>
+        <!-- NB: no default value elicits a warning if param is not provided by the caller -->
+        <param name="ObjectParam"/>
+        <param name="NewOwner" comment="faction or component with an owner"/>
+        <param name="ResetOrders" default="true" comment="Reset orders of ships"/>
+        <param name="SetHierarchyOwner" default="false" comment="Change the owner of the top commander and all of their subordinates?"/>
+        <param name="DebugChance" default="0"/>
+      </params>
+      <actions>
+        <do_if value="not $ObjectParam.iswreck and $ObjectParam.isrealclass.controllable">
+          <do_if value="$NewOwner">
+            <do_if value="typeof $NewOwner == datatype.component">
+              <set_value name="$NewOwner" exact="$NewOwner.trueowner"/>
+            </do_if>
+            
+            <do_if value="typeof $NewOwner == datatype.faction">
+              <set_value name="$Objects" exact="[]"/>
+              <do_if value="$SetHierarchyOwner and $ObjectParam.isoperational">
+                <set_value name="$TopCommander" exact="$ObjectParam.toplevelcommander"/>
+                <debug_text text="'Getting hierarchy objects of ' + $ObjectParam + ' ' + $ObjectParam.knownname + ' - topcommander ' + $TopCommander + ' ' + $TopCommander.knownname" chance="$DebugChance"/>
+                <append_to_list name="$Objects" exact="$TopCommander"/>
+                <append_list_elements name="$Objects" other="$TopCommander.allsubordinates"/>
+              </do_if>
+              <do_else>
+                <append_to_list name="$Objects" exact="$ObjectParam"/>
+              </do_else>
+
+              <do_for_each name="$Object" in="$Objects">
+                <do_if value="$Object.trueowner != $NewOwner">
+                  <debug_text text="'Setting owner of ' + $Object + ' ' + $Object.knownname" chance="$DebugChance"/>
+                  <set_owner object="$Object" faction="$NewOwner" overridenpc="true"/>
+                </do_if>
+                <do_if value="$Object.isoperational">
+                  <reset_relation_boost object="$Object" faction="$NewOwner"/>
+                  <do_if value="$ResetOrders">
+                    <do_if value="@$Object.isjobship">
+                      <!-- implicitly cancels all orders and sets default order to that set in job definition. -->
+                      <activate_job_ship_orders ship="$Object"/>
+                    </do_if>
+                    <do_elseif value="$Object.isclass.ship">
+                      <cancel_all_orders object="$Object"/>
+                    </do_elseif>
+                  </do_if>
+                </do_if>
+              </do_for_each>
+            </do_if>
+            <do_else>
+              <debug_text text="'SetObjectOwner called with invalid NewOwner: %s'.[$NewOwner]" filter="error"/>
+            </do_else>
+          </do_if>
+          <do_else>
+            <debug_text text="'SetObjectOwner called with no NewOwner specified.'" filter="error"/>
+          </do_else>
+        </do_if>
+        <do_else>
+          <debug_text text="'SetObjectOwner called with invalid object: %s %s %s'.[@$ObjectParam.idcode, @$ObjectParam.knownname, $ObjectParam]" filter="error"/>
+        </do_else>
+      </actions>
+    </library>
+
+  </cues>
+</mdscript>

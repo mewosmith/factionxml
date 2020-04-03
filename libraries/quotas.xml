@@ -1,0 +1,315 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Set loadmacros to true to force macros to be loaded, even in an empty universe. If false, there will be no error message in case of a typo. -->
+<quotas loadmacros="false" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="quotas.xsd">
+
+  <!-- Galaxy-wide offer settings that can be overridden/restricted for specific spaces. -->
+  <!-- Global default weight = 0, global default limit = none. Defaults for specific spaces are derived from parent nodes. -->
+  <offers zonelimit="10">
+    <offer type="trade" weight="100"/>
+    <offer type="fight" weight="100"/>
+    <offer type="build" weight="100"/>
+    <offer type="think" weight="100"/>
+    <offer type="other" weight="100"/>
+    <offer type="board" weight="100"/>
+    <offer type="deliver" weight="100"/>
+    <offer type="destroy" weight="100"/>
+    <offer type="drop" weight="100"/>
+    <offer type="escort" weight="100"/>
+    <offer type="explore" weight="100"/>
+    <offer type="find" weight="100"/>
+    <offer type="follow" weight="100"/>
+    <offer type="hack" weight="100"/>
+    <offer type="kill" weight="100"/>
+    <offer type="patrol" weight="100"/>
+    <offer type="pickup" weight="100"/>
+    <offer type="protect" weight="100"/>
+    <offer type="race" weight="100"/>
+    <offer type="repair" weight="100"/>
+    <offer type="restock" weight="100"/>
+    <offer type="scan" weight="100"/>
+    <offer type="talkto" weight="100"/>
+    <offer type="transport" weight="100"/>
+    <offer type="intelligence" weight="100"/>
+    <offer type="military" weight="100"/>
+    <offer type="police" weight="100"/>
+  </offers>
+
+  <actors stationlimit="100" modulelimit="20">
+    <actor type="officer" weight="80">
+      <dock type="bar" weight="130"/>
+      <dock type="ships" weight="130"/>
+      <character>
+        <select tags="commander"/>
+        <owner selection="random">
+          <select exact="argon" weight="70"/>
+          <select exact="antigone" weight="30"/>
+        </owner>
+        <skills>
+          <skill type="piloting" min="7" max="14" />
+          <skill type="morale" max="12" />
+
+          <skill type="boarding" exact="0" />
+          <skill type="engineering" max="2" />
+          <skill type="management" exact="0" />
+        </skills>
+      </character>
+    </actor>
+    <actor type="trader" weight="20">
+      <dock type="trade" weight="120"/>
+      <character>
+        <select tags="trader"/>
+        <owner selection="random">
+          <select exact="argon" weight="70"/>
+          <select exact="antigone" weight="30"/>
+        </owner>
+      </character>
+    </actor>
+    <!-- BAR GROUP -->
+    <!--<actor type="commander" weight="50">
+      <dock type="bar" weight="130"/>
+      <dock type="ships" weight="130"/>
+      <character group="argon.commander">
+        <owner selection="random">
+          <select exact="argon" weight="70"/>
+          <select exact="antigone" weight="30"/>
+        </owner>
+        <skills>
+          <skill type="piloting" min="7" max="14"/>
+          <skill type="morale" max="12"/>
+
+          <skill type="engineering" max="2"/>
+          <skill type="management" exact="0"/>
+          <skill type="boarding" exact="0"/>
+        </skills>
+      </character>
+    </actor>
+    <actor type="manager" weight="50">
+      <dock type="bar" weight="130"/>
+      <dock type="ships" weight="130"/>
+      <character group="argon.manager">
+        <owner selection="random">
+          <select exact="argon" weight="70"/>
+          <select exact="antigone" weight="30"/>
+        </owner>
+        <skills>
+          <skill type="management" min="4" max="11"/>
+          <skill type="morale" max="12"/>
+
+          <skill type="piloting" min="2" max="4"/>
+          <skill type="engineering" exact="0"/>
+          <skill type="boarding" exact="0"/>
+        </skills>
+      </character>
+    </actor>
+    <actor type="marine" weight="40">
+      <dock type="bar" weight="100"/>
+      <dock type="ships" weight="100"/>
+      <character group="argon.marine">
+        <owner selection="random">
+          <select exact="argon" weight="70"/>
+          <select exact="antigone" weight="30"/>
+        </owner>
+        <skills>
+          <skill type="boarding" min="1" max="5"/>
+          <skill type="morale" max="12"/>
+
+          <skill type="engineering" exact="0"/>
+          <skill type="piloting" min="2" max="4"/>
+          <skill type="management" exact="0"/>
+        </skills>
+      </character>
+    </actor>
+    <actor type="pilot" weight="60">
+      <dock type="bar" weight="150"/>
+      <dock type="ships" weight="150"/>
+      <character group="argon.pilot">
+        <owner selection="random">
+          <select exact="argon" weight="70"/>
+          <select exact="antigone" weight="30"/>
+        </owner>
+        <skills>
+          <skill type="piloting" min="7" max="14"/>
+          <skill type="morale" max="12"/>
+
+          <skill type="engineering" max="2"/>
+          <skill type="management" exact="0"/>
+          <skill type="boarding" exact="0"/>
+        </skills>
+      </character>
+    </actor>
+    <actor type="recruitment" weight="50">
+      <dock type="bar" weight="130"/>
+      <dock type="ships" weight="130"/>
+      <character>
+        <select tags="recruitment" race="race.argon" />
+        <owner selection="random">
+          <select exact="argon" weight="70"/>
+          <select exact="antigone" weight="30"/>
+        </owner>
+      </character>
+    </actor>-->
+    <!-- REPAIR GROUP -->
+    <!--<actor type="armsdealer" weight="80">
+      <dock type="repair" weight="480"/>
+      <character group="argon.armsdealer">
+        <owner selection="random">
+          <select exact="argon" weight="70"/>
+          <select exact="antigone" weight="30"/>
+        </owner>
+      </character>
+    </actor>-->
+    <!--<actor type="dronetrader" weight="80">
+      <dock type="repair" weight="480"/>
+      <character group="argon.dronetrader">
+        <owner selection="random">
+          <select exact="argon" weight="70"/>
+          <select exact="antigone" weight="30"/>
+        </owner>
+      </character>
+    </actor>-->
+    <!-- TRADE GROUP -->
+    <!--<actor type="equipment" weight="40">
+      <dock type="trade" weight="160"/>
+      <character group="argon.equipmentvendor">
+        <owner selection="random">
+          <select exact="argon" weight="70"/>
+          <select exact="antigone" weight="30"/>
+        </owner>
+      </character>
+    </actor>
+    <actor type="foodmerchant" weight="40">
+      <dock type="trade" weight="160"/>
+      <character group="argon.foodmerchant">
+        <owner selection="random">
+          <select exact="argon" weight="70"/>
+          <select exact="antigone" weight="30"/>
+        </owner>
+      </character>
+    </actor>-->
+    <!--<actor type="junkdealer" weight="40">
+      <dock type="trade" weight="160"/>
+      <character>
+        <select tags="junkdealer" race="race.argon" />
+        <owner selection="random">
+          <select exact="argon" weight="70"/>
+          <select exact="antigone" weight="30"/>
+        </owner>
+      </character>
+    </actor>-->
+    <!--<actor type="miningsupplier" weight="40">
+      <dock type="trade" weight="160"/>
+      <character group="argon.miningsupplier">
+        <owner selection="random">
+          <select exact="argon" weight="70"/>
+          <select exact="antigone" weight="30"/>
+        </owner>
+      </character>
+    </actor>-->
+    <!--<actor type="shiptech" weight="40">
+      <dock type="trade" weight="160"/>
+      <character group="argon.shiptechnician">
+        <owner selection="random">
+          <select exact="argon" weight="70"/>
+          <select exact="antigone" weight="30"/>
+        </owner>
+      </character>
+    </actor>
+    <actor type="spacefarmer" weight="40">
+      <dock type="trade" weight="160"/>
+      <character group="argon.spacefarmer">
+        <owner selection="random">
+          <select exact="argon" weight="70"/>
+          <select exact="antigone" weight="30"/>
+        </owner>
+      </character>
+    </actor>
+    <actor type="licencetrader" weight="30">
+      <dock type="trade" weight="120"/>
+      <character group="argon.licencetrader">
+        <owner exact="argon"/>
+      </character>
+    </actor>-->
+  </actors>
+
+  <!-- NOTE: <crate> nodes, i.e. crate content definitions for a certain crate visibility type, are only inherited as a whole. To override an <crate> node in a child space, it has to be redefined completely. -->
+  <crates>
+    <crate type="exposed" weight="100" roomlimit="12">
+      <content tags="crate_s" weight="11"><money min="1500" max="3500"/></content>
+      <content tags="crate_s" weight="7"><ware ware="inv_majaglit" min="1" max="30"/></content>
+      <content tags="crate_m" weight="3"><money min="1500" max="3500"/></content>
+      <content tags="crate_m" weight="7"><ware ware="inv_majaglit" min="1" max="30"/></content>
+      <content tags="crate_l" weight="3"><money min="1500" max="3500"/></content>
+      <content tags="crate_l" weight="7"><ware ware="inv_majaglit" min="1" max="30"/></content>
+    </crate>
+    
+    <crate type="hidden" weight="100" roomlimit="4">
+      <content tags="crate_s" weight="16"><money min="2571" max="6000"/></content>
+      <content tags="crate_s" weight="7"><ware ware="inv_majaglit" min="1" max="30"/></content>
+      <content tags="crate_m" weight="9"><money min="2571" max="6000"/></content>
+      <content tags="crate_m" weight="7"><ware ware="inv_majaglit" min="1" max="30"/></content>
+      <content tags="crate_l" weight="9"><money min="2571" max="6000"/></content>
+      <content tags="crate_l" weight="7"><ware ware="inv_majaglit" min="1" max="30"/></content>
+    </crate>
+
+    <crate type="secret" weight="100" roomlimit="4">
+      <content tags="crate_s" weight="27"><money min="4500" max="10500"/></content>
+      <content tags="crate_s" weight="7"><ware ware="inv_majaglit" min="1" max="30"/></content>
+      <content tags="crate_m" weight="12"><money min="4500" max="10500"/></content>
+      <content tags="crate_m" weight="7"><ware ware="inv_majaglit" min="1" max="30"/></content>
+      <content tags="crate_l" weight="12"><money min="4500" max="10500"/></content>
+      <content tags="crate_l" weight="7"><ware ware="inv_majaglit" min="1" max="30"/></content>
+    </crate>
+
+    <crate type="topsecret" weight="100" roomlimit="8">
+      <content tags="crate_s" weight="18"><money min="9000" max="21000"/></content>
+      <content tags="crate_s" weight="7"><ware ware="inv_majaglit" min="1" max="30"/></content>
+      <content tags="crate_m" weight="13"><money min="9000" max="21000"/></content>
+      <content tags="crate_m" weight="7"><ware ware="inv_majaglit" min="1" max="30"/></content>
+      <content tags="crate_l" weight="13"><money min="9000" max="21000"/></content>
+      <content tags="crate_l" weight="7"><ware ware="inv_majaglit" min="1" max="30"/></content>
+    </crate>
+  </crates>
+
+  <!-- Volatile crafting items can be spawned in crates when docking at a station that contains no crates yet. The crates can be distributed over multiple platforms of the station. -->
+  <!--<crafting chance="40">
+    <ware ware="inv_templocalsecurityid" weight="100">
+      <crate type="topsecret" tags="crate_s crate_m" weight="80" />
+      <crate type="secret" tags="crate_s crate_m" weight="20" />
+    </ware>
+  </crafting>-->
+
+  <!-- EXAMPLES
+  <cluster macro="Cluster_A_macro">
+    <offers zonelimit="15">
+      <offer type="build" zonelimit="0"/>
+    </offers>
+
+    <sector macro="Cluster_A_Sector02_macro">
+      <offers>
+        <offer type="build" weight="200" zonelimit="1"/>
+        <offer type="think" zonelimit="1"/>
+      </offers>
+
+      <zone macro="tzoneCluster_A_Sector02_Zone01_macro">
+        <offers zonelimit="0"/>
+      </zone>
+    </sector>
+  </cluster>
+
+  <sector macro="Cluster_B_Sector07_macro">
+    <offers>
+      <offer type="trade" weight="30"/>
+    </offers>
+    <actors stationlimit="none" roomlimit="5">
+      <actor type="engineer" weight="20" zonelimit="none"/>
+    </actors>
+    <crates roomlimit="5">
+      <crate type="topsecret" weight="100" roomlimit="1">
+        <content weight="100">
+          <ware ware="nividium" amount="1000" chance="5"/>
+        </content>
+      </crate>
+    </crates>
+  </sector>
+  -->
+</quotas>

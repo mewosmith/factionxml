@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Script used by ships (excluding drones) to collect crates/objects in space
+-->
+<aiscript name="order.collect.ship" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="aiscripts.xsd">
+  <order id="Collect" name="{1041, 481}" description="{1041, 482}" category="trade">
+    <params>
+      <param name="targetlist" default="[]" type="list" text="{1041, 10079}" comment="Objects to collect. list of targets to collect.">
+        <input_param name="type" value="'object'"/>
+        <input_param name="class" value="[class.drop]"/>
+      </param>
+      <param name="debugchance" type="bool" default="0" advanced="true" text="{1041, 10086}" comment="Print debug output">
+        <input_param name="truevalue" value="100"/>
+      </param>
+    </params>
+    <requires>
+      <match shiptype="shiptype.lasertower" negate="true"/>
+    </requires>
+    <location condition="$targetlist and $targetlist.count and $targetlist.{1}.exists" object="$targetlist.{1}" additionalobjects="$targetlist"/>
+  </order>
+  <interrupts>
+    <handler ref="AttackHandler"/>
+    <handler ref="MissileLockHandler" />
+  </interrupts>
+  <attention min="unknown">
+    <actions>
+      <label name="start"/>
+
+      <do_if value="not this.ship.isclass.ship">
+        <debug_text text="this.ship.knownname + ' is not a valid ship class for this script'"/>
+        <return value="false"/>
+      </do_if>
+
+      <!-- was occasionally getting null objects in input targetgroup. -->
+      <do_all exact="$targetlist.count" counter="$i">
+        <do_if value="$targetlist.{$i}.exists">
+          <set_value name="$loctarget" exact="$targetlist.{$i}"/>
+          <do_if value="$loctarget.isclass.drop">
+            <do_all exact="$loctarget.wares.count" counter="$j">
+              <set_value name="$locware" exact="$loctarget.wares.list.{$j}"/>
+
+              <!-- supports: cargo, deployables, missiles, countermeasures, units -->
+              <remove_value name="$cancarry"/>
+              <do_if value="this.assignedcontrolled.cargo.{$locware}.max">
+                <set_value name="$cancarry"/>
+              </do_if>
+              <do_elseif value="$locware.isinventory">
+                <set_value name="$cancarry"/>
+              </do_elseif>
+              <do_elseif value="$locware.isdeployable and (this.assignedcontrolled.ammostorage.deployable.free ge $loctarget.wares.{$locware}.count)">
+                <set_value name="$cancarry"/>
+              </do_elseif>
+              <do_elseif value="$locware.objectmacro">
+                <do_if value="$locware.objectmacro.isclass.missile and (this.assignedcontrolled.ammostorage.missile.free ge $loctarget.wares.{$locware}.count)">
+                  <set_value name="$cancarry"/>
+                </do_if>
+                <do_elseif value="$locware.objectmacro.isclass.countermeasure and (this.assignedcontrolled.ammostorage.countermeasure.free ge $loctarget.wares.{$locware}.count)">
+                  <set_value name="$cancarry"/>
+                </do_elseif>
+                <do_elseif value="$locware.objectmacro.isunit and (this.assignedcontrolled.units.free ge $loctarget.wares.{$locware}.count)">
+                  <set_value name="$cancarry"/>
+                </do_elseif>
+              </do_elseif>
+
+              <do_if value="$cancarry?">
+                <add_to_group groupname="$targetgroup" object="$loctarget"/>
+                <debug_text text="'adding drop %s %s with ware %s to list of things to collect.'.[@$loctarget.knownname, $loctarget, $loctarget.wares.list.{$j}]" chance="$debugchance"/>
+                <break/>
+              </do_if>
+            </do_all>
+          </do_if>
+          <do_elseif value="$loctarget.isdeployable">
+            <do_if value="this.assignedcontrolled.ammostorage.deployable.free and ($loctarget.trueowner == this.trueowner)">
+              <add_to_group groupname="$targetgroup" object="$loctarget"/>
+              <debug_text text="'adding deployable %s %s to list of things to collect.'.[@$loctarget.knownname, $loctarget]" chance="$debugchance"/>
+            </do_if>
+          </do_elseif>
+        </do_if>
+      </do_all>
+      <remove_value name="$loctarget"/>
+      <remove_value name="$locware"/>
+      <remove_value name="$cancarry"/>
+
+      <do_if value="@$targetgroup.count lt 1">
+        <debug_text text="'target group is empty.'" chance="$debugchance"/>
+        <return value="false"/>
+      </do_if>
+
+      <set_value name="$reftarget" exact="$targetgroup.random"/>
+      <do_if value="this.zone != $reftarget.zone">
+        <run_script name="'move.generic'">
+          <param name="destination" value="$reftarget.zone"/>
+          <param name="endintargetzone" value="true"/>
+          <param name="debugchance" value="$debugchance" />
+        </run_script>
+      </do_if>
+      <remove_value name="$reftarget"/>
+
+      <label name="collect"/>
+
+      <do_if value="@$targetgroup.count">
+        <!-- Capital or small -->
+        <do_if value="this.ship.isclass.[class.ship_l, class.ship_xl]">
+          <run_script name="'move.collect.ship.capship'">
+            <param name="targets" value="$targetgroup"/>
+            <param name="debugchance" value="$debugchance"/>
+          </run_script>
+        </do_if>
+        <do_else>
+          <run_script name="'move.collect.ship.smallship'">
+            <param name="targets" value="$targetgroup"/>
+            <param name="debugchance" value="$debugchance"/>
+          </run_script>
+        </do_else>
+
+        <wait min="1s" max="2s"/>
+      </do_if>
+      <do_else>
+        <debug_text text="' not targets to collect: group %1'.[$targetgroup]" chance="$debugchance"/>
+      </do_else>
+
+    </actions>
+  </attention>
+</aiscript>

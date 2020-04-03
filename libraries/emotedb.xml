@@ -1,0 +1,146 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<emotes>
+  <emote name="angry" facial="true">
+    <animation ref="angry" />
+  </emote>
+  <emote name="blink">
+    <animation ref="blink" />
+  </emote>
+  <emote name="cold" facial="true">
+    <animation ref="cold" />
+  </emote>
+  <emote name="cruel" facial="true">
+    <animation ref="cruel" />
+  </emote>
+  <emote name="dumb">
+    <animation ref="dumb" facial="true"/>
+  </emote>
+  <emote name="excuse" facial="true">
+    <animation ref="excuse" />
+  </emote>
+  <emote name="hard" facial="true">
+    <animation ref="cold" />
+  </emote>  
+  <emote name="laugh" facial="true">
+    <animation ref="laugh" />
+  </emote>
+  <emote name="sad" facial="true">
+    <animation ref="sad" />
+  </emote>
+  <emote name="smile" facial="true">
+    <animation ref="smile" />
+  </emote>
+  <emote name="warm" facial="true">
+    <animation ref="warm" />
+  </emote>
+  <emote name="crossarms01">
+    <animation ref="crossarms01" />
+  </emote>
+  <emote name="disapproval01">
+    <animation ref="disapproval01" />
+  </emote>
+  <emote name="facepalm01">
+    <animation ref="facepalm01" />
+  </emote>    
+  <emote name="gesticulate01">
+    <animation ref="gesticulate01" />
+  </emote>    
+  <emote name="gesticulate02">
+    <animation ref="gesticulate02" />
+  </emote>    
+  <emote name="gesticulate03">
+    <animation ref="gesticulate03" />
+  </emote>    
+  <emote name="gesticulate04">
+    <animation ref="gesticulate04" />
+  </emote>    
+  <emote name="lookdown01">
+    <animation ref="lookdown01" />
+  </emote>    
+  <emote name="lookup01">
+    <animation ref="lookup01" />
+  </emote>
+  <emote name="nod01">
+    <animation ref="nod01" />
+  </emote>     
+  <emote name="punchhand01">
+    <animation ref="punchhand01" />
+  </emote>
+  <emote name="rolleyes01">
+    <animation ref="roleeyes01" />
+  </emote>
+  <emote name="rolleyes02">
+    <animation ref="roleeyes02" />
+  </emote>    
+  <emote name="scratchhead01">
+    <animation ref="scratchhead01" />
+  </emote>     
+  <emote name="shrug01">
+    <animation ref="shrug01" />
+  </emote>  
+  <emote name="thinking01">
+    <animation ref="thinking01" />
+  </emote>
+  <emote name="thinking02">
+    <animation ref="thinking02" />
+  </emote>
+  <emote name="neutral01">
+    <animation ref="neutral01" />
+  </emote>   
+  <!-- special animation for event monitor -->
+  <emote name="evebuttons01">
+    <animation ref="buttons01" />
+  </emote>
+  <emote name="evebuttons02">
+    <animation ref="buttons02" />
+  </emote>
+  <emote name="evehectic01">
+    <animation ref="hectic01" />
+  </emote>    
+  <emote name="evelookaround01">
+    <animation ref="lookaround01" />
+  </emote>
+  <emote name="evelookaround02">
+    <animation ref="lookaround02" />
+  </emote>
+  <emote name="eveserious01">
+    <animation ref="serious01" />
+  </emote>
+  <emote name="evesitdown01">
+    <animation ref="sitdown01" />
+  </emote>
+  <emote name="eveslamchair01">
+    <animation ref="slamchair01" />
+  </emote>
+  <emote name="evesteady01">
+    <animation ref="steady01" />
+  </emote>
+  <emote name="evethinking01">
+    <animation ref="thinking01" />
+  </emote>
+  <emote name="eveveryserious01">
+    <animation ref="veryserious01" />
+  </emote>  
+  <!-- special animation gestures for yisha at the beginning of the game -->
+  <emote name="yisha_intro_part01">
+    <animation ref="cockpit_intro_part01" />
+  </emote>   
+  <emote name="yisha_intro_part02">
+    <animation ref="cockpit_intro_part02" />
+  </emote>   
+  <emote name="yisha_intro_part03">
+    <animation ref="cockpit_intro_part03" />
+  </emote>     
+  <emote name="yishatyping01">
+    <animation ref="cockpit_typing01" />
+  </emote> 
+  <emote name="yishatyping01_nolook">
+    <animation ref="cockpit_typing01_lookat" />
+  </emote> 
+  <emote name="yishatyping02">
+    <animation ref="cockpit_typing02" />
+  </emote> 
+  <emote name="yishagesticulate01">
+    <animation ref="cockpit_gesticulate01" />
+  </emote>   
+</emotes>

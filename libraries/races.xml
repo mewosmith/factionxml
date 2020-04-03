@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--Last exported: 19.02.2020 14:22:33-->
+<races xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="races.xsd">
+  <race id="argon" name="{20202,101}" description="{20202,102}" shortname="{20202,103}" names="20301">
+    <character height="1.86" width="0.25">
+      <speed slowwalk="0.87" walk="1.9" run="4" acceleration="4" />
+      <eventmonitor adjusty="0.1" adjustz="-0.25" />
+    </character>
+    <icon active="race_argon" inactive="race_argon" />
+    <relations>
+      <relation race="boron" relation="1" />
+      <relation race="paranid" relation="-1" />
+    </relations>
+    <trail brightness="1" contrast="1" saturation="0.6" hue="140" />
+  </race>
+  <race id="boron" name="{20202,201}" description="{20202,202}" shortname="{20202,203}" names="20305">
+    <character height="1.8" width="0.25">
+      <speed slowwalk="1" walk="2" run="4" acceleration="4" />
+      <eventmonitor adjusty="0.9" adjustz="0.45" />
+    </character>
+    <icon active="race_boron" inactive="race_boron" />
+    <relations>
+      <relation race="argon" relation="1" />
+      <relation race="split" relation="-1" />
+    </relations>
+    <trail brightness="1" contrast="1" saturation="0.4" hue="270" />
+  </race>
+  <race id="drone" name="{20202,801}" description="{20202,802}" />
+  <race id="khaak" name="{20202,901}" description="{20202,902}" shortname="{20202,903}">
+    <icon active="race_khaak" inactive="race_khaak" />
+    <trail brightness="1" contrast="1" saturation="0.6" hue="100" />
+  </race>
+  <race id="paranid" name="{20202,401}" description="{20202,402}" shortname="{20202,403}" names="20306">
+    <chair config="chairconfig_paranid" animation="chair_paranid_active" />
+    <character height="1.9" width="0.25">
+      <speed slowwalk="0.92" walk="2.2" run="4.25" acceleration="4" />
+      <eventmonitor adjusty="-0.5" adjustz="0.1" />
+    </character>
+    <icon active="race_paranid" inactive="race_paranid" />
+    <relations>
+      <relation race="argon" relation="-1" />
+    </relations>
+    <trail brightness="1" contrast="1" saturation="0.2" hue="90" />
+  </race>
+  <race id="split" name="{20202,301}" description="{20202,302}" shortname="{20202,303}" names="20302">
+    <character height="1.7" width="0.25">
+      <speed slowwalk="1" walk="2" run="4" acceleration="4" />
+    </character>
+    <icon active="race_split" inactive="race_split" />
+    <relations>
+      <relation race="boron" relation="-1" />
+    </relations>
+    <trail brightness="1" contrast="1" saturation="0.5" hue="345" />
+  </race>
+  <race id="teladi" name="{20202,501}" description="{20202,502}" shortname="{20202,503}" names="20303">
+    <character height="1.55" width="0.25">
+      <speed slowwalk="0.75" walk="1.95" run="4" acceleration="4" />
+      <eventmonitor adjusty="-0.1" adjustz="0.07" />
+    </character>
+    <icon active="race_teladi" inactive="race_teladi" />
+    <trail brightness="1" contrast="1" saturation="0.2" hue="225" />
+  </race>
+  <race id="terran" name="{20202,701}" description="{20202,702}" shortname="{20202,703}" names="20304">
+    <character height="1.7" width="0.25">
+      <speed slowwalk="1" walk="2" run="4" acceleration="4" />
+    </character>
+    <icon active="race_terran" inactive="race_terran" />
+    <trail brightness="1" contrast="1" saturation="0.1" hue="130" />
+  </race>
+  <race id="xenon" name="{20202,601}" description="{20202,602}" shortname="{20202,603}">
+    <icon active="race_xenon" inactive="race_xenon" />
+    <trail brightness="1" contrast="1" saturation="0.8" hue="0" />
+  </race>
+</races>

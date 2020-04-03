@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<aiscript name="order.fight.protect.station" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="aiscripts.xsd" version="2">
+  <!--
+      
+  by Adrian
+  -->
+  <order id="ProtectStation" name="{1041, 361}" description="{1041, 362}" category="combat">
+    <params>
+      <param name="station" type="object" text="{1041, 10150}" comment="Station to protect">
+        <input_param name="class" value="[class.station]" />
+      </param>
+      <param name="radius" type="length" default="(this.ship.maxradarrange + $station.size/2f)m" text="{1041, 10093}" advanced="true" comment="Radius">
+        <input_param name="min" value="(1km + $station.size/2f)m"/>
+        <input_param name="max" value="(this.ship.maxradarrange + $station.size/2f)m"/>
+        <input_param name="step" value="1km"/>
+      </param>
+      <param name="timeout" type="time" default="0s" infinitevalue="0s" text="{1041, 10034}" advanced="true" comment="Duration">
+        <input_param name="max" value="1h" />
+        <input_param name="step" value="30s" />
+      </param>
+      <param name="debugchance" type="bool" default="0" advanced="true" text="{1041, 10086}" comment="Print debug output">
+        <input_param name="truevalue" value="100"/>
+      </param>
+    </params>
+    <requires>
+      <match shiptype="shiptype.lasertower" negate="true"/>
+    </requires>
+    <location object="$station" radius="$radius" />
+  </order>
+  <interrupts>
+    <handler ref="SectorChangeHandler"/>
+    <handler ref="ScannedHandler"/>
+    <handler ref="InspectedHandler"/>
+    <handler ref="FoundAbandonedHandler"/>
+    <handler ref="FoundLockboxHandler"/>
+    <handler ref="TargetInvalidHandler"/>
+    <handler ref="ResupplyHandler" />
+  </interrupts>
+  <init>
+    <do_if value="not @$station.sector">
+      <debug_text text="'station %s %s %s is not in a sector. radius will not be enforced.'.[@$station.idcode, @$station.knownname, $station]" filter="error" chance="($station.isrealclass.station and not $station.iswreck) * 100"/>
+      <set_value name="$radius" exact="null"/>
+    </do_if>
+    <do_else>
+      <set_value name="$radiusanchorspace" exact="$station.sector"/>
+      <create_position name="$radiusanchorpos" space="$radiusanchorspace" object="$station"/>
+    </do_else>
+
+    <set_command command="command.protect" param="$station" />
+    <set_value name="$inittime" exact="player.age" />
+
+  </init>
+  <patch sinceversion="1">
+    <do_if value="not $station.sector">
+      <set_value name="$radius" exact="null"/>
+      <set_value name="$radiusanchorspace" exact="null"/>
+      <set_value name="$radiusanchorpos" exact="null"/>
+    </do_if>
+    <do_else>
+      <set_value name="$radiusanchorspace" exact="$station.sector"/>
+      <create_position name="$radiusanchorpos" space="$radiusanchorspace" object="$station"/>
+    </do_else>
+  </patch>
+  <patch sinceversion="2">
+    <set_value name="$newstation" exact="$station"/>
+    <do_if value="not $station.isrealclass.station or $station.iswreck">
+      <debug_text text="'PATCH: No valid station specified, and no commander found - exiting script'" filter="savegame"/>
+      <set_value name="$newstation" exact="null"/>
+    </do_if>
+    <do_if value="@$station.mayattack.{this.assignedcontrolled}">
+      <debug_text text="'PATCH: %s %s %s set to protect %s %s %s which is hostile. aborting.'.[@this.assignedcontrolled.idcode, @this.assignedcontrolled.knownname, this.assignedcontrolled, @$station.idcode, @$station.knownname, $station]" filter="savegame"/>
+      <set_value name="$newstation" exact="null"/>
+    </do_if>
+
+    <do_if value="$newstation != $station">
+      <set_value name="$station" exact="$newstation"/>
+      <do_if value="this.assignedcontrolled.order.id == 'ProtectStation'">
+        <edit_order_param order="this.assignedcontrolled.order" param="'station'" value="$station"/>
+      </do_if>
+    </do_if>
+    <remove_value name="$newstation"/>
+  </patch>
+  <attention min="unknown">
+    <actions>
+
+      <!-- Initial checks -->
+      <label name="start" />
+
+      <do_if value="not $station.exists or not $station.isrealclass.station or $station.iswreck">
+        <debug_text text="'No valid station specified, and no commander found - exiting script'" chance="$debugchance"/>
+        <resume label="finish" />
+      </do_if>
+
+      <do_if value="$station.mayattack.{this.assignedcontrolled}">
+        <debug_text text="'%s %s %s set to protect %s %s %s which is hostile. aborting.'.[@this.assignedcontrolled.idcode, @this.assignedcontrolled.knownname, this.assignedcontrolled, @$station.idcode, @$station.knownname, $station]" filter="error"/>
+        <resume label="finish"/>
+      </do_if>
+
+      <!-- if different zone, go there -->
+      <do_if value="this.zone != $station.zone">
+        <run_script name="'move.generic'">
+          <param name="destination" value="$station.zone" />
+          <param name="endintargetzone" value="true" />
+          <param name="activepatrol" value="true"/>
+          <param name="radius" value="$radius"/>
+          <param name="radiusanchorpos" value="$radiusanchorpos"/>
+          <param name="radiusanchorspace" value="$radiusanchorspace"/>
+          <param name="debugchance" value="$debugchance"/>
+        </run_script>
+      </do_if>
+
+      <!-- Required for all infinite orders, no effect in case of finite timeout -->
+      <set_order_syncpoint_reached order="this.ship.order" />
+
+      <do_while value="$station.zone.exists">
+        <!-- Evaluate exit condition -->
+        <do_if value="$timeout and (player.age ge $inittime + $timeout)">
+          <resume label="finish" />
+        </do_if>
+        <!-- initial random position in zone -->
+        <get_safe_pos result="$pos" zone="$station.zone" object="$station" radius="this.ship.size/2f" min="$station.size/2f" max="[$radius, this.assignedcontrolled.maxradarrange].max" />
+
+        <run_script name="'move.seekenemies'" >
+          <param name="destination" value="$station.zone" />
+          <param name="pos" value="$pos" />
+          <param name="escort" value="$station" />
+          <param name="pursuedistance" value="$radius"/>
+          <param name="radius" value="$radius"/>
+          <param name="radiusanchorpos" value="$radiusanchorpos"/>
+          <param name="radiusanchorspace" value="$radiusanchorspace"/>
+          <param name="internalorder" value="true"/>
+          <param name="debugchance" value="$debugchance" />
+        </run_script>
+
+        <do_if value="player.age gt @$next_resupply_check" chance="30">
+          <debug_text text="'%1 (%2) ready to resupply.'.[this.ship.knownname, this.ship]" chance="$debugchance"/>
+          <signal_objects object="this.ship" param="'resupply'" param2="[false]" param3="$debugchance" comment="param2 = [urgent?, resupplystationID], param3 = $debugchance"/>
+          <set_value name="$next_resupply_check" exact="player.age + 30min"/>
+        </do_if>
+
+        <wait exact="500ms" />
+      </do_while>
+
+      <do_if value="this.isplayerowned and not this.isclass.computer and not this.assignedcontrolled.nextorder and (not this.assignedcontrolled.commander or (this.assignedcontrolled.commander == player.occupiedship)) and notification.npc_await_orders.active">
+        <!-- Player notification -->
+        <set_value name="$speakline" exact="10304" comment="Awaiting orders."/>
+        <run_script name="'player.interaction'">
+          <param name="Line" value="$speakline"/>
+          <param name="MaxQueueDelay" value="10s"/>
+          <param name="caption" value="'%s (%s)'.[this.assignedcontrolled.knownname, this.assignedcontrolled.idcode]"/>
+          <param name="interactive" value="false"/>
+          <param name="debugchance" value="$debugchance"/>
+        </run_script>
+      </do_if>
+
+      <!-- Required for sync point handler -->
+      <label name="finish" />
+
+    </actions>
+  </attention>
+</aiscript>

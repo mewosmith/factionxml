@@ -1,0 +1,888 @@
+<?xml version="1.0" encoding="iso-8859-1" ?>
+<mdscript name="Upkeep" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="md.xsd">
+  <cues>    
+    
+    <!--*************************
+        \\\\\UPKEEP MISSIONS/////
+        *************************-->
+
+    <cue name="Acquire_Control_Entity_Start" instantiate="true" namespace="this">
+      <conditions>
+        <event_cue_signalled/>
+      </conditions>
+      <actions>
+        <set_value name="$DebugChance" exact="0"/>
+        <!--event.param.{1} can be null for global missions-->
+        <do_if value="event.param.{2} and event.param.{3}">
+          <do_if value="typeof event.param.{3}" exact="datatype.controlpost">
+            <set_value name="$NPC" exact="event.param.{1}"/>
+            <set_value name="$Object" exact="event.param.{2}"/>
+            <set_value name="$ControlPost" exact="event.param.{3}"/>
+            <set_value name="$MissionCue" exact="Acquire_Control_Entity_Start"/>
+            <set_value name="$ID" exact="'Acquire_Control_Entity ' + $ControlPost"/>
+
+            <!--If registering is successful, the value $StartMission will be set-->
+            <include_actions ref="md.Upkeep_Management.RegisterUpkeep"/>
+          </do_if>
+        </do_if>
+        
+        <do_if value="not $StartMission?">
+          <cancel_cue cue="Acquire_Control_Entity_Start"/>
+        </do_if>
+      </actions>
+      <cues>
+        <library name="Acquire_Control_Entity_Description">
+          <actions>
+            <set_value name="$DescriptionID" exact="0"/>
+            <do_if value="$ControlPost" exact="controlpost.aipilot">
+              <set_value name="$DescriptionID" exact="1001"/>
+            </do_if>
+            <do_elseif value="$ControlPost" list="[controlpost.defence, controlpost.engineer]">
+              <debug_text text="'Invalid entity type for upkeep mission [Owen] ' + $ControlPost" filter="error"/>
+            </do_elseif>
+            <do_elseif value="$ControlPost" exact="controlpost.manager">
+              <set_value name="$DescriptionID" exact="1002"/>
+            </do_elseif>
+            <substitute_text text="$Description" source="readtext.{30114}.{$DescriptionID} + ' $DESCRIPTION$'">
+              <replace string="'$OBJECT$'" with="$Object.knownname"/>
+              <replace string="'$DESCRIPTION$'" with="$ControlPost.description"/>
+            </substitute_text>
+            <update_mission cue="$MissionCue" description="$Description"/>
+            <remove_value name="$Description"/>
+            <remove_value name="$DescriptionID"/>
+          </actions>
+        </library>
+        <cue name="Acquire_Control_Entity_CreateMission" version="2">
+          <actions>
+            <debug_text text="'start'" chance="$DebugChance"/>
+
+            <create_mission associated="$Associated" cue="$MissionCue" name="{1004,20} + ' ' + $ControlPost.name" alertlevel="alertlevel.high" faction="faction.player" type="missiontype.upkeep_hirenpc" activate="false" abortable="false"/>
+            <include_actions ref="Acquire_Control_Entity_Description"/>
+          </actions>
+          <cues>
+            <!--Briefing Holomap-->
+            <cue name="Acquire_Control_Entity_HolomapBriefingRef" ref="md.LIB_HolomapBriefing.Start">
+              <param name="MissionCue" value="$MissionCue"/>
+              <param name="ForceCleanupCue" value="Acquire_Control_Entity_CleanupHolomap" comment="signal this cue to clean up the holomap when needed."/>
+
+              <param name="Target" value="$Object"/>
+              <param name="ShowUnknown" value="false"/>
+
+              <param name="DebugChance" value="$DebugChance"/>
+            </cue>
+            <cue name="Acquire_Control_Entity_CleanupHolomap">
+              <conditions>
+                <event_cue_signalled/>
+              </conditions>
+            </cue>
+            
+            <cue name="RML_Acquire_Crew_Ref" ref="md.RML_Acquire_Crew.AcquireCrew">
+              <param name="EndSignalCue" value="Acquire_Control_Entity_End"/>
+              <param name="MissionCue" value="$MissionCue"/>
+
+              <param name="Object" value="$Object" comment="Destination the controllable to assign the entity"/>
+              <param name="ControlPost" value="$ControlPost"/>
+            </cue>
+
+            <cue name="Acquire_Control_Entity_Owner_Changed">
+              <conditions>
+                <event_object_changed_true_owner object="$Object"/>
+                <check_value value="event.param != faction.player"/>
+              </conditions>
+              <actions>
+                <remove_mission cue="$MissionCue"/>
+                <signal_cue_instantly cue="Acquire_Control_Entity_CleanupHolomap"/>
+                <cancel_cue cue="RML_Acquire_Crew_Ref"/>
+                <include_actions ref="md.Upkeep_Management.UnregisterUpkeep"/>
+                <cancel_cue cue="Acquire_Control_Entity_Start"/>
+              </actions>
+            </cue>
+
+            <cue name="Acquire_Control_Entity_End">
+              <conditions>
+                <event_cue_signalled/>
+              </conditions>
+              <actions>
+                <do_if value="Acquire_Control_Entity_End.$EndFeedbackValue" min="1">
+                  <remove_mission cue="$MissionCue" type="completed"/>
+                </do_if>
+                <do_else>
+                  <remove_mission cue="$MissionCue"/>
+                </do_else>
+
+                <signal_cue_instantly cue="Acquire_Control_Entity_CleanupHolomap"/>
+                <include_actions ref="md.Upkeep_Management.UnregisterUpkeep"/>
+                <cancel_cue cue="Acquire_Control_Entity_Start"/>
+              </actions>
+            </cue>
+          </cues>
+        </cue>
+      </cues>
+    </cue>
+
+    <!--Transfer needed money for buying resources-->
+    <cue name="Transfer_Resource_Money_Start" instantiate="true" namespace="this">
+      <conditions>
+        <event_cue_signalled/>
+      </conditions>
+      <actions>
+        <set_value name="$DebugChance" exact="0"/>
+        <!--event.param.{1} can be null for global missions-->
+        <do_if value="event.param.{2} and event.param.{3}">
+          <do_if value="typeof event.param.{3}" exact="datatype.money">
+            <set_value name="$NPC" exact="event.param.{1}"/>
+            <set_value name="$Object" exact="event.param.{2}"/>
+            <set_value name="$Money" exact="event.param.{3}"/>
+            <set_value name="$MissionCue" exact="Transfer_Resource_Money_Start"/>
+            <set_value name="$ID" exact="'Transfer Resource Money'"/>
+
+            <!--If registering is successful, the value $StartMission will be set-->
+            <include_actions ref="md.Upkeep_Management.RegisterUpkeep"/>
+
+            <do_if value="not $StartMission?">
+              <signal_objects object="$NPC" param="'RML_Transfer_Money'" param2="$Money"/>
+            </do_if>
+          </do_if>
+        </do_if>
+        
+        <do_if value="not $StartMission?">
+          <cancel_cue cue="Transfer_Resource_Money_Start"/>
+        </do_if>
+      </actions>
+      <cues>
+        <library name="Transfer_Resource_Money_Description">
+          <actions>
+            <substitute_text text="$Description" source="{30114,3001}">
+              <replace string="'$OBJECT$'" with="$Object.knownname"/>
+            </substitute_text>
+            <update_mission cue="$MissionCue" description="$Description"/>
+            <remove_value name="$Description"/>
+          </actions>
+        </library>
+        <cue name="Transfer_Resource_Money_CreateMission" version="2">
+          <actions>
+            <substitute_text text="$MissionTitle" source="{1004,1072}" comment="Transfer credits to $NPC$">
+              <replace string="'$NPC$'" with="$NPC.name"/>
+            </substitute_text>
+            <create_mission associated="$Associated" cue="$MissionCue" name="$MissionTitle" alertlevel="alertlevel.medium" faction="faction.player" type="missiontype.upkeep_credits" activate="false" abortable="false"/>
+            <include_actions ref="Transfer_Resource_Money_Description"/>
+            <remove_value name="$MissionTitle"/>
+          </actions>
+          <cues>
+            <!--Briefing Holomap-->
+            <cue name="Transfer_Resource_Money_HolomapBriefingRef" ref="md.LIB_HolomapBriefing.Start">
+              <param name="MissionCue" value="$MissionCue"/>
+              <param name="ForceCleanupCue" value="Transfer_Resource_Money_Owner_Changed" comment="signal this cue to clean up the holomap when needed."/>
+
+              <param name="Target" value="$Object"/>
+              <param name="ShowUnknown" value="false"/>
+
+              <param name="DebugChance" value="$DebugChance"/>
+            </cue>
+            <cue name="Transfer_Resource_Money_CleanupHolomap">
+              <conditions>
+                <event_cue_signalled/>
+              </conditions>
+            </cue>
+            
+            <cue name="RML_Transfer_Money_Ref" ref="md.RML_Transfer_Money.TransferMoney">
+              <param name="EndSignalCue" value="Transfer_Resource_Money_End"/>
+              <param name="MissionCue" value="$MissionCue"/>
+
+              <param name="NPC" value="$NPC"/>
+              <param name="MinMoney" value="$Money"/>
+              <param name="Object" value="$Object" comment="Object the NPC must be a control entity of"/>
+            </cue>
+
+            <cue name="Transfer_Resource_Money_Owner_Changed">
+              <conditions>
+                <event_object_changed_true_owner object="$Object"/>
+                <check_value value="event.param != faction.player"/>
+              </conditions>
+              <actions>
+                <remove_mission cue="$MissionCue"/>
+                <signal_cue_instantly cue="Transfer_Resource_Money_CleanupHolomap"/>
+                <cancel_cue cue="RML_Transfer_Money_Ref"/>
+                <include_actions ref="md.Upkeep_Management.UnregisterUpkeep"/>
+                <cancel_cue cue="Transfer_Resource_Money_Start"/>
+              </actions>
+            </cue>
+
+            <cue name="Transfer_Resource_Money_End">
+              <conditions>
+                <event_cue_signalled/>
+              </conditions>
+              <actions>
+                <do_if value="Transfer_Resource_Money_End.$EndFeedbackValue" min="1">
+                  <remove_mission cue="$MissionCue" type="completed"/>
+                </do_if>
+                <do_else>
+                  <remove_mission cue="$MissionCue"/>
+                </do_else>
+
+                <signal_cue_instantly cue="Transfer_Resource_Money_CleanupHolomap"/>
+                <include_actions ref="md.Upkeep_Management.UnregisterUpkeep"/>
+                <cancel_cue cue="Transfer_Resource_Money_Start"/>
+              </actions>
+            </cue>
+          </cues>
+        </cue>
+      </cues>
+    </cue>
+
+    <!--TODO @Owen extend object by module macro?-->
+    <cue name="Extend_Object_Start" instantiate="true" namespace="this">
+      <conditions>
+        <event_cue_signalled/>
+      </conditions>
+      <actions>
+        <set_value name="$DebugChance" exact="0"/>
+        <!--event.param.{1} can be null for global missions-->
+        <do_if value="event.param.{2} and event.param.{3}">
+          <do_if value="typeof event.param.{3}" exact="datatype.list">
+            <set_value name="$NPC" exact="event.param.{1}"/>
+            <set_value name="$Object" exact="event.param.{2}"/>
+            <!--<set_value name="$Sequence" exact="event.param.{3}.{1}"/>
+            <set_value name="$Stage" exact="event.param.{3}.{2}"/>-->
+            <set_value name="$MissionCue" exact="Extend_Object_Start"/>
+            <set_value name="$ID" exact="'Extend Object ' + $Sequence + ' ' + $Stage"/>
+
+            <!--If registering is successful, the value $StartMission will be set-->
+            <include_actions ref="md.Upkeep_Management.RegisterUpkeep"/>
+          </do_if>
+        </do_if>
+
+        <do_if value="not $StartMission?">
+          <cancel_cue cue="Extend_Object_Start"/>
+        </do_if>
+      </actions>
+      <cues>
+        <library name="Extend_Object_Description">
+          <actions>
+            <substitute_text text="$Description" source="{30114,4001}">
+              <replace string="'$OBJECT$'" with="$Object.knownname"/>
+              <!--<replace string="'$EXTENSION$'" with="$Object.macro.buildpurposemacro.{buildplan.[$Sequence, $Stage]}.purposename"/>-->
+              <replace string="'$EXTENSION$'" with="'TODO @Owen'"/>
+            </substitute_text>
+            <update_mission cue="$MissionCue" description="$Description"/>
+            <remove_value name="$Description"/>
+          </actions>
+        </library>
+        <cue name="Extend_Object_CreateMission" version="2">
+          <actions>
+            <!--TODO @Owen use module macro class?-->
+            <set_value name="$MissionName" exact="{1004,33}"/>
+            <create_mission associated="$Associated" cue="$MissionCue" name="$MissionName" alertlevel="alertlevel.low" faction="faction.player" type="missiontype.upkeep_extend" activate="false" abortable="false"/>
+            <include_actions ref="Extend_Object_Description"/>
+          </actions>
+          <cues>
+            <!--Briefing Holomap-->
+            <cue name="Extend_Object_HolomapBriefingRef" ref="md.LIB_HolomapBriefing.Start">
+              <param name="MissionCue" value="$MissionCue"/>
+              <param name="ForceCleanupCue" value="Extend_Object_CleanupHolomap" comment="signal this cue to clean up the holomap when needed."/>
+
+              <param name="Target" value="$Object"/>
+              <param name="ShowUnknown" value="false"/>
+
+              <param name="DebugChance" value="$DebugChance"/>
+            </cue>
+            <cue name="Extend_Object_CleanupHolomap">
+              <conditions>
+                <event_cue_signalled/>
+              </conditions>
+            </cue>
+            
+            <cue name="RML_Build_Object_Ref" ref="md.RML_Build_Object.BuildObject">
+              <param name="EndSignalCue" value="Extend_Object_End"/>
+              <param name="MissionCue" value="$MissionCue"/>
+
+              <param name="FinishBuild" value="true" comment="true = listen to event_player_build_finished
+                                                        false = listen to event_player_build_started
+                                                        -1 = listen to both"/>
+              <!--Predefined object-->
+              <param name="Object" value="$Object" comment="Existing object to be further expanded/upgraded. (supersedes macro and space parameters)"/>
+
+              <!--<param name="Sequence" value="$Sequence" comment="String: Specified sequence to be built. Paired with 'Stage' param."/>
+              <param name="Stage" value="$Stage" comment="Integer: Specified stage to be built. Paired with 'Sequence' param."/>-->
+            </cue>
+
+            <cue name="Extend_Object_Check_NPC" onfail="cancel">
+              <conditions>
+                <check_value value="$NPC"/>
+              </conditions>
+              <cues>
+                <!--TODO: Event?-->
+                <cue name="Extend_Object_Lost_NPC" checkinterval="5s">
+                  <conditions>
+                    <check_value value="$Object.controlentity.{$NPC.controlpost} != $NPC"/>
+                  </conditions>
+                  <actions>
+                    <remove_mission cue="$MissionCue"/>
+                    <signal_cue_instantly cue="Extend_Object_CleanupHolomap"/>
+                    <cancel_cue cue="RML_Build_Object_Ref"/>
+                    <include_actions ref="md.Upkeep_Management.UnregisterUpkeep"/>
+                    <cancel_cue cue="Extend_Object_Start"/>
+                  </actions>
+                </cue>
+              </cues>
+            </cue>
+
+            <cue name="Extend_Object_Owner_Changed">
+              <conditions>
+                <event_object_changed_true_owner object="$Object"/>
+                <check_value value="event.param != faction.player"/>
+              </conditions>
+              <actions>
+                <remove_mission cue="$MissionCue"/>
+                <signal_cue_instantly cue="Extend_Object_CleanupHolomap"/>
+                <cancel_cue cue="RML_Build_Object_Ref"/>
+                <include_actions ref="md.Upkeep_Management.UnregisterUpkeep"/>
+                <cancel_cue cue="Extend_Object_Start"/>
+              </actions>
+            </cue>
+
+            <cue name="Extend_Object_End">
+              <conditions>
+                <event_cue_signalled/>
+              </conditions>
+              <actions>
+                <do_if value="Extend_Object_End.$EndFeedbackValue" min="1">
+                  <remove_mission cue="$MissionCue" type="completed"/>
+                </do_if>
+                <do_else>
+                  <remove_mission cue="$MissionCue"/>
+                </do_else>
+                <signal_cue_instantly cue="Extend_Object_CleanupHolomap"/>
+
+                <include_actions ref="md.Upkeep_Management.UnregisterUpkeep"/>
+                <cancel_cue cue="Extend_Object_Start"/>
+              </actions>
+            </cue>
+          </cues>
+        </cue>
+      </cues>
+    </cue>
+
+    <cue name="Deliver_Unit_Start" instantiate="true" namespace="this">
+      <conditions>
+        <event_cue_signalled/>
+      </conditions>
+      <actions>
+        <set_value name="$DebugChance" exact="0"/>
+        <!--event.param.{1} can be null for global missions-->
+        <do_if value="event.param.{2} and event.param.{3}">
+          <do_if value="typeof event.param.{3}" exact="datatype.table">
+            <set_value name="$NPC" exact="event.param.{1}"/>
+            <set_value name="$Object" exact="event.param.{2}"/>
+            <set_value name="$UnitTable" exact="event.param.{3}"/>
+            <set_value name="$MissionCue" exact="Deliver_Unit_Start"/>
+            <!--For this upkeep mission we store the table, not a string so we can better compare-->
+            <set_value name="$ID" exact="$UnitTable"/>
+
+            <!--If registering is successful, the value $StartMission will be set-->
+            <include_actions ref="md.Upkeep_Management.RegisterUpkeep"/>
+          </do_if>
+        </do_if>
+
+        <do_if value="not $StartMission?">
+          <cancel_cue cue="Deliver_Unit_Start"/>
+        </do_if>
+      </actions>
+      <cues>
+        <library name="Deliver_Unit_Description">
+          <actions>
+            <do_if value="$Object.isclass.station">
+              <update_mission cue="$MissionCue" description="{30114,8001}"/>
+            </do_if>
+            <do_else>
+              <update_mission cue="$MissionCue" description="{30114,8002}"/>
+            </do_else>
+          </actions>
+        </library>
+        <cue name="Deliver_Unit_CreateMission">
+          <actions>
+            <create_mission associated="$Associated" cue="$MissionCue" name="readtext.{1004}.{49}" alertlevel="alertlevel.medium" faction="faction.player" type="missiontype.upkeep_units" activate="false" abortable="false"/>
+            <include_actions ref="Deliver_Unit_Description"/>
+          </actions>
+          <cues>
+            <!--Briefing Holomap-->
+            <cue name="Deliver_Unit_HolomapBriefingRef" ref="md.LIB_HolomapBriefing.Start">
+              <param name="MissionCue" value="$MissionCue"/>
+              <param name="ForceCleanupCue" value="Deliver_Unit_CleanupHolomap" comment="signal this cue to clean up the holomap when needed."/>
+
+              <param name="Target" value="$Object"/>
+              <param name="ShowUnknown" value="false"/>
+
+              <param name="DebugChance" value="$DebugChance"/>
+            </cue>
+            <cue name="Deliver_Unit_CleanupHolomap">
+              <conditions>
+                <event_cue_signalled/>
+              </conditions>
+            </cue>
+
+            <cue name="RML_Deliver_Units_Ref" ref="md.RML_Deliver_Units.DeliverUnits">
+
+              <param name="EndSignalCue" value="Deliver_Unit_End"/>
+              <param name="MissionCue" value="Deliver_Unit_Start"/>
+
+              <param name="UnitTable_Master" value="$UnitTable" comment="Table of wanted units. Will be cloned to $UnitTable"/>
+              <param name="Object" value="$Object" comment="Object to deliver the units to"/>
+
+              <param name="DebugChance" value="$DebugChance"/>
+            </cue>
+
+            <cue name="Deliver_Unit_Check_NPC" onfail="cancel">
+              <conditions>
+                <check_value value="$NPC"/>
+              </conditions>
+              <cues>
+                <!--TODO: Event?-->
+                <cue name="Deliver_Unit_Lost_NPC" checkinterval="5s">
+                  <conditions>
+                    <check_value value="$Object.controlentity.{$NPC.controlpost} != $NPC"/>
+                  </conditions>
+                  <actions>
+                    <remove_mission cue="$MissionCue"/>
+                    <signal_cue_instantly cue="Deliver_Unit_CleanupHolomap"/>
+                    <cancel_cue cue="RML_Deliver_Units_Ref"/>
+                    <include_actions ref="md.Upkeep_Management.UnregisterUpkeep"/>
+                    <cancel_cue cue="Deliver_Unit_Start"/>
+                  </actions>
+                </cue>
+              </cues>
+            </cue>
+
+            <cue name="Deliver_Unit_Owner_Changed">
+              <conditions>
+                <event_object_changed_true_owner object="$Object"/>
+                <check_value value="event.param != faction.player"/>
+              </conditions>
+              <actions>
+                <remove_mission cue="$MissionCue"/>
+                <signal_cue_instantly cue="Deliver_Unit_CleanupHolomap"/>
+                <cancel_cue cue="RML_Deliver_Units_Ref"/>
+                <include_actions ref="md.Upkeep_Management.UnregisterUpkeep"/>
+                <cancel_cue cue="Deliver_Unit_Start"/>
+              </actions>
+            </cue>
+
+            <cue name="Deliver_Unit_End">
+              <conditions>
+                <event_cue_signalled/>
+              </conditions>
+              <actions>
+                <do_if value="Deliver_Unit_End.$EndFeedbackValue" min="1">
+                  <remove_mission cue="$MissionCue" type="completed"/>
+                </do_if>
+                <do_else>
+                  <remove_mission cue="$MissionCue"/>
+                </do_else>
+                <signal_cue_instantly cue="Deliver_Unit_CleanupHolomap"/>
+
+                <include_actions ref="md.Upkeep_Management.UnregisterUpkeep"/>
+                <cancel_cue cue="Deliver_Unit_Start"/>
+              </actions>
+            </cue>
+          </cues>
+        </cue>
+      </cues>
+    </cue>
+
+    <!--[$ship, $commanderobject]-->
+    <library name="Needs_Subordinate_Trade_Ship_Lib" purpose="run_actions">
+      <params>
+        <param name="Ship"/>
+        <param name="Resources"/>
+        <param name="TradeWares"/>
+      </params>
+      <actions>
+        <set_value name="$Result" exact="false"/>
+        <do_if value="$Ship.isclass.ship">
+          <!--Not a construction vessel or a mining ship-->
+          <do_if value="not $Ship.buildmodule and $Ship.primarypurpose != purpose.mine">
+            <do_all exact="$TradeWares.count" counter="$i">
+              <append_to_list name="$Resources" exact="$TradeWares.{$i}"/>
+            </do_all>
+            <do_if value="$Resources.count">
+              <do_all exact="$Resources.count" counter="$i">
+                <do_if value="$Ship.cargo.{$Resources.{$i}}.max">
+                  <set_value name="$Result" exact="true"/>
+                  <break/>
+                </do_if>
+              </do_all>
+            </do_if>
+            <do_else>
+              <set_value name="$Result" exact="true"/>
+            </do_else>
+          </do_if>
+        </do_if>
+        <return value="$Result"/>
+      </actions>
+    </library>
+
+    <!--
+    Result value: list of ware transport types-->
+    <library name="Needs_Subordinate_Mining_Ship_Lib" purpose="run_actions">
+      <params>
+        <param name="Commander"/>
+      </params>
+      <actions>
+        <set_value name="$WareTransportTypes" exact="[]"/>
+        <set_value name="$Resources" exact="$Commander.resources.list"/>
+        <do_all exact="$Resources.count" counter="$i">
+          <!--Resource is Minable type an can be carried by this mining ship-->
+          <do_if value="$Resources.{$i}.tags.indexof.{tag.minable} and not $WareTransportTypes.indexof.{$Resources.{$i}.waretransport}">
+            <append_to_list name="$WareTransportTypes" exact="$Resources.{$i}.waretransport"/>
+          </do_if>
+        </do_all>
+
+        <set_value name="$Subordinates" exact="$Commander.subordinates"/>
+        <do_all exact="$Subordinates.count" counter="$i">
+          <set_value name="$Ship" exact="$Subordinates.{$i}"/>
+          <do_if value="$Ship.isclass.ship">
+            <!--Is a mining ship-->
+            <do_if value="$Ship.primarypurpose == purpose.mine and not $Ship.buildmodule">
+              <do_all exact="$WareTransportTypes.count" counter="$k" reverse="true">
+                <do_if value="$Ship.waretransport.indexof.{$WareTransportTypes.{$k}}">
+                  <remove_value name="$WareTransportTypes.{$k}"/>
+                </do_if>
+              </do_all>
+            </do_if>
+          </do_if>
+        </do_all>
+
+        <return value="$WareTransportTypes"/>
+      </actions>
+    </library>
+
+    <cue name="Assign_Subordinate_Start" instantiate="true" namespace="this" version="2">
+      <conditions>
+        <event_cue_signalled/>
+      </conditions>
+      <actions>
+        <set_value name="$DebugChance" exact="0"/>
+        <!--event.param.{1} can be null for global missions-->
+        <do_if value="event.param.{2} and event.param.{3}">
+          <set_value name="$NPC" exact="event.param.{1}"/>
+          <set_value name="$Object" exact="event.param.{2}"/>
+          <set_value name="$VariantCue" exact="event.param.{3}"/>
+          <set_value name="$WareTransportType" exact="event.param.{4}"/>
+          <set_value name="$MissionCue" exact="Assign_Subordinate_Start"/>
+          <set_value name="$ID" exact="'Assign Subordinate ' + $VariantCue + ' ' + $WareTransportType"/>
+
+          <!--If registering is successful, the value $StartMission will be set-->
+          <include_actions ref="md.Upkeep_Management.RegisterUpkeep"/>
+        </do_if>
+        <do_if value="not $StartMission?">
+          <cancel_cue cue="Assign_Subordinate_Start"/>
+        </do_if>
+      </actions>
+      <cues>
+        <!--event.param: $ship-->
+        <cue name="Check_Subordinate_Trade_Ship" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <set_value name="static.$Result" exact="false"/>
+            <set_value name="$Ship" exact="event.param"/>
+            <do_if value="$Ship.isclass.ship">
+              <!--Not a construction vessel or a mining ship-->
+              <do_if value="not $Ship.buildmodule and $Ship.primarypurpose != purpose.mine">
+                <set_value name="$Resources" exact="$Object.resources.list"/>
+                <do_all exact="$Object.tradewares.count" counter="$i">
+                  <append_to_list name="$Resources" exact="$Object.tradewares.list.{$i}"/>
+                </do_all>
+                <do_if value="$Resources.count">
+                  <do_all exact="$Resources.count" counter="$i">
+                    <do_if value="$Ship.cargo.{$Resources.{$i}}.max">
+                      <set_value name="static.$Result" exact="true"/>
+                      <break/>
+                    </do_if>
+                  </do_all>
+                </do_if>
+                <do_else>
+                  <set_value name="static.$Result" exact="true"/>
+                </do_else>
+              </do_if>
+            </do_if>
+          </actions>
+        </cue>
+
+        <!--event.param: $ship-->
+        <cue name="Check_Subordinate_Mining_Ship" instantiate="true">
+          <conditions>
+            <event_cue_signalled/>
+          </conditions>
+          <actions>
+            <set_value name="static.$Result" exact="false"/>
+            <set_value name="$Ship" exact="event.param"/>
+            <do_if value="$Ship.isclass.ship">
+              <!--Is a mining ship-->
+              <do_if value="$Ship.primarypurpose == purpose.mine and not $Ship.buildmodule">
+                <do_if value="not $WareTransportType or $Ship.waretransport.indexof.{$WareTransportType}">
+                  <set_value name="static.$Result" exact="true"/>
+                </do_if>
+              </do_if>
+            </do_if>
+          </actions>
+        </cue>
+        
+        <library name="Assign_Subordinate_Description">
+          <actions>
+            <update_mission cue="$MissionCue" description="$DescriptionText"/>
+          </actions>
+        </library>
+        
+        <cue name="Assign_Subordinate_CreateMission" version="3">
+          <actions>
+            <create_mission associated="$Associated" cue="$MissionCue" name="readtext.{1004}.{50}" alertlevel="alertlevel.low" faction="faction.player" type="missiontype.upkeep_subordinates" activate="false" abortable="false"/>
+
+            <do_if value="$VariantCue == Needs_Subordinate_Trade_Ship_Lib">
+              <set_value name="$SubordinateCheckCue" exact="Check_Subordinate_Trade_Ship"/>
+              <set_value name="$CommanderObject" exact="$Object"/>
+              <set_value name="$Assignment" exact="assignment.trade"/>
+              <set_value name="$CommanderEntity" exact="null"/>
+              <set_value name="$DescriptionText" exact="{30114,9201}"/>
+              <set_value name="$ObjectiveText" exact="{30114,9202}"/>
+            </do_if>
+            <do_elseif value="$VariantCue == Needs_Subordinate_Mining_Ship_Lib">
+              <set_value name="$SubordinateCheckCue" exact="Check_Subordinate_Mining_Ship"/>
+              <set_value name="$CommanderObject" exact="$Object"/>
+              <set_value name="$Assignment" exact="assignment.mining"/>
+              <set_value name="$CommanderEntity" exact="null"/>
+
+              <do_if value="$WareTransportType">
+                <set_value name="$DescriptionText" exact="{30114,9301}"/>
+                <set_value name="$ObjectiveText" exact="{30114,9302} + ' (' + $WareTransportType.name + ')'"/>
+              </do_if>
+              <do_else>
+                <set_value name="$ObjectiveText" exact="{30114,9302}"/>
+              </do_else>
+            </do_elseif>
+            <include_actions ref="Assign_Subordinate_Description"/>
+          </actions>
+          <cues>
+            <!--Briefing Holomap-->
+            <cue name="Assign_Subordinate_HolomapBriefingRef" ref="md.LIB_HolomapBriefing.Start">
+              <param name="MissionCue" value="$MissionCue"/>
+              <param name="ForceCleanupCue" value="Assign_Subordinate_CleanupHolomap" comment="signal this cue to clean up the holomap when needed."/>
+
+              <param name="Target" value="$Object"/>
+              <param name="ShowUnknown" value="false"/>
+
+              <param name="DebugChance" value="$DebugChance"/>
+            </cue>
+            <cue name="Assign_Subordinate_CleanupHolomap">
+              <conditions>
+                <event_cue_signalled/>
+              </conditions>
+            </cue>
+
+            <cue name="RML_Assign_Subordinate_Ref" ref="md.RML_Assign_Subordinate.AssignSubordinate">
+
+              <param name="EndSignalCue" value="Assign_Subordinate_End"/>
+              <param name="MissionCue" value="Assign_Subordinate_Start"/>
+
+              <!--Commander params-->
+              <param name="CommanderObject" value="$CommanderObject" comment="Object for the subordinate to be assigned to (do not combine with $CommanderEntity)"/>
+              <param name="Assignment" value="$Assignment" comment="Assignment for the subordinate"/>
+
+              <param name="CommanderEntity" value="$CommanderEntity" comment="Entity for the subordinate to be assigned to (do not combine with $CommanderObject)"/>
+
+              <!--Subordinate params-->
+              <param name="SubordinateCheckCue" value="$SubordinateCheckCue" comment="Cue to be signalled with a newly assigned subordinate passed in as event.param. 
+               Sets $SubordinateCheckCue.$Result to true or false if the subordinate matches criteria."/>
+              <param name="ObjectiveText" value="$ObjectiveText"/>
+
+              <param name="DebugChance" value="$DebugChance"/>
+            </cue>
+
+            <cue name="Assign_Subordinate_Check_NPC" onfail="cancel">
+              <conditions>
+                <check_value value="$NPC"/>
+              </conditions>
+              <cues>
+                <!--TODO: Event?-->
+                <cue name="Assign_Subordinate_Lost_NPC" checkinterval="5s">
+                  <conditions>
+                    <check_value value="$Object.controlentity.{$NPC.controlpost} != $NPC"/>
+                  </conditions>
+                  <actions>
+                    <remove_mission cue="$MissionCue"/>
+                    <signal_cue_instantly cue="Assign_Subordinate_CleanupHolomap"/>
+                    <cancel_cue cue="RML_Assign_Subordinate_Ref"/>
+                    <include_actions ref="md.Upkeep_Management.UnregisterUpkeep"/>
+                    <cancel_cue cue="Assign_Subordinate_Start"/>
+                  </actions>
+                </cue>
+              </cues>
+            </cue>
+
+            <cue name="Assign_Subordinate_Owner_Changed">
+              <conditions>
+                <event_object_changed_true_owner object="$Object"/>
+                <check_value value="event.param != faction.player"/>
+              </conditions>
+              <actions>
+                <remove_mission cue="$MissionCue"/>
+                <signal_cue_instantly cue="Assign_Subordinate_CleanupHolomap"/>
+                <cancel_cue cue="RML_Assign_Subordinate_Ref"/>
+                <include_actions ref="md.Upkeep_Management.UnregisterUpkeep"/>
+                <cancel_cue cue="Assign_Subordinate_Start"/>
+              </actions>
+            </cue>
+
+            <cue name="Assign_Subordinate_End">
+              <conditions>
+                <event_cue_signalled/>
+              </conditions>
+              <actions>
+                <do_if value="Assign_Subordinate_End.$EndFeedbackValue" min="1">
+                  <remove_mission cue="$MissionCue" type="completed"/>
+                </do_if>
+                <do_else>
+                  <remove_mission cue="$MissionCue"/>
+                </do_else>
+                <signal_cue_instantly cue="Assign_Subordinate_CleanupHolomap"/>
+
+                <include_actions ref="md.Upkeep_Management.UnregisterUpkeep"/>
+                <cancel_cue cue="Assign_Subordinate_Start"/>
+              </actions>
+            </cue>
+          </cues>
+        </cue>
+      </cues>
+    </cue>
+
+    <cue name="Pickup_Person_Start" instantiate="true" namespace="this">
+      <conditions>
+        <event_cue_signalled/>
+      </conditions>
+      <actions>
+        <set_value name="$DebugChance" exact="0"/>
+        <!--event.param.{1} can be null for global missions-->
+        <do_if value="event.param.{2} and event.param.{3} and typeof event.param.{4} == datatype.group">
+          <set_value name="$NPC" exact="event.param.{1}"/>
+          <set_value name="$Object" exact="event.param.{2}"/>
+          <set_value name="$Identifier" exact="event.param.{3}"/>
+          <set_value name="$PassengerGroup" exact="event.param.{4}"/>
+          <set_value name="$MissionCue" exact="Pickup_Person_Start"/>
+          <set_value name="$ID" exact="'Pickup Person ' + $Identifier"/>
+
+          <!--If registering is successful, the value $StartMission will be set-->
+          <include_actions ref="md.Upkeep_Management.RegisterUpkeep"/>
+        </do_if>
+        <do_if value="not $StartMission?">
+          <cancel_cue cue="Pickup_Person_Start"/>
+        </do_if>
+      </actions>
+      <cues>
+        <library name="Pickup_Person_Description">
+          <actions>
+            <update_mission cue="$MissionCue" description="$DescriptionText"/>
+          </actions>
+        </library>
+
+        <cue name="Pickup_Person_CreateMission">
+          <actions>
+            <do_if value="$Identifier == 'Marine'">
+              <set_value name="$MissionName" exact="{30114,7002}"/>
+              <set_value name="$DescriptionText" exact="{30114,7001}"/>
+            </do_if>
+            <do_elseif value="$Identifier == 'Crew'">
+              <set_value name="$MissionName" exact="{30114,7102}"/>
+              <set_value name="$DescriptionText" exact="{30114,7101}"/>
+            </do_elseif>
+            <create_mission associated="$Associated" cue="$MissionCue" name="$MissionName" alertlevel="alertlevel.high" faction="faction.player" type="missiontype.upkeep_hirenpc" activate="false" abortable="false"/>
+
+            <include_actions ref="Pickup_Person_Description"/>
+          </actions>
+          <cues>
+            <!--Briefing Holomap-->
+            <cue name="Pickup_Person_HolomapBriefingRef" ref="md.LIB_HolomapBriefing.Start">
+              <param name="MissionCue" value="$MissionCue"/>
+              <param name="ForceCleanupCue" value="Pickup_Person_CleanupHolomap" comment="signal this cue to clean up the holomap when needed."/>
+
+              <param name="Target" value="$Object"/>
+              <param name="ShowUnknown" value="false"/>
+
+              <param name="DebugChance" value="$DebugChance"/>
+            </cue>
+            <cue name="Pickup_Person_CleanupHolomap">
+              <conditions>
+                <event_cue_signalled/>
+              </conditions>
+            </cue>
+
+            <cue name="RML_Pickup_Passengers_Ref" ref="md.RML_Pickup_Passengers.PickupPassengers">
+
+              <param name="EndSignalCue" value="Pickup_Person_End"/>
+              <param name="MissionCue" value="Pickup_Person_Start"/>
+
+              <param name="PassengersParam" value="$PassengerGroup" comment="Passengers to pickup"/>
+              <param name="EndOnDeath" value="true"/>
+            </cue>
+
+            <cue name="Pickup_Person_Check_NPC" onfail="cancel">
+              <conditions>
+                <check_value value="$NPC"/>
+              </conditions>
+              <cues>
+                <!--TODO: Event?-->
+                <cue name="Pickup_Person_Lost_NPC" checkinterval="5s">
+                  <conditions>
+                    <check_value value="$Object.controlentity.{$NPC.controlpost} != $NPC"/>
+                  </conditions>
+                  <actions>
+                    <remove_mission cue="$MissionCue"/>
+                    <signal_cue_instantly cue="Pickup_Person_CleanupHolomap"/>
+                    <cancel_cue cue="RML_Pickup_Person_Ref"/>
+                    <include_actions ref="md.Upkeep_Management.UnregisterUpkeep"/>
+                    <cancel_cue cue="Pickup_Person_Start"/>
+                  </actions>
+                </cue>
+              </cues>
+            </cue>
+
+            <cue name="Pickup_Person_Owner_Changed">
+              <conditions>
+                <event_object_changed_true_owner object="$Object"/>
+                <check_value value="event.param != faction.player"/>
+              </conditions>
+              <actions>
+                <remove_mission cue="$MissionCue"/>
+                <signal_cue_instantly cue="Pickup_Person_CleanupHolomap"/>
+                <cancel_cue cue="RML_Pickup_Person_Ref"/>
+                <include_actions ref="md.Upkeep_Management.UnregisterUpkeep"/>
+                <cancel_cue cue="Pickup_Person_Start"/>
+              </actions>
+            </cue>
+
+            <cue name="Pickup_Person_End">
+              <conditions>
+                <event_cue_signalled/>
+              </conditions>
+              <actions>
+                <do_if value="Pickup_Person_End.$EndFeedbackValue" min="1">
+                  <remove_mission cue="$MissionCue" type="completed"/>
+                </do_if>
+                <do_else>
+                  <remove_mission cue="$MissionCue"/>
+                </do_else>
+                <signal_cue_instantly cue="Pickup_Person_CleanupHolomap"/>
+
+                <include_actions ref="md.Upkeep_Management.UnregisterUpkeep"/>
+                <cancel_cue cue="Pickup_Person_Start"/>
+              </actions>
+            </cue>
+          </cues>
+        </cue>
+      </cues>
+    </cue>
+    
+    
+  </cues>
+</mdscript>
+

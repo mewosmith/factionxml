@@ -1,0 +1,198 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<voicesequences xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xsi:noNamespaceSchemaLocation="voicesequences.xsd">
+
+  <voicesequence id="gamestart1_selected" page="10101">
+    <delay time="1.5" />
+    <speak line="99901" />
+  </voicesequence>
+  <voicesequence id="gamestart1_started" page="10101">
+    <delay time="2.5" />
+    <speak line="99902" />
+  </voicesequence>
+  <voicesequence id="gamestart3_selected" page="10301">
+    <delay time="1.5" />
+    <speak line="99901" />
+  </voicesequence>
+  <voicesequence id="gamestart3_started" page="10301">
+    <delay time="2.5" />
+    <speak line="99902" />
+  </voicesequence>
+  <voicesequence id="gamestart4_selected" page="10106">
+    <delay time="1.5" />
+    <speak line="99901" />
+  </voicesequence>
+  <voicesequence id="gamestart4_started" page="10106">
+    <delay time="2.5" />
+    <speak line="99902" />
+  </voicesequence>
+  <voicesequence id="gamestart_split1_selected" page="10405">
+    <delay time="1.5" />
+    <speak line="99901" />
+  </voicesequence>
+  <voicesequence id="gamestart_split1_started" page="10405">
+    <delay time="2.5" />
+    <speak line="99902" />
+  </voicesequence>
+  <voicesequence id="gamestart_split2_selected" page="10451">
+    <delay time="1.5" />
+    <speak line="99901" />
+  </voicesequence>
+  <voicesequence id="gamestart_split2_started" page="10451">
+    <delay time="2.5" />
+    <speak line="99902" />
+  </voicesequence>
+  <voicesequence id="gamestart_scientist_selected" page="10201">
+    <delay time="1.5" />
+    <speak line="99901" />
+  </voicesequence>
+  <voicesequence id="gamestart_scientist_started" page="10201">
+    <delay time="2.5" />
+    <speak line="99902" />
+  </voicesequence>
+  <voicesequence id="gamestart_flightschool_selected" page="10190">
+    <delay time="1.5" />
+    <speak line="99901" />
+  </voicesequence>
+
+  <voicesequence id="timeline_earth_jumpgates" page="20299">
+    <speak line="1261" priority="-50" />
+    <delay time="2" />
+    <speak line="1262" priority="-50" />
+  </voicesequence>
+  <voicesequence id="timeline_winterblossom" page="20299">
+    <speak line="1171" priority="-50" />
+    <delay time="2" />
+    <speak line=" 1172" priority="-50" />
+  </voicesequence>
+  <voicesequence id="timeline_terraformer_project_starts" page="20299">
+    <speak line="1101" priority="-50" />
+    <delay time="2" />
+    <speak line="1102" priority="-50" />
+  </voicesequence>
+  <voicesequence id="timeline_terraformer_project_ends" page="20299">
+    <speak line="1271" priority="-50" />
+    <delay time="2" />
+    <speak line="1272" priority="-50" />
+  </voicesequence>
+  <voicesequence id="timeline_terraformer_war" page="20299">
+    <speak line="1111" priority="-50" />
+    <delay time="2" />
+    <speak line="1112" priority="-50" />
+  </voicesequence>
+  <voicesequence id="timeline_first_contact_paranid" page="20299">
+    <speak line="1031" priority="-50" />
+    <delay time="2" />
+    <speak line="1032" priority="-50" />
+  </voicesequence>
+  <voicesequence id="timeline_foundation_federation" page="20299">
+    <speak line="1041" priority="-50" />
+    <delay time="2" />
+    <speak line="1042" priority="-50" />
+  </voicesequence>
+  <voicesequence id="timeline_first_contact_boron" page="20299">
+    <speak line="1051" priority="-50" />
+    <delay time="2" />
+    <speak line="1052" priority="-50" />
+  </voicesequence>
+  <voicesequence id="timeline_first_contact_split" page="20299">
+    <speak line="1061" priority="-50" />
+    <delay time="2" />
+    <speak line="1062" priority="-50" />
+  </voicesequence>
+  <voicesequence id="timeline_foundation_community" page="20299">
+    <speak line="1071" priority="-50" />
+    <delay time="2" />
+    <speak line="1072" priority="-50" />
+  </voicesequence>
+  <voicesequence id="timeline_cold_war" page="20299">
+    <speak line="1081" priority="-50" />
+    <delay time="2" />
+    <speak line="1082" priority="-50" />
+  </voicesequence>
+  <voicesequence id="timeline_first_contact_teladi" page="20299">
+    <speak line="1091" priority="-50" />
+    <delay time="2" />
+    <speak line="1092" priority="-50" />
+  </voicesequence>
+  <voicesequence id="timeline_xenon_evolution" page="20299">
+    <speak line="1121" priority="-50" />
+    <delay time="2" />
+    <speak line="1122" priority="-50" />
+  </voicesequence>
+  <voicesequence id="timeline_kyle_brennan_arrival" page="20299">
+    <speak line="1001" priority="-50" />
+    <delay time="2" />
+    <speak line="1002" priority="-50" />
+  </voicesequence>
+  <voicesequence id="timeline_khaak_arrival" page="20299">
+    <speak line="1011" priority="-50" />
+    <delay time="2" />
+    <speak line="1012" priority="-50" />
+  </voicesequence>
+  <voicesequence id="timeline_presidents_end" page="20299">
+    <speak line="1211" priority="-50" />
+    <delay time="2" />
+    <speak line="1212" priority="-50" />
+  </voicesequence>
+  <voicesequence id="timeline_omicron_lyrae" page="20299">
+    <speak line="1221" priority="-50" />
+    <delay time="2" />
+    <speak line="1222" priority="-50" />
+  </voicesequence>
+  <voicesequence id="timeline_race_to_find_earth" page="20299">
+    <speak line="1021" priority="-50" />
+    <delay time="2" />
+    <speak line="1022" priority="-50" />
+  </voicesequence>
+  <voicesequence id="timeline_terran_khaak_assistance" page="20299">
+    <speak line="1131" priority="-50" />
+    <delay time="2" />
+    <speak line="1132" priority="-50" />
+  </voicesequence>
+  <voicesequence id="timeline_operation_final_fury" page="20299">
+    <speak line="1231" priority="-50" />
+    <delay time="2" />
+    <speak line="1232" priority="-50" />
+  </voicesequence>
+  <voicesequence id="timeline_agi_tension" page="20299">
+    <speak line="1141" priority="-50" />
+    <delay time="2" />
+    <speak line="1142" priority="-50" />
+  </voicesequence>
+  <voicesequence id="timeline_terran_conflict" page="20299">
+    <speak line="1151" priority="-50" />
+    <delay time="2" />
+    <speak line="1152" priority="-50" />
+  </voicesequence>
+  <voicesequence id="timeline_torus_aeternal" page="20299">
+    <speak line="1161" priority="-50" />
+    <delay time="2" />
+    <speak line="1162" priority="-50" />
+  </voicesequence>
+  <voicesequence id="timeline_warp_instability" page="20299">
+    <speak line="1181" priority="-50" />
+    <delay time="2" />
+    <speak line="1182" priority="-50" />
+  </voicesequence>
+  <voicesequence id="timeline_gate_shutdown" page="20299">
+    <speak line="1191" priority="-50" />
+    <delay time="2" />
+    <speak line="1192" priority="-50" />
+  </voicesequence>
+  <voicesequence id="timeline_alliance_of_the_word" page="20299">
+    <speak line="1201" priority="-50" />
+    <delay time="2" />
+    <speak line="1202" priority="-50" />
+  </voicesequence>
+  <voicesequence id="timeline_gate_reopening" page="20299">
+    <speak line="1241" priority="-50" />
+    <delay time="2" />
+    <speak line="1242" priority="-50" />
+  </voicesequence>
+  <voicesequence id="timeline_gate_stabilisation" page="20299">
+    <speak line="1251" priority="-50" />
+    <delay time="2" />
+    <speak line="1252" priority="-50" />
+  </voicesequence>
+
+</voicesequences>

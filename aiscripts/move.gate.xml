@@ -1,0 +1,416 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<aiscript name="move.gate" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="aiscripts.xsd" version="4">
+  <!--
+
+  Move Gate
+  by Adrian
+  
+  Generic routine for moving through specific gate.
+
+  -->
+  <params>
+    <param name="gate" comment="Gate to use. Has to be a jump gate or a highway entry gate."/>
+    <param name="recallsubordinates" default="false" comment="recall subordinates and cancel existing recall subordinate orders. handled in move.generic."/>
+    <param name="waitfor" default="null" comment="wait for this object after crossing the gate."/>
+    <param name="debugchance" default="0"/>
+  </params>
+  <interrupts>
+    <handler ref="TargetInvalidHandler"/>
+  </interrupts>
+  <patch sinceversion="1">
+    <set_value name="$recallsubordinates" exact="false"/>
+  </patch>
+  <patch sinceversion="2" early="true">
+    <set_value name="$time_interrupt" exact="([this.assignedcontrolled.distanceto.{$gate} / [this.assignedcontrolled.maxspeed, 1].max, 5s].min)s"/>
+  </patch>
+  <patch sinceversion="3">
+    <set_value name="$exitgate" exact="$gate.exit"/>
+    <set_value name="$waitfor" exact="null"/>
+    <create_group groupname="$group_waitfor"/>
+  </patch>
+  <patch sinceversion="4">
+    <do_if value="$gatedestination and (this.sector == $gatedestination.sector)">
+      <debug_text text="'%s %s %s already in destination sector. resuming movement.'.[@this.assignedcontrolled.idcode, @this.assignedcontrolled.knownname, this.assignedcontrolled]" filter="savegame"/>
+      <!-- NB: this signal only works because move.gate is always called from move.generic -->
+      <signal_objects object="this.assignedcontrolled" param="'move.generic_reinitialize'"/>
+    </do_if>
+  </patch>
+  <attention min="unknown">
+    <actions>
+
+      <label name="check" />
+
+      <do_if value="$gate.isclass.gate">
+        <set_value name="$gateorigin" exact="$gate.zone"/>
+      </do_if>
+      <do_elseif value="$gate.isclass.highwayentrygate">
+        <set_value name="$gateorigin" exact="$gate.highway.origin"/>
+      </do_elseif>
+      <do_else>
+        <debug_text text="'ERROR: $gate (%1 %2 %3) is neither a gate nor a highwayentrygate.'.[$gate.class, $gate.knownname, $gate]" filter="error"/>
+        <return/>
+      </do_else>
+      <set_value name="$gatedestination" exact="$gate.destination"/>
+      <set_value name="$exitgate" exact="$gate.exit"/>
+
+      <label name="move" />
+
+      <!-- NB: this movement has to be enforced before requesting the gate to minimize the time in which the gate is locked down. -->
+      <!-- If is not in the same zone use the generic routine to get there -->
+      <do_if value="(this.zone != $gate.zone)">
+        <run_script name="'move.generic'" >
+          <param name="destination" value="$gate.zone"/>
+          <param name="endintargetzone" value="true"/>
+          <param name="recallsubordinates" value="$recallsubordinates"/>
+          <param name="debugchance" value="$debugchance"/>
+        </run_script>
+      </do_if>
+
+      <do_if value="not this.assignedcontrolled.iscapitalship">
+        <debug_text text="'we are not in a capital ship. skipping queue'" chance="$debugchance"/>
+        <set_value name="$moveintogate"/>
+        <resume label="cross_gate"/>
+      </do_if>
+
+      <do_if value="this.ship.distanceto.{$gate} gt 5km + (this.ship.size / 2.0)">
+        <set_value name="$maxoffset" exact="[this.ship.size * 2, ([$gate.size, this.ship.size].max / 2 - this.ship.size / 2)].min"/>
+        <set_value name="$randomoffsetx" min="-($maxoffset)" max="$maxoffset"/>
+        <set_value name="$randomoffsety" min="-($maxoffset)" max="$maxoffset"/>
+        <!-- NB: we have to approach superhighway gates from behind,
+                and accelerator gates from the front.
+                jump gates can be approached from either side.
+
+                enforced capship approach to jump gates from behind. traffic problems otherwise. -->
+        <get_safe_pos result="$pos" zone="$gate.zone" object="$gate" value="position.[$randomoffsetx, $randomoffsety, -5km + (this.ship.size / 2.0)]" directionobject="$gate" direction="quadrant.back" angle="30deg" radius="this.ship.size" ignored="this.ship" allowyaxis="true"/>
+        <get_safe_pos result="$pos_front" zone="$gate.zone" object="$gate" value="position.[$randomoffsetx, $randomoffsety, 5km - (this.ship.size / 2.0)]" directionobject="$gate" direction="quadrant.front" angle="30deg" radius="this.ship.size" ignored="this.ship" allowyaxis="true"/>
+        <do_if value="@$gate.isaccelerator or ($gate.isclass.gate and not this.assignedcontrolled.iscapitalship and (this.assignedcontrolled.distanceto.[$gate.zone, $pos_front] lt this.assignedcontrolled.distanceto.[$gate.zone, $pos]))">
+          <set_value name="$pos" exact="$pos_front"/>
+        </do_if>
+        <create_orientation name="$rot" orientation="look_at" refobject="$gate">
+          <position value="$pos"/>
+        </create_orientation>
+        <create_position name="$pos" space="$gate" value="$pos" object="$gate.zone"/>
+        <debug_text text="'moving to parking position.\n distance to gate: %sm.\n distance between position and gate %sm.\n pos: %s\n gate size: %sm, ship size: %sm\n max offset: %sm\n random x: %sm, random y: %sm'.[$gate.distanceto.{this.ship}, $gate.distanceto.{$pos}, $pos, $gate.size, this.ship.size, $maxoffset, $randomoffsetx, $randomoffsety]" chance="$debugchance"/>
+        <remove_value name="$randomoffsety"/>
+        <remove_value name="$randomoffsetx"/>
+        <remove_value name="$maxoffset"/>
+
+        <!-- move to the front of the gate  -->
+        <move_to object="this.ship" destination="$gate" forceposition="false" forcerotation="true" travel="true">
+          <position value="$pos"/>
+          <rotation value="$rot"/>
+        </move_to>
+      </do_if>
+      <do_else>
+        <debug_text text="'%s %s (%s) %s m away from gate. going straight through.'.[this.ship.idcode, this.ship.knownname, this.ship, this.ship.distanceto.{$gate}]" chance="$debugchance"/>
+      </do_else>
+
+      <!-- Request queue -->
+      <request_gate ship="this.ship" gate="$gate" result="$success"/>
+      <set_value name="$time_initialrequest" exact="player.age" chance="$debugchance"/>
+      <debug_text text="'requesting gate (first request). \n my zone: %1, gate zone: %2, \n going from %3 to %4 \n distance to gate: %5, \n gate zone size: %6. \n attention lvl: %7 \n granted? %8'.[this.zone.knownname, $gate.zone.knownname, $gateorigin.sector.knownname, $gatedestination.sector.knownname, this.ship.distanceto.{$gate}, $gate.zone.size, this.ship.attention, $success]" chance="$debugchance"/>
+
+      <!-- we should now be within 10 km of the gate entrance. -->
+      <do_if value="this.ship.distanceto.{$gate} gt 10km" chance="$debugchance">
+        <debug_text text="'farther than 10km after first move! \n distance to gate: %1 \n attention lvl: %2'.[this.ship.distanceto.{$gate}, this.ship.attention]"/>
+      </do_if>
+
+      <!-- if gate is not clear, wait until it is (with a max timeout) -->
+      <do_while value="not $success">
+        <!-- request a connection between this ship and the gate -->
+        <request_gate ship="this.ship" gate="$gate" result="$success"/>
+        <debug_text text="'requesting gate (second request). \n my zone: %1, gate zone: %2, \n going from %3 to %4 \n distance to gate: %5, \n gate zone size: %6. \n attention lvl: %7 \n granted? %8'.[this.zone.knownname, $gate.zone.knownname, $gateorigin.sector.knownname, $gatedestination.sector.knownname, this.ship.distanceto.{$gate}, $gate.zone.size, this.ship.attention, $success]" chance="$debugchance"/>
+        <!-- not succesful -->
+        <do_if value="not $success">
+          <debug_text text="'Not success on requesting gate %1'.[$gate]" chance="$debugchance"/>
+          <do_if value="not $queuestarttime?">
+            <set_value name="$queuestarttime" exact="player.age"/>
+            <set_value name="$maxtime" min="5min" max="10min"/>
+          </do_if>
+          <do_if value="(player.age - $queuestarttime) gt $maxtime">
+            <debug_text text="'%1 has been waiting more than %2 seconds to get gate clearance from %3 to %4. going through anyway.'.[this.ship.knownname, $maxtime, $gate.sector.knownname, $gate.destination.sector.knownname]" filter="error" chance="$debugchance"/>
+            <break/>
+          </do_if>
+          <!-- Wait for it to be free -->
+          <wait min="5s" max="10s"/>
+        </do_if>
+      </do_while>
+
+      <!-- we need to go through a gate -->
+      <set_value name="$moveintogate" exact="true"/>
+
+      <label name="cross_gate"/>
+
+      <create_group groupname="$group_waitfor"/>
+      <do_if value="this.assignedcontrolled.subordinates.count">
+        <create_position name="$locpos" space="$gatedestination.sector" object="$exitgate"/>
+        <do_all exact="this.assignedcontrolled.subordinates.count" counter="$i">
+          <set_value name="$locship" exact="this.assignedcontrolled.subordinates.{$i}"/>
+          <do_if value="$locship.isoperational and (not $locship.dock or not $locship.hascontext.{this.assignedcontrolled}) and ((@$locship.formationleader == this.assignedcontrolled) or ((@$locship.order.id == 'Escort' or @$locship.order.id == 'SupplyFleet') and ($locship.order.$target == this.assignedcontrolled)))">
+            <add_to_group groupname="$group_waitfor" object="$locship"/>
+            <debug_text text="'ordering %s %s %s through the gate to sector %s'.[@$locship.idcode, @$locship.knownname, $locship, $gatedestination.sector.knownname]" chance="$debugchance"/>
+            <create_order id="'MoveWait'" object="$locship" immediate="true">
+              <param name="destination" value="[$gatedestination.sector, $locpos]"/>
+              <param name="recallsubordinates" value="$recallsubordinates"/>
+              <param name="waitforatgate" value="this.assignedcontrolled"/>
+              <param name="debugchance" value="$debugchance"/>
+            </create_order>
+          </do_if>
+          <remove_value name="$locship"/>
+        </do_all>
+        <break_formation object="this.assignedcontrolled"/>
+        <debug_text text="'%s %s %s about to go through the gate. ordered %s subordinates through.'.[@this.assignedcontrolled.idcode, @this.assignedcontrolled.knownname, this.assignedcontrolled, $group_waitfor.count]" chance="($group_waitfor.count gt 0) * $debugchance"/>
+        <remove_value name="$locpos"/>
+      </do_if>
+
+      <do_if value="$waitfor.isoperational and not $group_waitfor.indexof.{$waitfor}">
+        <debug_text text="'%s %s %s has orders to wait for %s %s %s after crossing the gate.'.[@this.assignedcontrolled.idcode, @this.assignedcontrolled.knownname, this.assignedcontrolled, @$waitfor.idcode, @$waitfor.knownname, $waitfor]" chance="$debugchance"/>
+        <add_to_group groupname="$group_waitfor" object="$waitfor"/>
+      </do_if>
+
+      <move_to object="this.assignedcontrolled" destination="$gate" chance="0" comment="this was the movement to the approachpos. movement is now redundant."/>
+
+      <set_value name="$time_startmove_gate" exact="player.age" chance="$debugchance"/>
+      <do_if value="not $gate.isclass.gate">
+        <!-- moving through superhighways:
+              we move to the highway's destination until we enter the gate,
+              then skip the movement below and wait until we get to the destination sector. -->
+        <include_interrupt_actions ref="NPCUseCase_NavApproachSuperHWGate" />
+        <move_to object="this.ship" destination="$gatedestination" uselocalhighways="false" abortpath="true" forcesteering="false" forceposition="false" travel="true">
+          <interrupt>
+            <conditions>
+              <event_object_changed_zone object="this.ship"/>
+              <check_value value="event.param.isclass.highway"/>
+            </conditions>
+            <actions>
+              <debug_text text="'entering superhighway'" chance="$debugchance"/>
+            </actions>
+          </interrupt>
+        </move_to>
+      </do_if>
+
+      <!-- If we didn't cross yet, move through the gate. -->
+      <do_if value="$moveintogate">
+        <set_value name="$time_interrupt" exact="([this.assignedcontrolled.distanceto.{$gate} / [this.assignedcontrolled.maxspeed, 1].max, 5s].min)s"/>
+        <debug_text text="'moving through %1.'.[$gate.class]" chance="$debugchance"/>
+        <!-- cases:
+              capital ships moving through jump gates do move_gate.
+              S/M ships not in a highway moving through jump gates do move_to to the gate's destination.
+              S/M ships in a highway moving through jump gates wait until they cross the gate.
+              all ships moving through a superhighway wait until they exit the superhighway.
+        -->
+        <do_if value="$gate.isclass.gate and not this.zone.isclass.highway">
+          <include_interrupt_actions ref="NPCUseCase_NavApproachJumpGate" />
+          <do_if value="this.assignedcontrolled.iscapitalship">
+            <move_gate object="this.ship" gate="$gate" abortpath="false">
+              <interrupt>
+                <conditions>
+                  <event_object_changed_sector object="this.ship"/>
+                </conditions>
+                <actions>
+                  <debug_text text="'changed from sector %1 to sector %2 (moved through gate)'.[$gateorigin.sector.knownname, event.param.knownname]" chance="$debugchance"/>
+                  <set_value name="$moveintogate" exact="false"/>
+                </actions>
+              </interrupt>
+              <interrupt_after_time time="$time_interrupt"/>
+            </move_gate>
+          </do_if>
+          <do_else>
+            <move_to object="this.ship" destination="$gatedestination" uselocalhighways="false" abortpath="false" forcesteering="false" forceposition="false" travel="true">
+              <interrupt>
+                <conditions>
+                  <event_object_changed_sector object="this.ship"/>
+                  <check_value value="this.sector == $gatedestination.sector"/>
+                </conditions>
+                <actions>
+                  <debug_text text="'changed from sector %1 to sector %2 (moved through highway or not capital ship)'.[$gateorigin.sector.knownname, event.param.knownname]" chance="$debugchance"/>
+                  <set_value name="$moveintogate" exact="false"/>
+                </actions>
+              </interrupt>
+              <interrupt_after_time time="$time_interrupt"/>
+            </move_to>
+            <debug_text text="'finished move out of superhighway. sector: %s %s. destination: %s %s. moveintogate: %s'.[@this.sector.knownname, this.sector, @$gatedestination.sector.knownname, $gatedestination.sector, $moveintogate]" chance="0"/>
+          </do_else>
+        </do_if>
+        <do_else>
+          <debug_text text="'%1(%2) is already enroute to %3(%4), planned destination: %5(%6)'.[this.ship.knownname, this.ship, this.zone.destination.knownname, this.zone.destination, $gatedestination.knownname, $gatedestination]" chance="$debugchance"/>
+        </do_else>
+        <remove_value name="$time_interrupt"/>
+
+        <!-- Clear the connection to the gate -->
+        <request_gate ship="this.assignedcontrolled" gate="$gate" unlock="true" result="$result"/>
+
+        <debug_text text="'moved to %1 from %2 to %3. \n gate was locked down for: %4 seconds.'.[$gate.class, $gateorigin.sector.knownname, $gatedestination.sector.knownname, player.age - $time_startmove_gate]" chance="$debugchance"/>
+
+        <!-- Wait for the transition if needed -->
+        <do_if value="$moveintogate and (this.sector != $gatedestination.sector)">
+          <wait>
+            <interrupt>
+              <conditions>
+                <event_object_changed_sector object="this.ship"/>
+                <check_value value="this.sector"/>
+              </conditions>
+              <actions>
+                <debug_text text="'changed from sector %1 to sector %2 (wait). in highway: %s'.[$gateorigin.sector.knownname, this.sector.knownname, this.zone.isclass.highway]" chance="$debugchance"/>
+              </actions>
+            </interrupt>
+          </wait>
+        </do_if>
+      </do_if>
+
+      <!-- we should have gone through the gate and be in the correct sector now -->
+      <do_if value="$gatedestination.sector != this.sector">
+        <debug_text text="'failed going through gate!'" filter="error" />
+      </do_if>
+      <do_else>
+        <debug_text text="'moved through %1 from %2 to %3. \n total transit time: %4 \n time from initial request: %5'.[$gate.class, $gateorigin.sector.knownname, $gatedestination.sector.knownname, player.age - $time_startmove_gate, if $time_initialrequest? then (player.age - $time_initialrequest) else 0s]" chance="$debugchance"/>
+      </do_else>
+
+      <!-- short wait to make sure we're in the destination sector -->
+      <wait exact="200ms"/>
+
+      <do_if value="this.zone.isclass.highway">
+        <!-- we are in a highway, likely a local highway that goes into a gate. no further action needed. NB: waiting for $group_waitfor will be skipped until the next transition, if there is one. -->
+        <debug_text text="'%s %s %s crossed into %s while in a highway %s %s. skipping further movement.'.[@this.assignedcontrolled.idcode, @this.assignedcontrolled.knownname, this.assignedcontrolled, @this.zone.knownname, this.zone]" chance="$debugchance"/>
+        <resume label="finish"/>
+      </do_if>
+
+      <debug_text text="'%s %s %s about to move to a position in zone while in a highway. handled, but this should not happen.'.[@this.assignedcontrolled.idcode, @this.assignedcontrolled.knownname, this.assignedcontrolled]" filter="error" chance="this.zone.isclass.highway * 100"/>
+
+      <set_value name="$locz" exact="this.assignedcontrolled.length * 5.0f"/>
+      <do_if value="$group_waitfor.count">
+        <!-- clear the front of the gate. we may need to wait for stragglers. -->
+        <set_value name="$locoffset" exact="($exitgate.size / 2.0) + this.assignedcontrolled.size"/>
+        <set_value name="$possiblequadrants" exact="[]"/>
+        <do_any>
+          <do_all>
+            <set_value name="$locx" exact="$locoffset"/>
+            <append_to_list name="$possiblequadrants" exact="quadrant.right"/>
+          </do_all>
+          <do_all>
+            <set_value name="$locx" exact="-$locoffset"/>
+            <append_to_list name="$possiblequadrants" exact="quadrant.left"/>
+          </do_all>
+        </do_any>
+        <set_value name="$locy" exact="0"/>
+        <do_if value="not @this.assignedcontrolled.iscapitalship">
+          <do_any>
+            <do_all>
+              <set_value name="$locy" min="0" max="$locoffset"/>
+              <append_to_list name="$possiblequadrants" exact="quadrant.up"/>
+            </do_all>
+            <do_all>
+              <set_value name="$locy" min="0" max="-$locoffset"/>
+              <append_to_list name="$possiblequadrants" exact="quadrant.down"/>
+            </do_all>
+          </do_any>
+        </do_if>
+        <set_value name="$locquadrant" exact="$possiblequadrants.random"/>
+
+        <create_position name="$safepos" space="$gatedestination" x="$locx" y="$locy" z="$locz" object="$exitgate"/>
+
+        <do_if value="true" chance="$debugchance">
+          <create_position name="$temppos" space="$exitgate" value="$safepos" object="$gatedestination"/>
+          <set_value name="$evalposdetails" exact="table[ $pos=$temppos, $quadrant=$locquadrant ]"/>
+          <remove_value name="$temppos"/>
+        </do_if>
+      </do_if>
+      <do_else>
+        <!-- move forward to a safepos to make sure the gate exit area is clear -->
+        <set_value name="$locref" exact="this.assignedcontrolled"/>
+        <do_if value="not this.assignedcontrolled.hascontext.{$gatedestination.sector}">
+          <debug_text text="'%s %s %s in sector %s %s about to move clear of the gate but has not yet transitioned to the destination sector. should be in sector %s %s. handled.'.[@this.assignedcontrolled.idcode, @this.assignedcontrolled.knownname, this.assignedcontrolled, @this.assignedcontrolled.sector.knownname, this.assignedcontrolled.sector, @$gatedestination.sector.knownname, $gatedestination.sector]" filter="error"/>
+          <!-- safety measure in case we are in a superhighway and have not crossed yet. should not be necessary. -->
+          <set_value name="$locref" exact="$exitgate"/>
+        </do_if>
+        <create_position name="$safepos" space="$gatedestination" z="$locz" object="$locref"/>
+        <set_value name="$locquadrant" exact="quadrant.front"/>
+        <remove_value name="$locref"/>
+      </do_else>
+
+      <get_safe_pos result="$safepos" zone="$gatedestination" value="$safepos" radius="this.assignedcontrolled.size" direction="$locquadrant" directionobject="$exitgate"/>
+
+      <debug_text text="'%1 start safepos move, dist %2'.[player.age, this.ship.distanceto.{$safepos}]" chance="$debugchance" />
+      <move_to object="this.ship" destination="$gatedestination" uselocalhighways="false" finishonapproach="false" abortpath="true" forceposition="false">
+        <position value="$safepos"/>
+        <interrupt_after_time time="1min"/>
+      </move_to>
+
+      <do_if value="true" chance="$debugchance">
+        <create_position name="$evalpos" space="$exitgate" object="this.assignedcontrolled"/>
+        <create_position name="$evalpos2" space="$exitgate" value="$safepos" object="$gatedestination"/>
+        <debug_text text="'current pos: %s, distance to exitgate: %sm, gate radius: %sm\ntarget pos: %s\ninitial pos: %s, quadrant: %s'.[$evalpos, $exitgate.distanceto.{this.assignedcontrolled}, $exitgate.size / 2.0, $evalpos2, @$evalposdetails.$pos, @$evalposdetails.$quadrant]" chance="($locoffset? and $exitgate.distanceto.{this.assignedcontrolled} le ($exitgate.size / 2.0)) * $debugchance"/>
+      </do_if>
+      <remove_value name="$locz"/>
+      <remove_value name="$locy"/>
+      <remove_value name="$locx"/>
+      <remove_value name="$locoffset"/>
+      <remove_value name="$locquadrant"/>
+
+      <debug_text text="'%1 end safepos move, dist %2'.[player.age, this.ship.distanceto.{$safepos}]" chance="$debugchance" />
+
+      <do_if value="not @$group_waitfor.count">
+        <resume label="finish"/>
+      </do_if>
+
+      <set_value name="$time_startwait" exact="player.age" chance="$debugchance"/>
+      <set_value name="$num_waitfor" exact="$group_waitfor.count" chance="$debugchance"/>
+
+      <label name="waitfor"/>
+
+      <do_all exact="$group_waitfor.count" counter="$i" reverse="true">
+        <set_value name="$locship" exact="$group_waitfor.{$i}"/>
+        <do_if value="($locship.sector == this.sector) or not $locship.iszonechangepending">
+          <remove_from_group group="$group_waitfor" object="$locship"/>
+          <debug_text text="'%s %s %s already in sector or is not changing sectors. still waiting for %s ships.'.[@$locship.idcode, @$locship.knownname, $locship, $group_waitfor.count]" chance="$debugchance"/>
+        </do_if>
+        <remove_value name="$locship"/>
+      </do_all>
+
+      <do_if value="$group_waitfor.count">
+        <wait exact="1min" sinceversion="3">
+          <interrupt>
+            <conditions>
+              <check_any>
+                <check_all>
+                  <event_object_changed_sector group="$group_waitfor"/>
+                  <check_value value="event.param == this.sector"/>
+                </check_all>
+                <event_object_destroyed group="$group_waitfor"/>
+              </check_any>
+            </conditions>
+            <actions>
+              <do_if value="event.object.isoperational and (event.object.sector == this.sector)">
+                <remove_from_group group="$group_waitfor" object="event.object"/>
+                <debug_text text="'verified that %s %s %s is now in our sector.'.[@event.object.idcode, @event.object.knownname, event.object]" chance="$debugchance"/>
+              </do_if>
+            </actions>
+          </interrupt>
+        </wait>
+
+        <do_if value="$group_waitfor.count">
+          <debug_text text="'still waiting for %s ships.'.[$group_waitfor.count]" chance="$debugchance"/>
+          <resume label="waitfor"/>
+        </do_if>
+      </do_if>
+
+      <debug_text text="'done waiting. waited for %s ships for %s seconds.'.[$num_waitfor, player.age - $time_startwait]" chance="$debugchance"/>
+
+      <do_if value="(@this.assignedcontrolled.order.id == 'MoveWait') and this.assignedcontrolled.order.$waitforatgate">
+        <!-- if we are waiting for something due to having been ordered to do so,
+              and we are now done waiting,
+              cancel the movement order to skip any further movement resulting from that order. -->
+        <cancel_order order="this.assignedcontrolled.order"/>
+      </do_if>
+
+      <label name="finish"/>
+
+      <request_gate ship="this.assignedcontrolled" gate="$gate" unlock="true" result="$result"/>
+
+    </actions>
+  </attention>
+  <on_abort>
+    <request_gate ship="this.ship" gate="$gate" unlock="true" result="$result"/>
+    <debug_text text="'on_abort: %s %s %s unlocking %s %s. result: %s'.[@this.assignedcontrolled.idcode, @this.assignedcontrolled.knownname, this.assignedcontrolled, $gate.class, $gate.knownname, $result]" chance="$debugchance"/>
+  </on_abort>
+</aiscript>

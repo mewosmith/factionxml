@@ -1,0 +1,302 @@
+<?xml version="1.0" encoding="iso-8859-1" ?>
+<aiscript name="move.flee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="aiscripts.xsd" version="2">
+  <!--  
+  
+  Wrapper script to use Flee, Evade and Retreat maneuvers
+  Allowed methods 'boost','maneuver','highway','dock'
+  
+  -->
+  <order id="Flee" name="{1041, 551}" description="{1041, 552}" category="internal" >
+    <params>
+      <param name="method" type="number" required="true" text="{1041, 10064}" comment="Method. Methods 'boost','maneuver','highway','dock'" >
+        <input_param name="min" value="1" />
+        <input_param name="max" value="5" />
+      </param>
+      <param name="return" default="false" type="bool" text="{1041, 10104}" advanced="true" comment="Return to previous position. do we return to the position before flee was started?"/>
+      <param name="donotdrop" default="this.ship.isplayerowned" type="bool" text="{1041, 10030}" advanced="true" comment="Do not drop cargo"/>
+      <param name="deploydistraction" default="not this.ship.isplayerowned" type="bool" text="{1041, 10026}" advanced="true" comment="Deploy a lasertower before fleeing if available."/>
+      <param name="holdfire" type="bool" default="false" text="{1041, 10157}" comment="Hold fire. Hold fire until this order is completed or aborted."/>
+      <param name="attacker" default="null" type="internal" text="{1041, 10011}" comment="Attacker. the attacker we are fleeing from" />
+      <param name="maxboostdistance" default="20km" type="internal" text="{1041, 10052}" comment="Max flee distance. how far away should we flee? only for passing into move.flee.boost"/>
+      <param name="maxboostduration" default="30s" type="internal" text="{1041, 10053}" comment="Max flee duration. how long should we boost for? only for passing into move.flee.boost"/>
+      <param name="log" default="this.ship.isplayerowned" type="internal" text="'Log'" comment="Will add a log entry that we fled."/>
+      <param name="debugchance" type="bool" default="0" advanced="true" text="{1041, 10086}" comment="Print debug output">
+        <input_param name="truevalue" value="100"/>
+      </param>
+    </params>
+    <requires>
+      <match shiptype="shiptype.lasertower" negate="true"/>
+    </requires>
+  </order>
+  <init>
+    <set_value name="$initpos" exact="[this.zone, this.ship.position]" />
+    <set_value name="$attempt" exact="1" />
+
+    <!-- convert method to numbers for compatibility with UI. -->
+    <do_if value="not $method or not (typeof $method).isnumeric or ($method lt 1) or ($method gt 5)">
+      <debug_text text="'method %s, type: %s'.[$method, typeof $method]" chance="$debugchance"/>
+      <do_if value="$method == 'highway'">
+        <set_value name="$method" exact="1"/>
+      </do_if>
+      <do_elseif value="$method == 'dock'">
+        <set_value name="$method" exact="2"/>
+      </do_elseif>
+      <do_elseif value="$method == 'boost'">
+        <set_value name="$method" exact="3"/>
+      </do_elseif>
+      <do_elseif value="$method == 'maneuver'">
+        <set_value name="$method" exact="4"/>
+      </do_elseif>
+      <do_else>
+        <set_value name="$method" exact="5"/>
+      </do_else>
+    </do_if>
+  </init>
+  <patch sinceversion="1">
+    <do_if value="not $holdfire?">
+      <set_value name="$holdfire" exact="false"/>
+    </do_if>
+  </patch>
+  <patch sinceversion="2">
+    <do_if value="this.ship.isplayerowned">
+      <set_value name="$donotdrop" exact="true"/>
+      <set_value name="$deploydistraction" exact="false"/>
+    </do_if>
+  </patch>
+  <attention min="unknown">
+    <actions>
+
+      <do_if value="($method == 'dock' or $method == 2) and this.ship.dock">
+        <debug_text text="'%s %s already docked. checking if safe.'.[this.ship.knownname, this.ship]" chance="$debugchance"/>
+        <run_script name="'move.flee.dock'">
+          <param name="attacker" value="$attacker"/>
+          <param name="alreadydocked" value="true"/>
+        </run_script>
+      </do_if>
+
+      <debug_text text="'chance to drop stuff: %s. $method != maneuver: %s, not this.ship.isplayerowned: %s, this.ship.cargo.count: %s'.[(90 - (this.skill.morale * 6)), $method != 'maneuver', not this.ship.isplayerowned, this.ship.cargo.count]" chance="$debugchance"/>
+      <do_if value="not $donotdrop and $method != 'maneuver' and not this.ship.isplayerowned and this.ship.cargo.count" chance="90 - (this.skill.morale * 6)">
+        <set_value name="$currentcargo" exact="this.ship.cargo.list"/>
+        <do_if value="true" chance="this.assignedcontrolled.combinedskill">
+          <do_all exact="$currentcargo.count" counter="$i">
+            <do_if value="not $dropware? or ($currentcargo.{$i}.averageprice lt @$dropware.averageprice)">
+              <set_value name="$dropware" exact="$currentcargo.{$i}"/>
+            </do_if>
+          </do_all>
+        </do_if>
+        <do_else>
+          <set_value name="$dropware" exact="$currentcargo.random"/>
+        </do_else>
+        <do_if value="$dropware?">
+          <debug_text text="'%s %s fleeing. Dropping %s'.[this.ship.knownname, this.ship, $dropware]" chance="$debugchance"/>
+          <drop_cargo object="this.ship" ware="$dropware" exact="this.ship.cargo.{$dropware}.max"/>
+          <remove_value name="$dropware"/>
+        </do_if>
+        <remove_value name="$currentcargo"/>
+      </do_if>
+
+      <do_if value="@$attacker.isoperational and ($attacker.owner == this.owner)">
+        <do_if value="$attacker.coverowner">
+          <signal_objects object="$attacker" param="'LoseCover'" param2="false"/>
+        </do_if>
+        <do_else>
+          <set_value name="$deploydistraction" exact="false"/>
+        </do_else>
+      </do_if>
+
+      <do_if value="$deploydistraction and not $alreadydeployed? and not this.assignedcontrolled.zone.isclass.highway">
+        <do_if value="this.ship.ammostorage.{deployablecategory.lasertower}.count and @$attacker.isoperational">
+          <debug_text text="player.age + ': deploying lasertower'" chance="$debugchance"/>
+          <launch_lasertower name="$lasertower" object="this.assignedcontrolled"/>
+          <do_if value="$lasertower.exists">
+            <set_relation_boost object="$lasertower" otherobject="$attacker" value="this.trueowner.relation.kill.max" silent="true"/>
+            <create_order object="$lasertower" id="'Lasertower'" default="true"/>
+          </do_if>
+          <remove_value name="$lasertower"/>
+          <set_value name="$alreadydeployed"/>
+        </do_if>
+      </do_if>
+
+      <set_command command="command.withdrawbattle"/>
+
+      <!-- hold fire -->
+      <do_if value="$holdfire">
+        <run_script name="'lib.set.weaponmode'" result="$weaponmodes" sinceversion="1">
+          <param name="weaponmode" value="weaponmode.holdfire"/>
+          <param name="debugchance" value="$debugchance"/>
+        </run_script>
+      </do_if>
+
+      <label name="start"/>
+
+      <set_value name="$starttime" exact="player.age"/>
+      <!-- amount of time in seconds it would take for me to get far enough away from the attacker that they can't see me. very rough approximation. -->
+      <set_value name="$optimalduration" exact="(@$attacker.maxradarrange / [this.assignedcontrolled.boost.maxspeed - @$attacker.boost.maxspeed, 1].max)s"/>
+      <do_if value="this.assignedcontrolled.boost.maxspeed gt @$attacker.boost.maxspeed and $optimalduration == (@$attacker.maxradarrange)s">
+        <debug_text text="'optimal duration: %s, my maxspeed: %s, attacker maxspeed: %s, attacker radar range: %s, should be: %s'.[$optimalduration, this.assignedcontrolled.boost.maxspeed, @$attacker.boost.maxspeed, @$attacker.maxradarrange, @$attacker.maxradarrange / [this.assignedcontrolled.boost.maxspeed - @$attacker.boost.maxspeed, 1].max]" chance="$debugchance"/>
+      </do_if>
+
+      <set_value name="$difficulty" exact="(@$attacker.dps.all / [this.assignedcontrolled.dps.all, 1].max) + ((@$attacker.hull / [this.assignedcontrolled.hull, 1].max) * 0.5)"/>
+      <do_if value="$difficulty gt 2">
+        <set_value name="$XP_category" exact="'ship_flee_hard'"/>
+      </do_if>
+      <do_else>
+        <set_value name="$XP_category" exact="'ship_flee'"/>
+      </do_else>
+
+      <debug_text text="'Flee using method %1 (attacker %2)'.[$method, @$attacker.knownname]" chance="$debugchance"/>
+
+      <!-- boost -->
+      <do_if value="$method == 3">
+        <resume label="boost" />
+      </do_if>
+      <!-- maneuver -->
+      <do_elseif value="$method == 4">
+        <resume label="maneuver" />
+      </do_elseif>
+      <!-- highway -->
+      <do_elseif value="$method == 1">
+        <resume label="highway" />
+      </do_elseif>
+      <!-- dock -->
+      <do_elseif value="$method == 2">
+        <resume label="dock" />
+      </do_elseif>
+
+      <!-- #1 - Highway Flee -->
+      <label name="highway" />
+      <!-- special case: since move.flee.highway can return on zone-change but before reaching the highway we want to make sure we go to the same highway on subsequent attempts -->
+      <run_script name="'move.flee.highway'" result="$preferredhighway">
+        <param name="attacker" value="$attacker" />
+        <param name="preferredhighway" value="@$preferredhighway" />
+      </run_script>
+      <set_value name="$success" exact="$preferredhighway.exists"/>
+      <do_if value="$success">
+        <resume label="done"/>
+      </do_if>
+
+      <!-- #2 - Dock at a station -->
+      <label name="dock" />
+      <run_script name="'move.flee.dock'" result="$success">
+        <param name="attacker" value="$attacker" />
+      </run_script>
+      <do_if value="$success">
+        <resume label="done"/>
+      </do_if>
+
+      <!-- #3 - Boost away -->
+      <label name="boost" />
+      <run_script name="'move.flee.boost'" result="$success">
+        <param name="maxdistance" value="$maxboostdistance"/>
+        <param name="maxboostduration" value="$maxboostduration"/>
+      </run_script>
+      <do_if value="$success">
+        <resume label="done"/>
+      </do_if>
+
+      <!-- #4 - Flying evasive maneuvers -->
+      <label name="maneuver" />
+      <run_script name="'move.flee.maneuver'" result="$success"/>
+      <do_if value="$success">
+        <resume label="done"/>
+      </do_if>
+
+      <resume label="finish" />
+
+      <label name="done"/>
+
+      <do_if value="not @$attacker.isoperational or this.assignedcontrolled.dock or this.zone.isclass.highway or $attacker.distanceto.{this.assignedcontrolled} gt @$attacker.maxradarrange">
+        <set_value name="$XP_factor" exact="[($optimalduration)f / [(player.age - $starttime)f, 1.0].max, 1.0].min"/>
+        <apply_experience entity="this" experience="$XP_category" factor="$XP_factor"/>
+        <apply_experience object="this.assignedcontrolled" role="entityrole.service" experience="$XP_category" factor="$XP_factor"/>
+        <debug_text text="'flee experience earned. factor: %s, duration: %s, optimal duration: %s, my maxspeed: %s, attacker maxspeed: %s, attacker maxradarrange: %s'.[$XP_factor, player.age - $starttime, $optimalduration, this.assignedcontrolled.boost.maxspeed, @$attacker.boost.maxspeed, @$attacker.maxradarrange]" chance="$debugchance"/>
+      </do_if>
+      <!-- do not retry if trying to flee via boost or maneuver and attempt fails. these are evasive actions which do not eliminate the chance to be threatened. resume normal order and allow attacked handler to re-evaluate if necessary. -->
+      <do_elseif value="$method lt 3">
+        <debug_text text="'finished fleeing but attacker can still see us. method: %s, duration: %s. trying again.'.[$method, player.age - $starttime]" chance="$debugchance"/>
+        <resume label="start"/>
+      </do_elseif>
+
+      <do_if value="not $return">
+        <resume label="finish"/>
+      </do_if>
+
+      <!-- Go back to the inital position -->
+      <label name="return" />
+
+      <!-- if we changed zone -->
+      <do_if value="this.zone != $initpos.{1}">
+        <!-- not using <run_script> in order to allow interruptions on the return movement  -->
+        <create_order object="this.ship" id="'MoveGeneric'" immediate="true">
+          <param name="destination" value="$initpos.{1}" />
+          <param name="position" value="$initpos.{2}" />
+        </create_order>
+      </do_if>
+
+      <!-- Finish the flee -->
+      <label name="finish" />
+      <debug_text text="'finish flee, success:%1'.[$success]" chance="$debugchance" />
+
+      <do_if value="$success">
+        <!-- Inform the player -->
+        <do_if value="$log">
+          <!-- with or with out attacker -->
+          <do_if value="$attacker.exists">
+            <substitute_text text="$logtext" source="{1016,33}" comment="$SHIP$ was forced to flee after being attacked by $ATTACKER$ in $ORIGIN$. Your ship is at $LOCATION$ in $SPACE$.">
+              <replace string="'$ATTACKER$'" with="$attacker.name" />
+              <replace string="'$SHIP$'" with="this.ship.name" />
+              <replace string="'$ORIGIN$'" with="$initpos.{1}.name" />
+              <replace string="'$LOCATION$'" with="this.ship.parent.name" />
+              <replace string="'$SPACE$'" with="this.ship.sector.name" />
+            </substitute_text>
+          </do_if>
+          <do_else>
+            <substitute_text text="$logtext" source="{1016,32}" comment="$SHIP$ was forced to flee after being attacked in $ORIGIN$. Your ship is at $LOCATION$ in $SPACE$.">
+              <replace string="'$SHIP$'" with="this.ship.name" />
+              <replace string="'$ORIGIN$'" with="$initpos.{1}.name" />
+              <replace string="'$LOCATION$'" with="this.ship.parent.name" />
+              <replace string="'$SPACE$'" with="this.ship.sector.name" />
+            </substitute_text>
+          </do_else>
+          <!-- write to upkeep -->
+          <write_to_logbook category="upkeep" title="$logtext" interaction="showonmap" object="this.ship"/>
+        </do_if>
+      </do_if>
+      <!-- when an attempt fails -->
+      <do_else>
+        <do_if value="$attempt ge 2">
+          <!-- If there is one or more there is nothing else todo-->
+          <debug_text text="'nothing I can do, Help! hull %1, shield %2'.[this.ship.hullpercentage, this.ship.shieldpercentage]" chance="$debugchance"/>
+          <wait min="3s" max="10s" />
+        </do_if>
+        <do_else>
+          <!-- not succesful flee, retry something else, starting from the first -->
+          <debug_text text="'not succesful flee, retry something else'" chance="$debugchance"/>
+          <set_value name="$attempt" exact="1" operation="add" />
+          <resume label="highway" />
+        </do_else>
+      </do_else>
+
+      <!-- restore weapon modes -->
+      <do_if value="$holdfire and $weaponmodes? and $weaponmodes.keys.count">
+        <run_script name="'lib.set.weaponmode'" sinceversion="1">
+          <param name="weapons" value="$weaponmodes.keys.list"/>
+          <param name="weaponmodes" value="$weaponmodes"/>
+          <param name="debugchance" value="$debugchance"/>
+        </run_script>
+      </do_if>
+
+      <return value="$success" />
+
+    </actions>
+  </attention>
+  <on_abort>
+    <!-- restore weapon modes -->
+    <do_if value="$holdfire and $weaponmodes? and $weaponmodes.keys.count">
+      <do_all exact="$weaponmodes.keys.count" counter="$i">
+        <debug_text text="'restore weapon %s %s. mode: %s'.[$weaponmodes.keys.{$i}.knownname, $weaponmodes.keys.{$i}, $weaponmodes.{$weaponmodes.keys.{$i}}]" chance="$debugchance"/>
+        <set_weapon_mode weapon="$weaponmodes.keys.{$i}" weaponmode="$weaponmodes.{$weaponmodes.keys.{$i}}" />
+      </do_all>
+    </do_if>
+  </on_abort>
+</aiscript>

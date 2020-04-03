@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="iso-8859-1" ?>
+
+<!--
+
+this script attempts to find a shipyard for this ship to be recycled at.
+
+-->
+
+<aiscript name="order.move.recycle" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="aiscripts.xsd" >
+  <order id="MoveRecycle" name="{1041, 281}" description="{1041, 282}" category="internal">
+    <params>
+      <param name="timeout" default="2h" type="time" required="true" text="{1041, 10034}" comment="Duration. Time at which the search for a suitable shipyard ends and the ship performs MoveDie"/>
+      <param name="debugchance" type="bool" default="0" advanced="true" text="{1041, 10086}" comment="Print debug output">
+        <input_param name="truevalue" value="100"/>
+      </param>
+    </params>
+    <requires>
+      <match shiptype="shiptype.lasertower" negate="true"/>
+    </requires>
+  </order>
+  <init>
+    <set_command command="command.explore" />
+  </init>
+  <attention min="unknown">
+    <actions>
+      <label name="start"/>
+      <!--TODO @Owen safety checks for player controlled ship-->
+
+      <!--find shipyard-->
+
+      <!--$EndTime-->
+
+      <!--MoveDie-->
+
+      <destroy_object object="this.ship"/>
+    </actions>
+  </attention>
+</aiscript>
+

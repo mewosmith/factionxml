@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tools>
+  <!-- NPC tools -->
+  <tool id="tool2hand" geometry="assets/characters/argon/props/pickup_tool_two_handed_01">
+    <animation carry="mix_right_arm_carry_01"/>
+  </tool>
+  <tool id="tool1hand" geometry="assets/characters/argon/props/pickup_tool_one_handed_01">
+    <animation carry="mix_right_arm_carry_01"/>
+  </tool>
+  <tool id="suitcase1hand" geometry="assets/characters/argon/props/pickup_suitcase_one_handed_01">
+	</tool>
+</tools>

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<aiscript name="interrupt.disengage" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="aiscripts.xsd" priority="9">
+  <!-- this interrupt handler expects that the referencing script has the following variables initialized:
+        $target,
+        $pursuetargets,
+        $pursuedistance,
+        $debugchance
+  -->
+  <interrupts>
+    <library>
+      <handler name="DisengageHandler">
+        <conditions>
+          <check_any>
+            <event_object_changed_owner object="$target" check="false"/>
+            <check_all>
+              <event_object_changed_sector object="$target" check="false"/>
+              <check_value value="@$target.sector != this.sector"/>
+              <check_value value="not $pursuetargets"/>
+              <set_value name="$disengage_pursue"/>
+            </check_all>
+            <check_all>
+              <event_object_changed_zone object="$target" check="false"/>
+              <check_value value="@$target.zone.isclass.highway"/>
+              <set_value name="$disengage_pursue"/>
+            </check_all>
+            <check_all>
+              <!-- live view is the gravidar of all player-owned things, so this can only apply to player-owned ships and stations. -->
+              <event_object_left_live_view object="$target" check="false"/>
+
+              <check_value value="this.object.isplayerowned"/>
+              <check_value value="not $pursuedistance or @this.object.distanceto.{$target} gt $pursuedistance"/>
+            </check_all>
+            <check_all>
+              <event_object_changed_zone object="$target" check="false"/>
+              <check_value value="this.isplayerowned"/>
+              <check_value value="@$radius and @$radiusanchorpos and @$radiusanchorspace"/>
+              <check_value value="not $pursuetargets"/>
+              <check_value value="$target.distanceto.[$radiusanchorspace, $radiusanchorpos] gt $radius"/>
+              <debug_text text="'disengaging target outside of radius.\n target distance from anchor: %sm\n radius: %sm'.[$target.distanceto.[$radiusanchorspace, $radiusanchorpos], $radius]" debugchance="$debugchance"/>
+            </check_all>
+            <event_object_docked object="$target" check="false"/>
+          </check_any>
+        </conditions>
+        <actions>
+          <do_if value="event.name == 'event_object_changed_owner' and @$target.exists">
+            <reset_relation_boost object="this.assignedcontrolled" otherobject="$target"/>
+            <do_if value="this.assignedcontrolled.mayattack.{$target}">
+              <debug_text text="'target is still hostile after ownership change. continuing attack.'" chance="$debugchance"/>
+              <return/>
+            </do_if>
+          </do_if>
+
+          <debug_text text="'%7 disengaging.\nwhy? %6\ntarget: %1 (%2)\npursuetargets: %3\npursuedistance: %4\ndistance to target: %5\ntarget is in highway: %7'.[$target.knownname, $target, $pursuetargets, $pursuedistance, this.object.distanceto.{$target}, event.name, this.object.knownname, $target.zone.isclass.highway]" chance="$debugchance"/>
+
+          <do_if value="$disengage_pursue?">
+            <remove_value name="$disengage_pursue"/>
+            <abort_called_scripts resume="fight"/>
+          </do_if>
+          <do_else>
+            <!-- Remove the target to stop shooting at it when owner changes -->
+            <set_value name="$target" exact="null"/>
+
+            <abort_called_scripts resume="finish"/>
+          </do_else>
+        </actions>
+      </handler>
+    </library>
+  </interrupts>
+</aiscript>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+  <!-- graphic options -->
+  <!-- low gfx preset -->
+  <shaderquality>0</shaderquality>
+  <shadows>0</shadows>
+  <softshadows>false</softshadows>
+  <ssao>0</ssao>
+  <glow>0</glow>
+  <lodfactor>0.15</lodfactor>
+  <effectdistance>0.15</effectdistance>
+  <distortion>false</distortion>
+  <disableradar>false</disableradar>
+  <radarquality>0</radarquality>
+  <ssr>false</ssr>
+  <ssrquality>low</ssrquality>
+  <texturequality>low</texturequality>
+  <chromaticaberration>false</chromaticaberration>
+</root>

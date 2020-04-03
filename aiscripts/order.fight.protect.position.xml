@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<aiscript name="order.fight.protect.position" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="aiscripts.xsd" >
+  <!--
+
+  by Adrian
+  -->
+  <order id="ProtectPosition" name="{1041, 381}" description="{1041, 382}" category="combat">
+    <params>
+      <param name="destination" type="position" text="{1041, 10008}" comment="Area to protect. Position">
+        <input_param name="class" value="class.sector"/>
+      </param>
+      <param name="radius" type="length" default="this.ship.maxradarrange" text="{1041, 10093}" comment="Radius">
+        <input_param name="min" value="1km"/>
+        <input_param name="max" value="[this.ship.maxradarrange, 1km].max"/>
+        <input_param name="step" value="1km"/>
+      </param>
+      <param name="pursuetargets" default="false" type="bool" text="{1041, 10091}" advanced="true" comment="Pursue targets"/>
+      <param name="timeout" type="time" default="0s" infinitevalue="0s" text="{1041, 10034}" advanced="true" comment="Duration">
+        <input_param name="max" value="1h" />
+        <input_param name="step" value="30s" />
+      </param>
+      <param name="debugchance" type="bool" default="0" advanced="true" text="{1041, 10086}" comment="Print debug output">
+        <input_param name="truevalue" value="100"/>
+      </param>
+    </params>
+    <requires>
+      <match shiptype="shiptype.lasertower" negate="true"/>
+    </requires>
+    <location object="$destination.{1}" position="$destination.{2}" radius="$radius" />
+  </order>
+  <interrupts>
+    <handler ref="SectorChangeHandler"/>
+    <handler ref="ScannedHandler"/>
+    <handler ref="InspectedHandler"/>
+    <handler ref="FoundAbandonedHandler"/>
+    <handler ref="FoundLockboxHandler"/>
+    <handler ref="TargetInvalidHandler"/>
+    <handler ref="ResupplyHandler" />
+  </interrupts>
+  <init>
+
+    <set_command command="command.patrol" />
+    <do_if value="$destination.{1}.isclass.sector">
+      <set_value name="$targetsector" exact="$destination.{1}" />
+    </do_if>
+    <do_elseif value="$destination.{1}.isclass.zone">
+      <do_if value="$destination.{1}.isclass.highway">
+        <debug_text text="'%1 (%2) was sent to protect an area inside a highway. This is not supported.  Destination Space: %3 (%4), Position: %5'.[this.ship.knownname, this.ship, $destination.{1}.knownname, $destination.{1}, $destination.{2}]" filter="error"/>
+        <return/>
+      </do_if>
+      <do_elseif value="$destination.{1}.sector">
+        <set_value name="$targetsector" exact="$destination.{1}.sector"/>
+        <create_position name="$position" space="$targetsector" value="$destination.{2}" object="$destination.{1}"/>
+      </do_elseif>
+      <do_else>
+        <debug_text text="'This situation where a zone is not in a sector is unaccounted for. Destination Space: %1 (%2), Position: %3'.[$destination.{1}.knownname, $destination.{1}, $destination.{2}]" filter="error"/>
+        <return/>
+      </do_else>
+    </do_elseif>
+    <do_else>
+      <debug_text text="'Input destination is not in a valid space. Destination Space: %1 (%2), Position: %3'.[$destination.{1}.knownname, $destination.{1}, $destination.{2}]" filter="error"/>
+      <return/>
+    </do_else>
+    <do_if value="not $position?">
+      <set_value name="$position" exact="$destination.{2}" />
+    </do_if>
+    <set_value name="$inittime" exact="player.age" />
+
+  </init>
+  <attention min="unknown">
+    <actions>
+      <do_if value="($timeout gt 0s) and (@this.assignedcontrolled.order.id == 'ProtectPosition') and (this.assignedcontrolled.order == this.assignedcontrolled.defaultorder)">
+        <debug_text text="'order ProtectPosition created as a default order but is not infinite. timeout: %ss'.[$timeout]" filter="error"/>
+      </do_if>
+
+      <!-- Initial checks -->
+      <label name="start" />
+
+      <!-- if different zone, go there -->
+      <do_if value="(this.sector != $targetsector) or (this.ship.distanceto.[$targetsector, $position] gt $radius)">
+        <run_script name="'move.generic'">
+          <param name="destination" value="$targetsector" />
+          <param name="position" value="$position"/>
+          <param name="endintargetzone" value="true" />
+          <param name="activepatrol" value="true"/>
+          <param name="radius" value="$radius"/>
+          <param name="radiusanchorpos" value="$position"/>
+          <param name="radiusanchorspace" value="$targetsector"/>
+          <param name="debugchance" value="$debugchance"/>
+        </run_script>
+      </do_if>
+
+      <get_zone_at_position name="$targetzone" sector="$targetsector" value="$position"/>
+
+      <do_if value="not $targetzone">
+        <!-- If there is still no zone at the position, the position is unobstructed and we are fairly close. Move straight there. -->
+        <move_to object="this.ship" destination="$targetsector" uselocalhighways="false" finishonapproach="true">
+          <position value="$position"/>
+        </move_to>
+        <!-- at this point, we should be at the destination, so there should now be a zone. -->
+        <get_zone_at_position name="$targetzone" sector="$targetsector" value="$position"/>
+        <do_if value="not $targetzone">
+          <debug_text text="'Error: %1 (%2) should be at the destination zone, but there still is no zone at the destination. present location: %3, %4, %5. destination: %6'.[this.ship.knownname, this.ship, this.ship.zone.knownname, this.ship.sector.knownname, this.ship.cluster.knownname, $destination]" filter="error"/>
+          <return/>
+        </do_if>
+      </do_if>
+
+      <!-- Translate sector coordinates to zone coordinates. Dealing with zones is still necessary due to needing a safepos further down. -->
+      <do_if value="$targetzone">
+        <!-- Input: $position relative to $targetsector. Output: $zoneposition relative to $targetzone. -->
+        <create_position name="$zoneposition" space="$targetzone" value="$position" object="$targetsector"/>
+        <debug_text text="'%1 (%2) destination coordinates are now: %3 in %4 (%5), %6, %7'.[this.ship.knownname, this.ship, $zoneposition, $targetzone.knownname, $targetzone.macro, $targetzone.sector.knownname, $targetzone.cluster.knownname]" chance="$debugchance"/>
+      </do_if>
+
+      <!-- Required for all infinite orders, no effect in case of finite timeout -->
+      <set_order_syncpoint_reached order="this.ship.order" />
+
+      <do_while value="$targetzone.exists">
+        <!-- Evaluate exit condition -->
+        <do_if value="$timeout and (player.age ge $inittime + $timeout)">
+          <resume label="finish" />
+        </do_if>
+        <!-- initial random position in zone -->
+        <get_safe_pos result="$pos" zone="$targetzone" radius="this.ship.size/2f" max="$radius" value="$zoneposition"  />
+
+        <run_script name="'move.seekenemies'" >
+          <param name="destination" value="$targetzone" />
+          <param name="pos" value="$pos" />
+          <param name="pursuetargets" value="$pursuetargets" />
+          <param name="pursuedistance" value="$radius" />
+          <param name="radius" value="$radius"/>
+          <param name="radiusanchorpos" value="$position"/>
+          <param name="radiusanchorspace" value="$targetsector"/>
+          <param name="internalorder" value="true"/>
+          <param name="debugchance" value="$debugchance" />
+        </run_script>
+
+        <do_if value="player.age gt @$next_resupply_check" chance="30">
+          <debug_text text="'%1 (%2) ready to resupply.'.[this.ship.knownname, this.ship]" chance="$debugchance"/>
+          <signal_objects object="this.ship" param="'resupply'" param2="[false]" param3="$debugchance" comment="param2 = [urgent?, resupplystationID], param3 = $debugchance"/>
+          <set_value name="$next_resupply_check" exact="player.age + 30min"/>
+        </do_if>
+
+        <wait exact="500ms" />
+      </do_while>
+
+      <do_if value="this.isplayerowned and not this.isclass.computer and not this.assignedcontrolled.nextorder and (not this.assignedcontrolled.commander or (this.assignedcontrolled.commander == player.occupiedship)) and notification.npc_await_orders.active">
+        <!-- Player notification -->
+        <set_value name="$speakline" exact="10304" comment="Awaiting orders."/>
+        <run_script name="'player.interaction'">
+          <param name="Line" value="$speakline"/>
+          <param name="MaxQueueDelay" value="10s"/>
+          <param name="caption" value="'%s (%s)'.[this.assignedcontrolled.knownname, this.assignedcontrolled.idcode]"/>
+          <param name="interactive" value="false"/>
+          <param name="debugchance" value="$debugchance"/>
+        </run_script>
+      </do_if>
+
+      <!-- Required for sync point handler -->
+      <label name="finish" />
+
+    </actions>
+  </attention>
+</aiscript>

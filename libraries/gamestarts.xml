@@ -1,0 +1,1597 @@
+<?xml version="1.0" encoding="utf-8"?>
+<gamestarts xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="gamestarts.xsd">
+  <gamestart id="x4ep1_gamestart_tutorial" name="{1021,100}" description="{1021,101}" image="gamestart_1" cutscene="gamestart_1" cutscenevoice="gamestart1_selected" intro="gamestart1" introvoice="gamestart1_started" group="1">
+    <info>
+      <item name="{1021,8}" value="{1021,102}" />
+      <item name="{1021,1}" value="{1021,103}" />
+      <item name="{1021,2}" value="{1021,104}" />
+      <item name="{1021,3}" value="{1021,105}" />
+    </info>
+    <location galaxy="xu_ep2_universe_macro" zone="zone002_cluster_06_sector001_macro" room="dockingbay_arg_s_01_macro" station="station_gen_factory_base_01_macro" equipmentdock="true">
+      <player>
+        <position x="-2.5" y="1.7" z="21" />
+        <rotation yaw="145" pitch="0" roll="0" />
+      </player>
+    </location>
+    <player macro="character_player_tutorial_macro" money="10000" name="{1021,102}">
+      <ship macro="ship_arg_s_fighter_02_a_macro">
+        <loadout>
+          <macros>
+            <engine macro="engine_arg_s_allround_01_mk1_macro" path="../con_engine_01" />
+            <weapon macro="weapon_gen_s_laser_01_mk1_macro" path="../con_weapon_01" optional="1" />
+            <shield macro="shield_arg_s_standard_01_mk1_macro" path="../con_shield_01" optional="1" />
+          </macros>
+          <ammunition>
+            <ammunition macro="eq_arg_satellite_01_macro" exact="5" optional="true"/>
+            <ammunition macro="env_deco_nav_beacon_t1_macro" exact="5" optional="true"/>
+            <ammunition macro="eq_arg_resourceprobe_01_macro" exact="5" optional="true"/>
+          </ammunition>
+          <software>
+            <software ware="software_targetmk1" />
+            <software ware="software_scannerlongrangemk1" />
+          </software>
+          <virtualmacros>
+            <thruster macro="thruster_gen_s_allround_01_mk1_macro" />
+          </virtualmacros>
+        </loadout>
+      </ship>
+      <inventory>
+        <ware ware="weapon_gen_spacesuit_repairlaser_01_mk1" amount="1" />
+        <ware ware="software_scannerobjectmk3" amount="1" />
+      </inventory>
+      <blueprints>
+        <ware ware="clothingmod_0001" />
+        <ware ware="clothingmod_0002" />
+        <ware ware="module_arg_dock_m_01_lowtech" />
+        <ware ware="module_arg_pier_l_01" />
+        <ware ware="module_arg_stor_container_s_01" />
+        <ware ware="module_arg_conn_base_01" />
+        <ware ware="module_arg_conn_cross_01" />
+        <ware ware="module_arg_conn_vertical_01" />
+        <ware ware="module_gen_prod_energycells_01" />
+        <ware ware="module_arg_prod_meat_01" />
+        <ware ware="paintmod_0006"/>
+        <ware ware="paintmod_0048"/>
+        <ware ware="paintmod_0049"/>
+        <ware ware="paintmod_0050"/>
+        <ware ware="paintmod_0097"/>
+        <ware ware="paintmod_0098"/>
+        <ware ware="paintmod_0099"/>
+        <ware ware="paintmod_0100"/>
+      </blueprints>
+      <research>
+        <ware ware="research_radioreceiver" />
+        <ware ware="research_sensorbooster" />
+        <ware ware="research_tradeinterface" />
+      </research>
+      <theme paint="painttheme_player_01" />
+    </player>
+    <universe>
+      <!-- Argon gamestart = friendly with Argon, friendly with Antigone, unfriendly with Holy Order -->
+      <factions>
+        <relations>
+          <relation faction="argon" otherfaction="player" relation="0.0032"/>
+          <relation faction="antigone" otherfaction="player" relation="0.0032"/>
+          <relation faction="holyorder" otherfaction="player" relation="-0.009"/>
+        </relations>
+      </factions>
+    </universe>
+  </gamestart>
+
+  <gamestart id="x4ep1_gamestart_trade" name="{1021,200}" description="{1021,201}" image="gamestart_2" cutscene="gamestart_2" group="1">
+    <info>
+      <item name="{1021,8}" value="{1021,202}" />
+      <item name="{1021,1}" value="{1021,203}" />
+      <item name="{1021,2}" value="{1021,204}" />
+      <item name="{1021,3}" value="{1021,205}" />
+      <item name="{1021,4}" value="{1021,206}" />
+      <item name="{1021,5}" value="{1021,207}" />
+    </info>
+    <unlock>
+      <userdata ref="unlock_x4gamestart_trade" value="1" />
+    </unlock>
+    <location galaxy="xu_ep2_universe_macro" zone="zone001_cluster_19_sector001_macro" room="dockingbay_arg_s_01_lowtech_macro" faction="player" station="station_gen_factory_base_01_macro">
+      <player disembarked="true">
+        <position x="-2.5" y="1.7" z="21" />
+        <rotation yaw="145" pitch="0" roll="0" />
+      </player>
+    </location>
+    <player macro="character_player_trade_macro" money="200000" name="{1021,202}"> <!--peter-->
+      <ship macro="ship_tel_s_scout_01_a_macro">
+        <loadout>
+          <macros>
+            <engine macro="engine_tel_s_travel_01_mk1_macro" path="../con_engine_01" />
+            <engine macro="engine_tel_s_travel_01_mk1_macro" path="../con_engine_02" />
+            <weapon macro="weapon_gen_s_laser_01_mk1_macro" path="../con_weapon_01" optional="true" />
+            <shield macro="shield_tel_s_standard_01_mk1_macro" path="../con_shield_01" optional="true" />
+          </macros>
+          <ammunition>
+            <ammunition macro="eq_arg_satellite_01_macro" exact="5" optional="true"/>
+            <ammunition macro="env_deco_nav_beacon_t1_macro" exact="5" optional="true"/>
+            <ammunition macro="eq_arg_resourceprobe_01_macro" exact="5" optional="true"/>
+          </ammunition>
+          <software>
+            <software ware="software_trademk1" />
+          </software>
+          <virtualmacros>
+            <thruster macro="thruster_gen_s_allround_01_mk1_macro" />
+          </virtualmacros>
+        </loadout>
+      </ship>
+      <inventory>
+        <ware ware="weapon_gen_spacesuit_repairlaser_01_mk1" amount="1" />
+        <ware ware="software_scannerobjectmk3" amount="1" />
+      </inventory>
+      <blueprints>
+        <ware ware="clothingmod_0001" />
+        <ware ware="clothingmod_0002" />
+        <ware ware="paintmod_0006"/>
+        <ware ware="paintmod_0048"/>
+        <ware ware="paintmod_0049"/>
+        <ware ware="paintmod_0050"/>
+        <ware ware="paintmod_0097"/>
+        <ware ware="paintmod_0098"/>
+        <ware ware="paintmod_0099"/>
+        <ware ware="paintmod_0100"/>        
+      </blueprints>
+      <research>
+        <ware ware="research_radioreceiver" />
+        <ware ware="research_sensorbooster" />
+        <ware ware="research_tradeinterface" />
+      </research>
+      <theme paint="painttheme_player_01" />
+    </player>
+    <universe>
+      <!-- Teladi gamestart = friendly with Teladi, friendly with Ministry, unfriendly with Holy Order -->
+      <factions>
+        <relations>
+          <relation faction="teladi" otherfaction="player" relation="0.0032"/>
+          <relation faction="ministry" otherfaction="player" relation="0.0032"/>
+          <relation faction="holyorder" otherfaction="player" relation="-0.009"/>
+        </relations>
+      </factions>
+    </universe>
+  </gamestart>
+
+  <gamestart id="x4ep1_gamestart_fight" name="{1021,300}" description="{1021,301}" image="gamestart_3" cutscene="gamestart_3" cutscenevoice="gamestart3_selected" intro="gamestart3" introvoice="gamestart3_started" group="1">
+    <info>
+      <item name="{1021,8}" value="{1021,302}" />
+      <item name="{1021,1}" value="{1021,303}" />
+      <item name="{1021,2}" value="{1021,304}" />
+      <item name="{1021,3}" value="{1021,305}" />
+      <item name="{1021,4}" value="{1021,306}" />
+    </info>
+    <location galaxy="xu_ep2_universe_macro" zone="zone001_cluster_47_sector001_macro">
+      <position x="-24299.879" y="-249.256" z="-13310.063"/>
+      <rotation yaw="-61.50683" pitch="14.70719" roll="43.06808"/>
+    </location>
+    <player macro="character_player_fight_macro" money="5000" name="{1021,302}">
+      <ship macro="ship_par_s_fighter_01_a_macro">
+        <loadout>
+          <macros>
+            <engine macro="engine_par_s_combat_01_mk1_macro" path="../con_engine_01" />
+            <engine macro="engine_par_s_combat_01_mk1_macro" path="../con_engine_02" />
+            <engine macro="engine_par_s_combat_01_mk1_macro" path="../con_engine_03" />
+            <weapon macro="weapon_gen_s_laser_01_mk1_macro" path="../con_weapon_01" optional="true" />
+            <weapon macro="weapon_gen_s_guided_01_mk1_macro" path="../con_weapon_02" optional="true" />
+            <shield macro="shield_par_s_standard_01_mk1_macro" path="../con_shield_01" optional="true" />
+          </macros>
+          <ammunition>
+            <ammunition macro="missile_guided_light_mk1_macro" exact="10" optional="true" />
+            <ammunition macro="eq_arg_satellite_01_macro" exact="5" optional="true"/>
+            <ammunition macro="env_deco_nav_beacon_t1_macro" exact="5" optional="true"/>
+            <ammunition macro="eq_arg_resourceprobe_01_macro" exact="5" optional="true"/>
+          </ammunition>
+          <software>
+            <software ware="software_targetmk1" />
+          </software>
+          <virtualmacros>
+            <thruster macro="thruster_gen_s_allround_01_mk1_macro" />
+          </virtualmacros>
+        </loadout>
+      </ship>
+      <inventory>
+        <ware ware="weapon_gen_spacesuit_repairlaser_01_mk1" amount="1" />
+        <ware ware="software_scannerobjectmk3" amount="1" />
+      </inventory>
+      <blueprints>
+        <ware ware="clothingmod_0001" />
+        <ware ware="clothingmod_0002" />
+        <ware ware="module_arg_dock_m_01_lowtech" />
+        <ware ware="module_par_pier_l_01" />
+        <ware ware="module_par_stor_container_s_01" />
+        <ware ware="module_par_conn_base_01" />
+        <ware ware="module_par_conn_cross_01" />
+        <ware ware="module_par_conn_vertical_01" />
+        <ware ware="module_gen_prod_energycells_01" />
+        <ware ware="module_par_prod_sojabeans_01" />
+        <ware ware="paintmod_0006"/>
+        <ware ware="paintmod_0048"/>
+        <ware ware="paintmod_0049"/>
+        <ware ware="paintmod_0050"/>
+        <ware ware="paintmod_0097"/>
+        <ware ware="paintmod_0098"/>
+        <ware ware="paintmod_0099"/>
+        <ware ware="paintmod_0100"/>        
+      </blueprints>
+      <research>
+        <ware ware="research_radioreceiver" />
+        <ware ware="research_sensorbooster" />
+        <ware ware="research_tradeinterface" />
+      </research>
+      <theme paint="painttheme_player_01" />
+    </player>
+    <universe>
+      <!-- Godrealm gamestart = friendly with Godrealm, unfriendly with Holy Order -->
+      <factions>
+        <relations>
+          <relation faction="paranid" otherfaction="player" relation="0.0032"/>
+          <relation faction="holyorder" otherfaction="player" relation="-0.009"/>
+        </relations>
+      </factions>
+    </universe>
+  </gamestart>
+
+  <gamestart id="x4ep1_gamestart_discover" name="{1021,400}" description="{1021,401}" image="gamestart_4" cutscene="gamestart_4" cutscenevoice="gamestart4_selected" intro="gamestart4" introvoice="gamestart4_started" group="1">
+    <info>
+      <item name="{1021,8}" value="{1021,402}" />
+      <item name="{1021,1}" value="{1021,403}" />
+      <item name="{1021,2}" value="{1021,404}" />
+      <item name="{1021,3}" value="{1021,405}" />
+      <item name="{1021,4}" value="{1021,406}" />
+    </info>
+    <location galaxy="xu_ep2_universe_macro" zone="zone001_cluster_23_sector001_macro">
+      <position x="352.325" y="518.247" z="-5929.35"/>
+      <rotation yaw="5.42928" pitch="-5.39564" roll="0.605027"/>
+    </location>
+    <player macro="character_player_discover_macro" money="5000" name="{1021,402}">
+      <ship macro="ship_arg_s_scout_01_a_macro">
+        <loadout>
+          <macros>
+            <engine macro="engine_par_s_travel_01_mk1_macro" path="../con_engine_01" />
+            <engine macro="engine_par_s_travel_01_mk1_macro" path="../con_engine_02" />
+            <weapon macro="weapon_gen_s_laser_01_mk1_macro" path="../con_primaryweapon_01" optional="true" />
+            <weapon macro="weapon_gen_s_laser_01_mk1_macro" path="../con_primaryweapon_02" optional="true" />
+            <shield macro="shield_tel_s_standard_01_mk1_macro" path="../con_shield_01" optional="true" />
+          </macros>
+          <ammunition>
+            <ammunition macro="eq_arg_satellite_01_macro" exact="5" optional="true"/>
+            <ammunition macro="env_deco_nav_beacon_t1_macro" exact="5" optional="true"/>
+            <ammunition macro="eq_arg_resourceprobe_01_macro" exact="5" optional="true"/>
+          </ammunition>
+          <software>
+            <software ware="software_scannerlongerangemk1" />
+          </software>
+          <virtualmacros>
+            <thruster macro="thruster_gen_s_allround_01_mk1_macro" />
+          </virtualmacros>
+        </loadout>
+      </ship>
+      <inventory>
+        <ware ware="weapon_gen_spacesuit_repairlaser_01_mk1" amount="1" />
+        <ware ware="software_scannerobjectmk3" amount="1" />
+      </inventory>
+      <blueprints>
+        <ware ware="clothingmod_0001" />
+        <ware ware="clothingmod_0002" />
+        <ware ware="module_arg_dock_m_01_lowtech" />
+        <ware ware="module_arg_pier_l_01" />
+        <ware ware="module_arg_stor_container_s_01" />
+        <ware ware="module_arg_conn_base_01" />
+        <ware ware="module_arg_conn_cross_01" />
+        <ware ware="module_arg_conn_vertical_01" />
+        <ware ware="module_gen_prod_energycells_01" />
+        <ware ware="module_arg_prod_meat_01" />
+        <ware ware="paintmod_0006"/>
+        <ware ware="paintmod_0048"/>
+        <ware ware="paintmod_0049"/>
+        <ware ware="paintmod_0050"/>
+        <ware ware="paintmod_0097"/>
+        <ware ware="paintmod_0098"/>
+        <ware ware="paintmod_0099"/>
+        <ware ware="paintmod_0100"/>        
+      </blueprints>
+      <research>
+        <ware ware="research_radioreceiver" />
+        <ware ware="research_sensorbooster" />
+        <ware ware="research_tradeinterface" />
+      </research>
+      <theme paint="painttheme_player_01" />
+    </player>
+    <universe>
+      <!-- Alliance gamestart = friendly with Alliance -->
+      <factions>
+        <relations>
+          <relation faction="alliance" otherfaction="player" relation="0.0032"/>
+        </relations>
+      </factions>
+    </universe>
+  </gamestart>
+
+  <gamestart id="x4ep1_gamestart_pirate" name="{1021,500}" description="{1021,501}" image="gamestart_5" intro="gamestart5" group="1" debug="true">
+    <info>
+      <item name="{1021,8}" value="{1021,502}" />
+      <item name="{1021,1}" value="{1021,503}" />
+      <item name="{1021,2}" value="{1021,504}" />
+      <item name="{1021,3}" value="{1021,505}" />
+      <item name="{1021,4}" value="{1021,506}" />
+      <item name="{1021,7}" value="{1021,507}" />
+    </info>
+    <location galaxy="xu_ep2_universe_macro" zone="zone001_cluster_35_sector001_macro" station="station_gen_factory_base_01_macro" defencestation="true" docked="true">
+      <player disembarked="true">
+        <position x="0.0" y="1.62" z="-6" />
+        <rotation yaw="0.526415" pitch="-4.07935" />
+      </player>
+      <interior module="dockarea_arg_m_station_01_macro" corridor="room_par_corridor_01_macro" door="con_room_01" room="room_gen_detentioncell_01_macro" />
+    </location>
+    <player macro="character_player_pirate_macro" money="0" name="{1021,502}">
+      <!--ship macro="ship_par_s_fighter_01_a_macro">
+        <loadout>
+          <macros>
+            <engine macro="engine_par_s_combat_01_mk1_macro" path="../con_engine_01" />
+            <engine macro="engine_par_s_combat_01_mk1_macro" path="../con_engine_02" />
+            <engine macro="engine_par_s_combat_01_mk1_macro" path="../con_engine_03" />
+            <weapon macro="weapon_gen_s_laser_01_mk1_macro" path="../con_weapon_01" optional="true" />
+            <weapon macro="weapon_gen_s_laser_01_mk1_macro" path="../con_weapon_02" optional="true" />
+            <shield macro="shield_par_s_standard_01_mk1_macro" path="../con_shield_01" optional="true" />
+          </macros>
+          <software>
+            <software ware="software_targetmk1" />
+          </software>
+          <virtualmacros>
+            <thruster macro="thruster_gen_s_allround_01_mk1_macro" />
+          </virtualmacros>
+        </loadout>
+      </ship-->
+      <inventory>
+        <ware ware="weapon_gen_spacesuit_repairlaser_01_mk1" amount="1" />
+        <ware ware="software_scannerobjectmk3" amount="1" />
+      </inventory>
+      <blueprints>
+        <ware ware="clothingmod_0001" />
+        <ware ware="clothingmod_0002" />
+        <ware ware="paintmod_0006"/>
+        <ware ware="paintmod_0048"/>
+        <ware ware="paintmod_0049"/>
+        <ware ware="paintmod_0050"/>
+        <ware ware="paintmod_0097"/>
+        <ware ware="paintmod_0098"/>
+        <ware ware="paintmod_0099"/>
+        <ware ware="paintmod_0100"/>        
+      </blueprints>
+      <research>
+        <ware ware="research_radioreceiver" />
+        <ware ware="research_sensorbooster" />
+        <ware ware="research_tradeinterface" />
+        <ware ware="research_module_dock" />
+        <ware ware="research_module_production" />
+        <ware ware="research_module_storage" />
+      </research>
+      <theme paint="painttheme_player_01" />
+    </player>
+  </gamestart>
+
+  <gamestart id="x4ep1_gamestart_scientist" name="{1021,800}" description="{1021,801}" image="gamestart_1" cutscene="gamestart_scientist" cutscenevoice="gamestart_scientist_selected" intro="gamestart1" introvoice="gamestart_scientist_started" group="1">
+    <info>
+      <item name="{1021,8}" value="{1021,802}" />
+      <item name="{1021,1}" value="{1021,803}" />
+      <item name="{1021,2}" value="{1021,804}" />
+      <item name="{1021,3}" value="{1021,805}" />
+    </info>
+    <unlock>
+      <userdata ref="unlock_x4gamestart_scientist" value="1" />
+    </unlock>
+    <location galaxy="xu_ep2_universe_macro" sector="cluster_01_sector001_macro" station="station_pla_headquarters_base_01_macro">
+      <player disembarked="true">
+        <position x="-0.05115" y="1.806" z="-2.541"/>
+        <rotation yaw="179.69951" pitch="-1.83378"/>
+      </player>
+      <interior module="landmarks_player_hq_01_research_macro" corridor="room_arg_corridor_01_macro" door="con_room_01" room="room_gen_boronoffice_01_macro" name="{20007,1171}" />
+    </location>
+    <player macro="character_player_scientist_macro" money="250000" name="{1021,802}">
+      <inventory>
+        <ware ware="weapon_gen_spacesuit_repairlaser_01_mk1" amount="1" />
+        <ware ware="software_scannerobjectmk3" amount="1" />
+      </inventory>
+      <blueprints>
+        <ware ware="clothingmod_0001" />
+        <ware ware="clothingmod_0002" />
+        <ware ware="module_arg_dock_m_01_lowtech" />
+        <ware ware="module_arg_pier_l_01" />
+        <ware ware="module_arg_stor_container_s_01" />
+        <ware ware="module_arg_conn_base_01" />
+        <ware ware="module_arg_conn_cross_01" />
+        <ware ware="module_arg_conn_vertical_01" />
+        <ware ware="module_gen_prod_energycells_01" />
+        <ware ware="module_arg_prod_meat_01" />
+        <ware ware="paintmod_0006"/>
+        <ware ware="paintmod_0048"/>
+        <ware ware="paintmod_0049"/>
+        <ware ware="paintmod_0050"/>
+        <ware ware="paintmod_0097"/>
+        <ware ware="paintmod_0098"/>
+        <ware ware="paintmod_0099"/>
+        <ware ware="paintmod_0100"/>
+      </blueprints>
+      <research>
+        <ware ware="research_radioreceiver" />
+        <ware ware="research_sensorbooster" />
+        <ware ware="research_tradeinterface" />
+      </research>
+      <theme paint="painttheme_player_01" />
+    </player>
+    <universe>
+      <!-- Advanced Alliance gamestart = very friendly with Alliance -->
+      <factions>
+        <relations>
+          <relation faction="alliance" otherfaction="player" relation="0.01"/>
+        </relations>
+      </factions>
+    </universe>
+  </gamestart>
+
+  <gamestart id="x4ep1_gamestart_split1" name="{1021,600}" description="{1021,601}" image="gamestart_split1" cutscene="gamestart_split1" cutscenevoice="gamestart_split1_selected" introvoice="gamestart_split1_started">
+    <extension id="ego_dlc_split">
+      <source type="steam" value="1133000" />
+      <source type="gog" value="{1021,691}" />
+    </extension>
+    <info requirement="{1021,81}">
+      <item name="{1021,8}" value="{1021,602}" />
+      <item name="{1021,1}" value="{1021,603}" />
+      <item name="{1021,2}" value="{1021,604}" />
+      <item name="{1021,3}" value="{1021,605}" />
+      <item name="{1021,4}" value="{1021,606}" />
+    </info>
+  </gamestart>
+
+  <gamestart id="x4ep1_gamestart_split2" name="{1021,700}" description="{1021,701}" image="gamestart_split2" cutscene="gamestart_split2" cutscenevoice="gamestart_split2_selected" introvoice="gamestart_split1_started">
+    <extension id="ego_dlc_split">
+      <source type="steam" value="1133000" />
+      <source type="gog" value="{1021,791}" />
+    </extension>
+    <info requirement="{1021,81}">
+      <item name="{1021,8}" value="{1021,702}" />
+      <item name="{1021,1}" value="{1021,703}" />
+      <item name="{1021,2}" value="{1021,704}" />
+      <item name="{1021,3}" value="{1021,705}" />
+      <item name="{1021,4}" value="{1021,706}" />
+    </info>
+  </gamestart>
+
+  <gamestart id="x4ep1_gamestart_flightschool" name="{1021,7000}" description="{1021,7001}" image="gamestart_flightschool" group="5" cutscene="scenario_flightschool" cutscenevoice="gamestart_flightschool_selected">
+    <info>
+      <item name="{1021,8}" value="{1021,7002}" />
+      <item name="{1021,1}" value="{1021,7003}" />
+    </info>
+    <location galaxy="demo_universe_macro" sector="demo_cluster_40_sector001_macro" station="station_gen_factory_base_01_macro" wharf="true" docked="true">
+      <player disembarked="true">
+        <position x="1.769" y="1.769" z="-7.123" />
+      </player>
+      <interior module="dockarea_arg_m_station_01_macro" corridor="room_arg_corridor_01_macro" door="con_room_01" room="room_gen_securityoffice_01_macro" name="{20007,1471}" />
+    </location>
+    <player macro="character_player_scenario_combat_argon_macro" money="100000" name="{1021,5002}">
+      <inventory>
+        <ware ware="weapon_gen_spacesuit_laser_01_mk1" amount="1" />
+        <ware ware="weapon_gen_spacesuit_repairlaser_01_mk1" amount="1" />
+        <ware ware="software_scannerobjectmk3" amount="1" />
+      </inventory>
+      <theme paint="painttheme_player_01" />
+    </player>
+    <universe ventures="false" visitors="false"/>
+  </gamestart>
+
+  <gamestart id="x4ep1_gamestart_tutorial1" name="{1021,5000}" description="{1021,5001}" image="gamestart_tutorial1" cutscene="scenario_combat" group="5" loadingscreen="demo_3" loadingscreentext="{1021,5101}" loadingscreentime="25">
+    <info>
+      <item name="{1021,8}" value="{1021,5002}" />
+      <item name="{1021,1}" value="{1021,5003}" />
+    </info>
+    <location galaxy="demo_universe_macro" sector="demo_cluster_40_sector001_macro">
+      <position x="129000" z="87000"/>
+    </location>
+    <player macro="character_player_scenario_combat_argon_macro" money="5000" name="{1021,5002}">
+      <ship macro="ship_par_s_fighter_01_a_macro"/>
+      <theme paint="painttheme_player_01" />
+    </player>
+    <universe ventures="false" visitors="false"/>
+  </gamestart>
+
+  <gamestart id="x4ep1_gamestart_tutorial2" name="{1021,6000}" description="{1021,6001}" image="gamestart_tutorial2" cutscene="scenario_advanced" group="5" loadingscreen="demo_3" loadingscreentext="{1021,6101}" loadingscreentime="30">
+    <info>
+      <item name="{1021,8}" value="{1021,6002}" />
+      <item name="{1021,1}" value="{1021,6003}" />
+    </info>
+    <location galaxy="demo_universe_macro" zone="demo_zone001_cluster_40_sector001_macro">
+      <position x="-24299.773" y="-248.469" z="-13310.175"/>
+      <rotation yaw="152.47937" pitch="-10.79021" roll="-2.4608"/>
+    </location>
+    <player macro="character_player_scenario_advanced_argon_macro" money="5000" name="{1021,6002}">
+      <ship macro="ship_par_s_fighter_01_a_macro">
+        <loadout>
+          <macros>
+            <engine macro="engine_par_s_combat_01_mk1_macro" path="../con_engine_01" />
+            <engine macro="engine_par_s_combat_01_mk1_macro" path="../con_engine_02" />
+            <engine macro="engine_par_s_combat_01_mk1_macro" path="../con_engine_03" />
+            <weapon macro="weapon_gen_s_laser_01_mk1_macro" path="../con_weapon_02" optional="true" />
+            <weapon macro="weapon_gen_s_guided_01_mk1_macro" path="../con_weapon_01" optional="true" />
+            <shield macro="shield_par_s_standard_01_mk1_macro" path="../con_shield_01" optional="true" />
+          </macros>
+          <ammunition>
+            <ammunition macro="missile_guided_light_mk1_macro" exact="10" optional="true" />
+            <ammunition macro="eq_arg_satellite_01_macro" exact="5" optional="true"/>
+            <ammunition macro="env_deco_nav_beacon_t1_macro" exact="5" optional="true"/>
+            <ammunition macro="eq_arg_resourceprobe_01_macro" exact="5" optional="true"/>
+          </ammunition>
+          <software>
+            <software ware="software_targetmk1" />
+          </software>
+          <virtualmacros>
+            <thruster macro="thruster_gen_s_allround_01_mk1_macro" />
+          </virtualmacros>
+        </loadout>
+      </ship>
+      <inventory>
+        <ware ware="weapon_gen_spacesuit_repairlaser_01_mk1" amount="1" />
+        <ware ware="software_scannerobjectmk3" amount="1" />
+      </inventory>
+      <blueprints>
+        <ware ware="clothingmod_0001" />
+        <ware ware="clothingmod_0002" />
+        <ware ware="module_arg_dock_m_01_lowtech" />
+        <ware ware="module_par_pier_l_01" />
+        <ware ware="module_par_stor_container_s_01" />
+        <ware ware="module_par_conn_base_01" />
+        <ware ware="module_par_conn_cross_01" />
+        <ware ware="module_par_conn_vertical_01" />
+        <ware ware="module_gen_prod_energycells_01" />
+        <ware ware="module_par_prod_sojabeans_01" />
+        <ware ware="paintmod_0006"/>
+        <ware ware="paintmod_0048"/>
+        <ware ware="paintmod_0049"/>
+        <ware ware="paintmod_0050"/>
+      </blueprints>
+      <research>
+        <ware ware="research_radioreceiver" />
+        <ware ware="research_sensorbooster" />
+        <ware ware="research_tradeinterface" />
+      </research>
+      <theme paint="painttheme_player_01" />
+    </player>
+    <universe ventures="false" visitors="false"/>
+  </gamestart>
+
+  <gamestart id="custom_creative" name="{1021,9000}" description="{1021,9001}" image="custom_gamestart_01" group="2" debug="true">
+    <location galaxy="xu_ep2_universe_macro" sector="cluster_14_sector001_macro" />
+    <player macro="character_player_discover_macro" money="10000" name="{1021,102}">
+      <ship macro="ship_arg_s_scout_01_a_macro">
+        <loadout>
+          <macros>
+            <engine macro="engine_arg_s_travel_01_mk2_macro" path="../con_engine_01" />
+            <engine macro="engine_arg_s_travel_01_mk2_macro" path="../con_engine_02" />
+            <weapon macro="weapon_gen_s_laser_01_mk1_macro" path="../con_primaryweapon_01" optional="1" />
+            <weapon macro="weapon_gen_s_dumbfire_01_mk1_macro" path="../con_primaryweapon_02" optional="1" />
+            <shield macro="shield_arg_s_standard_01_mk1_macro" path="../con_shield_01" optional="1" />
+          </macros>
+          <ammunition>
+            <ammunition macro="missile_dumbfire_light_mk1_macro" exact="20" optional="1" />
+            <ammunition macro="countermeasure_flares_01_macro" exact="4" optional="false"/>
+            <ammunition macro="eq_arg_satellite_01_macro" exact="10" optional="true" />
+          </ammunition>
+          <software>
+            <software ware="software_trademk1" />
+            <software ware="software_scannerlongrangemk2" />
+          </software>
+          <virtualmacros>
+            <thruster macro="thruster_gen_s_allround_01_mk1_macro" />
+          </virtualmacros>
+        </loadout>
+      </ship>
+    </player>
+    <custom>
+      <item value="seed" state="standard" />
+      <item value="sector" state="modified" />
+      <item value="offset" state="modified" />
+      <item value="universeringhighways" state="modified" />
+      <item value="universelinearhighways" state="modified" />
+      <item value="playername" state="standard" />
+      <item value="player" state="standard" list="character_player_custom_f_asi_macro character_player_tutorial_macro character_player_discover_macro character_player_fight_macro character_player_trade_macro character_player_custom_m_asi_macro character_player_custom_m_afr_macro character_player_custom_f_afr_macro" />
+      <item value="playermoney" state="modified" />
+      <item value="shipname" state="modified" />
+      <item value="ship" state="modified" />
+      <item value="shiploadout" state="modified" />
+      <item value="playerresearch" state="modified" />
+      <item value="universefactionrelations" state="modified" />
+      <item value="playerencyclopedia" state="modified" />
+      <item value="playerinventory" state="modified" />
+      <item value="playerblueprints" state="modified" />
+    </custom>
+  </gamestart>
+
+  <gamestart id="test_smallship" name="TS1 S-Ship (Test)" description="Test flying around in an s-sized ship" image="gamestart_2" group="3" debug="true">
+    <info>
+      <item name="{1021,1}" value="Nathan's Legacy, Argon Prime" />
+      <item name="{1021,2}" value="Discoverer" />
+      <item name="{1021,4}" value="Dumbfire Missile Launcher (20 missiles)" />
+    </info>
+    <location galaxy="xu_ep2_universe_macro" zone="zone003_cluster_14_sector001_macro">
+      <position x="1616.792" y="1465.168" z="19765.754"/>
+      <rotation yaw="154.56161" pitch="-8.86304" roll="0.0"/>
+    </location>
+    <player macro="character_player_tutorial_macro" money="10000">
+      <ship macro="ship_arg_s_scout_01_a_macro">
+        <loadout>
+          <macros>
+            <engine macro="engine_arg_s_travel_01_mk2_macro" path="../con_engine_01" />
+            <engine macro="engine_arg_s_travel_01_mk2_macro" path="../con_engine_02" />
+            <weapon macro="weapon_gen_s_laser_01_mk1_macro" path="../con_primaryweapon_01" optional="1" />
+            <weapon macro="weapon_gen_s_dumbfire_01_mk1_macro" path="../con_primaryweapon_02" optional="1" />
+            <shield macro="shield_arg_s_standard_01_mk1_macro" path="../con_shield_01" optional="1" />
+          </macros>
+          <ammunition>
+            <ammunition macro="missile_dumbfire_light_mk1_macro" exact="20" optional="1" />
+            <ammunition macro="countermeasure_flares_01_macro" exact="20" optional="false"/>
+            <ammunition macro="eq_arg_satellite_01_macro" exact="10" optional="true" />
+          </ammunition>
+          <software>
+            <software ware="software_trademk1" />
+            <software ware="software_scannerlongrangemk2" />
+          </software>
+          <virtualmacros>
+            <thruster macro="thruster_gen_s_allround_01_mk1_macro" />
+          </virtualmacros>
+        </loadout>
+      </ship>
+      <inventory>
+        <ware ware="inv_timewarp" amount="1" />
+        <ware ware="inv_interfaceunit" amount="6" />
+        <ware ware="weapon_gen_spacesuit_repairlaser_01_mk1" amount="1" />
+        <ware ware="software_scannerobjectmk3" amount="1" />
+      </inventory>
+      <blueprints>
+        <ware ware="paintmod_0006"/>
+        <ware ware="paintmod_0048"/>
+        <ware ware="paintmod_0049"/>
+        <ware ware="paintmod_0050"/>
+      </blueprints>
+      <research>
+        <ware ware="research_teleportation" />
+        <ware ware="research_teleportation_range_01" />
+        <ware ware="research_teleportation_range_02" />
+        <ware ware="research_teleportation_range_03" />
+        <ware ware="research_radioreceiver" />
+        <ware ware="research_sensorbooster" />
+        <ware ware="research_tradeinterface" />
+        <ware ware="research_module_defence" />
+        <ware ware="research_module_habitation" />
+        <ware ware="research_module_production" />
+        <ware ware="research_module_storage" />
+        <ware ware="research_module_dock" />
+        <ware ware="research_module_build" />
+      </research>
+      <timeline>
+        <entry ref="gate_stabilisation" />
+      </timeline>
+    </player>
+  </gamestart>
+
+  <gamestart id="test_trade" name="TS2 Trade Fleet (Test)" description="Test economy trading with freighters across the universe and a M sized freighter as the player ship" image="gamestart_3" group="3" debug="true">
+    <info>
+      <item name="Location" value="Hatikvah's Choice, Dark Horizon" />
+      <item name="Starting Ship" value="Mercury (Solid)" />
+      <item name="Property" value="1x Veles (Solid), 1x Veles (Liquid), 1x Large Argon Miner, 1x Large Argon Liquid Miner, 2x Mercury (Solid), 1x Mercury (Liquid), 1x Drill, 1x Sunder" />
+    </info>
+    <location galaxy="xu_ep2_universe_macro" zone="zone002_cluster_14_sector001_macro">
+      <position x="28685" y="-1240" z="10695"/>
+      <rotation yaw="-115" pitch="0" roll="0" />
+    </location>
+    <player macro="character_player_tutorial_macro" money="1000000000">
+      <ship macro="ship_arg_m_trans_container_01_a_macro">
+        <loadout>
+          <macros>
+            <engine macro="engine_arg_m_travel_01_mk3_macro" path="../con_engine_01" />
+            <shield macro="shield_arg_m_standard_01_mk2_macro" path="../con_shield_01" optional="1" />
+            <turret macro="turret_arg_m_laser_01_mk1_macro" path="../con_turret_01" optional="1" />
+            <turret macro="turret_arg_m_laser_01_mk1_macro" path="../con_turret_02" optional="1" />
+          </macros>
+          <ammunition>
+            <ammunition macro="eq_arg_satellite_01_macro" exact="10" optional="true" />
+          </ammunition>
+          <software>
+            <software ware="software_trademk1" />
+          </software>
+          <virtualmacros>
+            <thruster macro="thruster_gen_m_allround_01_mk1_macro" />
+          </virtualmacros>
+        </loadout>
+      </ship>
+      <inventory>
+        <ware ware="inv_timewarp" amount="1" />
+        <ware ware="inv_interfaceunit" amount="6" />
+        <ware ware="weapon_gen_spacesuit_repairlaser_01_mk1" amount="1" />
+        <ware ware="software_scannerobjectmk3" amount="1" />
+      </inventory>
+      <blueprints>
+        <ware ware="paintmod_0006"/>
+        <ware ware="paintmod_0048"/>
+        <ware ware="paintmod_0049"/>
+        <ware ware="paintmod_0050"/>
+      </blueprints>
+      <research>
+        <ware ware="research_teleportation" />
+        <ware ware="research_teleportation_range_01" />
+        <ware ware="research_teleportation_range_02" />
+        <ware ware="research_teleportation_range_03" />
+        <ware ware="research_radioreceiver" />
+        <ware ware="research_sensorbooster" />
+        <ware ware="research_tradeinterface" />
+        <ware ware="research_module_defence" />
+        <ware ware="research_module_habitation" />
+        <ware ware="research_module_production" />
+        <ware ware="research_module_storage" />
+        <ware ware="research_module_dock" />
+        <ware ware="research_module_build" />
+      </research>
+      <timeline>
+        <entry ref="gate_stabilisation" />
+      </timeline>
+    </player>
+  </gamestart>
+
+  <gamestart id="test_trade_2" name="TS2.5 Trade Single Ship (Test)" description="Test economy trading with a single freighter as the player ship" image="gamestart_3" group="3" debug="true">
+    <info>
+      <item name="Location" value="Hatikvah's Choice, Dark Horizon" />
+      <item name="Starting Ship" value="Mercury (Solid)" />
+    </info>
+    <location galaxy="xu_ep2_universe_macro" zone="zone002_cluster_14_sector001_macro">
+      <position x="28685" y="-1240" z="10695"/>
+      <rotation yaw="-115" pitch="0" roll="0" />
+    </location>
+    <player macro="character_player_tutorial_macro" money="25000">
+      <ship macro="ship_arg_m_trans_container_01_a_macro">
+        <loadout>
+          <macros>
+            <engine macro="engine_arg_m_travel_01_mk3_macro" path="../con_engine_01" />
+            <shield macro="shield_arg_m_standard_01_mk2_macro" path="../con_shield_01" optional="1" />
+            <turret macro="turret_arg_m_laser_01_mk1_macro" path="../con_turret_01" optional="1" />
+            <turret macro="turret_arg_m_laser_01_mk1_macro" path="../con_turret_02" optional="1" />
+          </macros>
+          <ammunition>
+            <ammunition macro="eq_arg_satellite_01_macro" exact="10" optional="true" />
+          </ammunition>
+          <software>
+            <software ware="software_trademk1" />
+          </software>
+          <virtualmacros>
+            <thruster macro="thruster_gen_m_allround_01_mk1_macro" />
+          </virtualmacros>
+        </loadout>
+      </ship>
+      <inventory>
+        <ware ware="inv_timewarp" amount="1" />
+        <ware ware="inv_interfaceunit" amount="6" />
+        <ware ware="weapon_gen_spacesuit_repairlaser_01_mk1" amount="1" />
+        <ware ware="software_scannerobjectmk3" amount="1" />
+      </inventory>
+      <blueprints>
+        <ware ware="paintmod_0006"/>
+        <ware ware="paintmod_0048"/>
+        <ware ware="paintmod_0049"/>
+        <ware ware="paintmod_0050"/>
+      </blueprints>
+      <research>
+        <ware ware="research_teleportation" />
+        <ware ware="research_teleportation_range_01" />
+        <ware ware="research_teleportation_range_02" />
+        <ware ware="research_teleportation_range_03" />
+        <ware ware="research_radioreceiver" />
+        <ware ware="research_sensorbooster" />
+        <ware ware="research_tradeinterface" />
+        <ware ware="research_module_defence" />
+        <ware ware="research_module_habitation" />
+        <ware ware="research_module_production" />
+        <ware ware="research_module_storage" />
+        <ware ware="research_module_dock" />
+        <ware ware="research_module_build" />
+      </research>
+      <timeline>
+        <entry ref="gate_stabilisation" />
+      </timeline>
+    </player>
+  </gamestart>
+
+  <gamestart id="test_platform" name="TS3 Platform (Test)" description="Test starting the game on a platform" image="gamestart_4" group="3" debug="true">
+    <info>
+      <item name="Location" value="Nathan's Legacy, Argon Prime" />
+      <item name="Starting Ship" value="None (Platform Start)" />
+      <item name="Property" value="5x s-sized combat ships, 2 m-sized combat ships" />
+    </info>
+    <location galaxy="xu_ep2_universe_macro" zone="zone004_cluster_14_sector001_macro" room="dockingbay_arg_s_01_macro" station="station_gen_factory_base_01_macro" shipyard="true" wharf="true">
+      <player>
+        <position x="-2.5" y="1.7" z="21" />
+        <rotation yaw="145" pitch="0" roll="0" />
+      </player>
+    </location>
+    <player macro="character_player_tutorial_macro" money="200000">
+      <ship macro="ship_arg_s_fighter_01_a_macro" name="Missile Nova">
+        <loadout>
+          <macros>
+            <engine macro="engine_arg_s_combat_01_mk2_macro" path="../con_engine_01"/>
+            <engine macro="engine_arg_s_combat_01_mk2_macro" path="../con_engine_02"/>
+            <weapon macro="weapon_gen_s_guided_01_mk1_macro" path="../con_primaryweapon_01" optional="1" />
+            <weapon macro="weapon_gen_s_guided_01_mk1_macro" path="../con_primaryweapon_02" optional="1" />
+            <shield macro="shield_arg_s_standard_01_mk2_macro" path="../con_shield_01" optional="1" />
+          </macros>
+          <ammunition>
+            <ammunition macro="missile_guided_light_mk1_macro" exact="10" optional="true"/>
+            <ammunition macro="missile_heatseeker_light_mk1_macro" exact="10" optional="true"/>
+            <ammunition macro="missile_smart_light_mk1_macro" exact="10" optional="true"/>
+            <ammunition macro="missile_swarm_light_mk1_macro" exact="10" optional="true"/>
+            <ammunition macro="countermeasure_flares_01_macro" exact="20" optional="true"/>
+            <ammunition macro="eq_arg_satellite_01_macro" exact="10" optional="true" />
+          </ammunition>
+          <virtualmacros>
+            <thruster macro="thruster_gen_s_combat_01_mk2_macro"/>
+          </virtualmacros>
+        </loadout>
+      </ship>
+      <inventory>
+        <ware ware="inv_timewarp" amount="1" />
+        <ware ware="inv_interfaceunit" amount="6" />
+        <ware ware="weapon_gen_spacesuit_repairlaser_01_mk1" amount="1" />
+        <ware ware="software_scannerobjectmk3" amount="1" />
+      </inventory>
+      <blueprints>
+        <ware ware="paintmod_0006"/>
+        <ware ware="paintmod_0048"/>
+        <ware ware="paintmod_0049"/>
+        <ware ware="paintmod_0050"/>
+        <ware ware="paintmod_0097"/>
+        <ware ware="paintmod_0098"/>
+        <ware ware="paintmod_0099"/>
+        <ware ware="paintmod_0100"/>
+      </blueprints>
+      <research>
+        <ware ware="research_teleportation" />
+        <ware ware="research_teleportation_range_01" />
+        <ware ware="research_teleportation_range_02" />
+        <ware ware="research_teleportation_range_03" />
+        <ware ware="research_radioreceiver" />
+        <ware ware="research_sensorbooster" />
+        <ware ware="research_tradeinterface" />
+        <ware ware="research_module_defence" />
+        <ware ware="research_module_habitation" />
+        <ware ware="research_module_production" />
+        <ware ware="research_module_storage" />
+        <ware ware="research_module_dock" />
+        <ware ware="research_module_build" />
+      </research>
+      <timeline>
+        <entry ref="gate_stabilisation" />
+      </timeline>
+      <theme paint="painttheme_player_05"/>
+    </player>
+  </gamestart>
+
+  <gamestart id="test_platform_2" name="TS3.5 Platform - Ships Launch With Player (Test)" description="Test starting the game on a platform. All player-owned ships have pilots and have Wait as their default order." image="gamestart_4" group="3" debug="true">
+    <info>
+      <item name="Location" value="Nathan's Legacy, Argon Prime" />
+      <item name="Starting Ship" value="None (Platform Start)" />
+      <item name="Property" value="5x s-sized combat ships, 2 m-sized combat ships" />
+    </info>
+    <location galaxy="xu_ep2_universe_macro" zone="zone004_cluster_14_sector001_macro" room="dockingbay_arg_s_01_macro" station="station_gen_factory_base_01_macro" shipyard="true" wharf="true">
+      <player>
+        <position x="-2.5" y="1.7" z="21" />
+        <rotation yaw="145" pitch="0" roll="0" />
+      </player>
+    </location>
+    <player macro="character_player_tutorial_macro" money="200000">
+      <ship macro="ship_arg_s_fighter_01_a_macro" name="Missile Nova">
+        <loadout>
+          <macros>
+            <engine macro="engine_arg_s_combat_01_mk2_macro" path="../con_engine_01"/>
+            <engine macro="engine_arg_s_combat_01_mk2_macro" path="../con_engine_02"/>
+            <weapon macro="weapon_gen_s_guided_01_mk1_macro" path="../con_primaryweapon_01" optional="1" />
+            <weapon macro="weapon_gen_s_guided_01_mk1_macro" path="../con_primaryweapon_02" optional="1" />
+            <shield macro="shield_arg_s_standard_01_mk2_macro" path="../con_shield_01" optional="1" />
+          </macros>
+          <ammunition>
+            <ammunition macro="missile_guided_light_mk1_macro" exact="10" optional="true"/>
+            <ammunition macro="missile_heatseeker_light_mk1_macro" exact="10" optional="true"/>
+            <ammunition macro="missile_smart_light_mk1_macro" exact="10" optional="true"/>
+            <ammunition macro="missile_swarm_light_mk1_macro" exact="10" optional="true"/>
+            <ammunition macro="countermeasure_flares_01_macro" exact="20" optional="true"/>
+            <ammunition macro="eq_arg_satellite_01_macro" exact="10" optional="true" />
+          </ammunition>
+          <virtualmacros>
+            <thruster macro="thruster_gen_s_combat_01_mk2_macro"/>
+          </virtualmacros>
+        </loadout>
+      </ship>
+      <inventory>
+        <ware ware="inv_timewarp" amount="1" />
+        <ware ware="inv_interfaceunit" amount="6" />
+        <ware ware="weapon_gen_spacesuit_repairlaser_01_mk1" amount="1" />
+        <ware ware="software_scannerobjectmk3" amount="1" />
+      </inventory>
+      <blueprints>
+        <ware ware="paintmod_0006"/>
+        <ware ware="paintmod_0048"/>
+        <ware ware="paintmod_0049"/>
+        <ware ware="paintmod_0050"/>
+      </blueprints>
+      <research>
+        <ware ware="research_teleportation" />
+        <ware ware="research_teleportation_range_01" />
+        <ware ware="research_teleportation_range_02" />
+        <ware ware="research_teleportation_range_03" />
+        <ware ware="research_radioreceiver" />
+        <ware ware="research_sensorbooster" />
+        <ware ware="research_tradeinterface" />
+        <ware ware="research_module_defence" />
+        <ware ware="research_module_habitation" />
+        <ware ware="research_module_production" />
+        <ware ware="research_module_storage" />
+        <ware ware="research_module_dock" />
+        <ware ware="research_module_build" />
+      </research>
+      <timeline>
+        <entry ref="gate_stabilisation" />
+      </timeline>
+    </player>
+  </gamestart>
+
+  <gamestart id="test_building" name="TS4 Build (Test)" description="Test building and expanding stations" image="gamestart_5" group="3" debug="true">
+    <info>
+      <item name="Location" value="Nathan's Legacy, Argon Prime" />
+      <item name="Starting Ship" value="Hercher" />
+    </info>
+    <location galaxy="xu_ep2_universe_macro" zone="zone002_cluster_14_sector001_macro">
+      <position x="-4850.0" y="0.0" z="-5223.3" />
+      <rotation yaw="14.1" pitch="-3.0" roll="0.0" />
+    </location>
+    <player macro="character_player_tutorial_macro" money="10000000">
+      <ship macro="ship_arg_s_fighter_01_a_macro">
+        <loadout>
+          <macros>
+            <engine macro="engine_arg_s_combat_01_mk2_macro" path="../con_engine_01" />
+            <engine macro="engine_arg_s_combat_01_mk2_macro" path="../con_engine_02" />
+            <weapon macro="weapon_gen_s_gatling_01_mk2_macro" path="../con_primaryweapon_01" optional="1" />
+            <weapon macro="weapon_gen_s_gatling_01_mk2_macro" path="../con_primaryweapon_02" optional="1" />
+            <shield macro="shield_arg_s_standard_01_mk2_macro" path="../con_shield_01" optional="1" />
+          </macros>
+          <ammunition>
+            <ammunition macro="eq_arg_satellite_01_macro" exact="10" optional="true" />
+          </ammunition>
+          <virtualmacros>
+            <thruster macro="thruster_gen_s_combat_01_mk1_macro" />
+          </virtualmacros>
+        </loadout>
+      </ship>
+      <inventory>
+        <ware ware="inv_timewarp" amount="1" />
+        <ware ware="inv_interfaceunit" amount="6" />
+        <ware ware="weapon_gen_spacesuit_repairlaser_01_mk1" amount="1" />
+        <ware ware="software_scannerobjectmk3" amount="1" />
+      </inventory>
+      <blueprints>
+        <ware ware="paintmod_0006"/>
+        <ware ware="paintmod_0048"/>
+        <ware ware="paintmod_0049"/>
+        <ware ware="paintmod_0050"/>
+      </blueprints>
+      <research>
+        <ware ware="research_teleportation" />
+        <ware ware="research_teleportation_range_01" />
+        <ware ware="research_teleportation_range_02" />
+        <ware ware="research_teleportation_range_03" />
+        <ware ware="research_radioreceiver" />
+        <ware ware="research_sensorbooster" />
+        <ware ware="research_tradeinterface" />
+        <ware ware="research_module_defence" />
+        <ware ware="research_module_habitation" />
+        <ware ware="research_module_production" />
+        <ware ware="research_module_storage" />
+        <ware ware="research_module_dock" />
+        <ware ware="research_module_build" />
+      </research>
+      <timeline>
+        <entry ref="gate_stabilisation" />
+      </timeline>
+    </player>
+  </gamestart>
+
+  <gamestart id="test_battle" name="TS5 Battle (Test)" description="Test giving orders to many ships in a big battle" image="gamestart_4" group="3" debug="true">
+    <info>
+      <item name="Location" value="Event Horizon, Black Hole Sun" />
+      <item name="Starting Ship" value="Discovery" />
+      <item name="Property" value="24x S-sized ships, 6x M-sized ships, 2x L-sized ships, 2x XL-sized ships" />
+    </info>
+    <location galaxy="xu_ep2_universe_macro" zone="zone001_cluster_29_sector002_macro">
+      <position x="0" y="25000" z="-20000"/>
+      <rotation yaw="32.289799" pitch="-33.779114" roll="0"/>
+    </location>
+    <player macro="character_player_tutorial_macro" money="10000">
+      <ship macro="ship_arg_s_scout_01_a_macro">
+        <loadout>
+          <macros>
+            <engine macro="engine_arg_s_travel_01_mk2_macro" path="../con_engine_01" />
+            <engine macro="engine_arg_s_travel_01_mk2_macro" path="../con_engine_02" />
+            <weapon macro="weapon_gen_s_laser_01_mk1_macro" path="../con_primaryweapon_01" optional="1" />
+            <weapon macro="weapon_gen_s_laser_01_mk1_macro" path="../con_primaryweapon_02" optional="1" />
+            <shield macro="shield_arg_s_standard_01_mk1_macro" path="../con_shield_01" optional="1" />
+          </macros>
+          <ammunition>
+            <ammunition macro="eq_arg_satellite_01_macro" exact="10" optional="true" />
+          </ammunition>
+          <virtualmacros>
+            <thruster macro="thruster_gen_s_allround_01_mk1_macro" />
+          </virtualmacros>
+        </loadout>
+      </ship>
+      <inventory>
+        <ware ware="inv_timewarp" amount="1" />
+        <ware ware="inv_interfaceunit" amount="6" />
+        <ware ware="weapon_gen_spacesuit_repairlaser_01_mk1" amount="1" />
+        <ware ware="software_scannerobjectmk3" amount="1" />
+      </inventory>
+      <blueprints>
+        <ware ware="paintmod_0006"/>
+        <ware ware="paintmod_0048"/>
+        <ware ware="paintmod_0049"/>
+        <ware ware="paintmod_0050"/>
+      </blueprints>
+      <research>
+        <ware ware="research_teleportation" />
+        <ware ware="research_teleportation_range_01" />
+        <ware ware="research_teleportation_range_02" />
+        <ware ware="research_teleportation_range_03" />
+        <ware ware="research_radioreceiver" />
+        <ware ware="research_sensorbooster" />
+        <ware ware="research_tradeinterface" />
+        <ware ware="research_module_defence" />
+        <ware ware="research_module_habitation" />
+        <ware ware="research_module_production" />
+        <ware ware="research_module_storage" />
+        <ware ware="research_module_dock" />
+        <ware ware="research_module_build" />
+      </research>
+      <timeline>
+        <entry ref="gate_stabilisation" />
+      </timeline>
+    </player>
+  </gamestart>
+
+  <gamestart id="test_capshipdocking" name="TS6 Cap Ship Docking (Test)" description="Test docking on capital ships" image="gamestart_2" group="3" debug="true">
+    <info>
+      <item name="Location" value="Nathan's Legacy, Argon Prime" />
+      <item name="Starting Ship" value="Hercher" />
+      <item name="Property" value="1x carrier, 1x m-sized ship, 1 s-sized ship" />
+    </info>
+    <location galaxy="xu_ep2_universe_macro" zone="zone001_cluster_14_sector001_macro">
+      <position x="-4850.0" y="0.0" z="-5223.3" />
+      <rotation yaw="14.1" pitch="-3.0" roll="0.0" />
+    </location>
+    <player macro="character_player_tutorial_macro" money="10000">
+      <ship macro="ship_arg_s_fighter_01_a_macro">
+        <loadout>
+          <macros>
+            <engine macro="engine_arg_s_combat_01_mk2_macro" path="../con_engine_01" />
+            <engine macro="engine_arg_s_combat_01_mk2_macro" path="../con_engine_02" />
+            <weapon macro="weapon_gen_s_gatling_01_mk2_macro" path="../con_primaryweapon_01" optional="1" />
+            <weapon macro="weapon_gen_s_gatling_01_mk2_macro" path="../con_primaryweapon_02" optional="1" />
+            <shield macro="shield_arg_s_standard_01_mk2_macro" path="../con_shield_01" optional="1" />
+          </macros>
+          <ammunition>
+            <ammunition macro="eq_arg_satellite_01_macro" exact="10" optional="true" />
+          </ammunition>
+          <software>
+            <software ware="software_dockmk2" />
+          </software>
+          <virtualmacros>
+            <thruster macro="thruster_gen_s_combat_01_mk1_macro" />
+          </virtualmacros>
+        </loadout>
+      </ship>
+      <inventory>
+        <ware ware="inv_timewarp" amount="1" />
+        <ware ware="inv_interfaceunit" amount="6" />
+        <ware ware="weapon_gen_spacesuit_repairlaser_01_mk1" amount="1" />
+        <ware ware="software_scannerobjectmk3" amount="1" />
+      </inventory>
+      <blueprints>
+        <ware ware="paintmod_0006"/>
+        <ware ware="paintmod_0048"/>
+        <ware ware="paintmod_0049"/>
+        <ware ware="paintmod_0050"/>
+      </blueprints>
+      <research>
+        <ware ware="research_teleportation" />
+        <ware ware="research_teleportation_range_01" />
+        <ware ware="research_teleportation_range_02" />
+        <ware ware="research_teleportation_range_03" />
+        <ware ware="research_radioreceiver" />
+        <ware ware="research_sensorbooster" />
+        <ware ware="research_tradeinterface" />
+        <ware ware="research_module_defence" />
+        <ware ware="research_module_habitation" />
+        <ware ware="research_module_production" />
+        <ware ware="research_module_storage" />
+        <ware ware="research_module_dock" />
+        <ware ware="research_module_build" />
+      </research>
+      <timeline>
+        <entry ref="gate_stabilisation" />
+      </timeline>
+    </player>
+  </gamestart>
+
+  <gamestart id="test_mining" name="TS7 Mining (Test)" description="Test mining" image="gamestart_2" group="3" debug="true">
+    <info>
+      <item name="Location" value="Oum's Legacy, Dark Horizon" />
+      <item name="Starting Ship" value="Drill" />
+      <item name="Property" value="2x l-sized mining ships, 1x m-sized mining ship" />
+    </info>
+    <location galaxy="xu_ep2_universe_macro" zone="zone001_cluster_29_sector002_macro">
+      <position x="-4850.0" y="0.0" z="-5223.3" />
+      <rotation yaw="14.1" pitch="-3.0" roll="0.0" />
+    </location>
+    <player macro="character_player_tutorial_macro" money="10000">
+      <ship macro="ship_arg_m_miner_solid_01_a_macro">
+        <loadout>
+          <macros>
+            <engine macro="engine_arg_m_allround_01_mk1_macro" path="../con_engine_01" />
+            <weapon macro="weapon_gen_m_mining_01_mk1_macro" path="../con_primaryweapon_01" optional="1" />
+            <shield macro="shield_arg_m_standard_01_mk1_macro" path="../con_shield_01" optional="1" />
+            <turret macro="turret_arg_m_laser_01_mk1_macro" path="../con_turret_01" optional="1" />
+            <turret macro="turret_arg_m_laser_01_mk1_macro" path="../con_turret_02" optional="1" />
+          </macros>
+          <ammunition>
+            <ammunition macro="eq_arg_satellite_01_macro" exact="10" optional="true" />
+          </ammunition>
+          <virtualmacros>
+            <thruster macro="thruster_gen_m_allround_01_mk1_macro" />
+          </virtualmacros>
+        </loadout>
+      </ship>
+      <inventory>
+        <ware ware="inv_timewarp" amount="1" />
+        <ware ware="inv_interfaceunit" amount="6" />
+        <ware ware="weapon_gen_spacesuit_repairlaser_01_mk1" amount="1" />
+        <ware ware="software_scannerobjectmk3" amount="1" />
+      </inventory>
+      <blueprints>
+        <ware ware="paintmod_0006"/>
+        <ware ware="paintmod_0048"/>
+        <ware ware="paintmod_0049"/>
+        <ware ware="paintmod_0050"/>
+      </blueprints>
+      <research>
+        <ware ware="research_teleportation" />
+        <ware ware="research_teleportation_range_01" />
+        <ware ware="research_teleportation_range_02" />
+        <ware ware="research_teleportation_range_03" />
+        <ware ware="research_radioreceiver" />
+        <ware ware="research_sensorbooster" />
+        <ware ware="research_tradeinterface" />
+        <ware ware="research_module_defence" />
+        <ware ware="research_module_habitation" />
+        <ware ware="research_module_production" />
+        <ware ware="research_module_storage" />
+        <ware ware="research_module_dock" />
+        <ware ware="research_module_build" />
+      </research>
+      <timeline>
+        <entry ref="gate_stabilisation" />
+      </timeline>
+    </player>
+  </gamestart>
+
+  <gamestart id="test_capshipbridge" name="TS8 Capital Ship Bridge (Test)" description="Test walking around on the bridge of a capital ship" image="gamestart_2" group="3" debug="true">
+    <info>
+      <item name="Location" value="Nathan's Legacy, Argon Prime" />
+      <item name="Starting Ship" value="Discoverer" />
+      <item name="Property" value="1x resupplier" />
+    </info>
+    <location galaxy="xu_ep2_universe_macro" zone="zone001_cluster_14_sector001_macro">
+      <position x="-4850.0" y="0.0" z="-5223.3" />
+      <rotation yaw="14.1" pitch="-3.0" roll="0.0" />
+    </location>
+    <player macro="character_player_tutorial_macro" money="10000">
+      <ship macro="ship_arg_s_scout_01_a_macro">
+        <loadout>
+          <macros>
+            <engine macro="engine_arg_s_travel_01_mk2_macro" path="../con_engine_01" />
+            <engine macro="engine_arg_s_travel_01_mk2_macro" path="../con_engine_02" />
+            <weapon macro="weapon_gen_s_laser_01_mk1_macro" path="../con_primaryweapon_01" optional="1" />
+            <weapon macro="weapon_gen_s_laser_01_mk1_macro" path="../con_primaryweapon_02" optional="1" />
+            <shield macro="shield_arg_s_standard_01_mk1_macro" path="../con_shield_01" optional="1" />
+          </macros>
+          <ammunition>
+            <ammunition macro="eq_arg_satellite_01_macro" exact="10" optional="true" />
+          </ammunition>
+          <virtualmacros>
+            <thruster macro="thruster_gen_s_allround_01_mk1_macro" />
+          </virtualmacros>
+        </loadout>
+      </ship>
+      <inventory>
+        <ware ware="inv_timewarp" amount="1" />
+        <ware ware="inv_interfaceunit" amount="6" />
+        <ware ware="weapon_gen_spacesuit_repairlaser_01_mk1" amount="1" />
+        <ware ware="software_scannerobjectmk3" amount="1" />
+      </inventory>
+      <blueprints>
+        <ware ware="paintmod_0006"/>
+        <ware ware="paintmod_0048"/>
+        <ware ware="paintmod_0049"/>
+        <ware ware="paintmod_0050"/>
+      </blueprints>
+      <research>
+        <ware ware="research_teleportation" />
+        <ware ware="research_teleportation_range_01" />
+        <ware ware="research_teleportation_range_02" />
+        <ware ware="research_teleportation_range_03" />
+        <ware ware="research_radioreceiver" />
+        <ware ware="research_sensorbooster" />
+        <ware ware="research_tradeinterface" />
+        <ware ware="research_module_defence" />
+        <ware ware="research_module_habitation" />
+        <ware ware="research_module_production" />
+        <ware ware="research_module_storage" />
+        <ware ware="research_module_dock" />
+        <ware ware="research_module_build" />
+      </research>
+      <timeline>
+        <entry ref="gate_stabilisation" />
+      </timeline>
+    </player>
+  </gamestart>
+
+  <gamestart id="test_squadron" name="TS9 Squadron (Test)" description="Player has a small squadron comprised of a frigate and four fighters" image="gamestart_2" group="3" debug="true">
+    <info>
+      <item name="{1021,1}" value="Nathan's Legacy, Argon Prime"/>
+      <item name="{1021,2}" value="Nova"/>
+    </info>
+    <location galaxy="xu_ep2_universe_macro" zone="zone002_cluster_14_sector001_macro">
+      <position x="10951" y="467" z="35603"/>
+      <rotation yaw="-168" pitch="-11" roll="0"/>
+    </location>
+    <player macro="character_player_tutorial_macro" money="10000">
+      <ship macro="ship_arg_s_fighter_01_a_macro">
+        <loadout>
+          <macros>
+            <engine macro="engine_arg_s_combat_01_mk2_macro" path="../con_engine_01" />
+            <engine macro="engine_arg_s_combat_01_mk2_macro" path="../con_engine_02" />
+            <weapon macro="weapon_gen_s_laser_01_mk1_macro" path="../con_primaryweapon_01" optional="1" />
+            <weapon macro="weapon_gen_s_plasma_01_mk1_macro" path="../con_primaryweapon_02" optional="1" />
+            <shield macro="shield_arg_s_standard_01_mk1_macro" path="../con_shield_01" optional="1" />
+          </macros>
+          <ammunition>
+            <ammunition macro="countermeasure_flares_01_macro" exact="30" optional="1" />
+            <ammunition macro="eq_arg_satellite_01_macro" exact="10" optional="true" />
+          </ammunition>
+          <software>
+            <software ware="software_trademk1" />
+          </software>
+          <virtualmacros>
+            <thruster macro="thruster_gen_s_allround_01_mk1_macro" />
+          </virtualmacros>
+        </loadout>
+      </ship>
+      <inventory>
+        <ware ware="inv_timewarp" amount="1" />
+        <ware ware="inv_interfaceunit" amount="6" />
+        <ware ware="weapon_gen_spacesuit_repairlaser_01_mk1" amount="1" />
+        <ware ware="software_scannerobjectmk3" amount="1" />
+      </inventory>
+      <blueprints>
+        <ware ware="paintmod_0006"/>
+        <ware ware="paintmod_0048"/>
+        <ware ware="paintmod_0049"/>
+        <ware ware="paintmod_0050"/>
+      </blueprints>
+      <research>
+        <ware ware="research_teleportation" />
+        <ware ware="research_teleportation_range_01" />
+        <ware ware="research_teleportation_range_02" />
+        <ware ware="research_teleportation_range_03" />
+        <ware ware="research_radioreceiver" />
+        <ware ware="research_sensorbooster" />
+        <ware ware="research_tradeinterface" />
+        <ware ware="research_module_defence" />
+        <ware ware="research_module_habitation" />
+        <ware ware="research_module_production" />
+        <ware ware="research_module_storage" />
+        <ware ware="research_module_dock" />
+        <ware ware="research_module_build" />
+      </research>
+      <timeline>
+        <entry ref="gate_stabilisation" />
+      </timeline>
+    </player>
+  </gamestart>
+
+  <gamestart id="test_weapontest" name="TS10 Weapons (Test)" description="Player has a M sized ship with lasers and missile turrets" image="gamestart_2" group="3" debug="true">
+    <info>
+      <item name="{1021,1}" value="Nathan's Legacy, Argon Prime"/>
+      <item name="{1021,2}" value="Minotaur"/>
+    </info>
+    <location galaxy="xu_ep2_universe_macro" zone="zone002_cluster_14_sector001_macro">
+      <position x="10951" y="467" z="35603"/>
+      <rotation yaw="-168" pitch="-11" roll="0"/>
+    </location>
+    <player macro="character_player_tutorial_macro" money="10000">
+      <ship macro="test_ship_arg_m_uimax_test_macro" />
+      <!--<loadout>
+          <ammunition>
+            <ammunition macro="eq_arg_satellite_01_macro" exact="10" optional="true" />
+          </ammunition>
+        </loadout>
+      </ship>-->
+      <inventory>
+        <ware ware="inv_timewarp" amount="1" />
+        <ware ware="inv_interfaceunit" amount="6" />
+        <ware ware="weapon_gen_spacesuit_repairlaser_01_mk1" amount="1" />
+        <ware ware="software_scannerobjectmk3" amount="1" />
+      </inventory>
+      <blueprints>
+        <ware ware="paintmod_0006"/>
+        <ware ware="paintmod_0048"/>
+        <ware ware="paintmod_0049"/>
+        <ware ware="paintmod_0050"/>
+      </blueprints>
+      <research>
+        <ware ware="research_teleportation" />
+        <ware ware="research_teleportation_range_01" />
+        <ware ware="research_teleportation_range_02" />
+        <ware ware="research_teleportation_range_03" />
+        <ware ware="research_radioreceiver" />
+        <ware ware="research_sensorbooster" />
+        <ware ware="research_tradeinterface" />
+        <ware ware="research_module_defence" />
+        <ware ware="research_module_habitation" />
+        <ware ware="research_module_production" />
+        <ware ware="research_module_storage" />
+        <ware ware="research_module_dock" />
+        <ware ware="research_module_build" />
+      </research>
+      <timeline>
+        <entry ref="gate_stabilisation" />
+      </timeline>
+    </player>
+  </gamestart>
+
+  <gamestart id="test_npcpresentation" name="TS11 NPC Presentation (Test)" description="Test starting the game on a platform" image="gamestart_4" group="3" debug="true">
+    <info>
+      <item name="Location" value="Nathan's Legacy, Argon Prime" />
+      <item name="Starting Ship" value="None (Platform Start)" />
+      <item name="Property" value="1x Argon Nova, 1x Teladi Kestral, 1x Teladi Osprey, 1x Teladi Peregrine, 1x Argon Behemoth" />
+    </info>
+    <location galaxy="xu_ep2_universe_macro" zone="zone004_cluster_14_sector001_macro" room="dockingbay_arg_s_01_macro" station="station_gen_factory_base_01_macro" shipyard="true" wharf="true">
+      <player>
+        <position x="-2.5" y="1.7" z="21" />
+        <rotation yaw="145" pitch="0" roll="0" />
+      </player>
+    </location>
+    <player macro="character_player_tutorial_macro" money="200000">
+      <ship macro="ship_arg_s_fighter_01_a_macro" name="Combat Nova">
+        <loadout>
+          <macros>
+            <engine macro="engine_arg_s_combat_01_mk3_macro" path="../con_engine_01"/>
+            <engine macro="engine_arg_s_combat_01_mk3_macro" path="../con_engine_02"/>
+            <weapon macro="weapon_gen_s_gatling_01_mk2_macro" path="../con_primaryweapon_01" optional="1" />
+            <weapon macro="weapon_gen_s_gatling_01_mk2_macro" path="../con_primaryweapon_02" optional="1" />
+            <shield macro="shield_arg_s_standard_01_mk2_macro" path="../con_shield_01" optional="1" />
+          </macros>
+          <ammunition>
+            <ammunition macro="eq_arg_satellite_01_macro" exact="10" optional="true" />
+          </ammunition>
+          <virtualmacros>
+            <thruster macro="thruster_gen_s_combat_01_mk3_macro"/>
+          </virtualmacros>
+        </loadout>
+      </ship>
+      <inventory>
+        <ware ware="inv_timewarp" amount="1" />
+        <ware ware="inv_interfaceunit" amount="6" />
+        <ware ware="weapon_gen_spacesuit_repairlaser_01_mk1" amount="1" />
+        <ware ware="software_scannerobjectmk3" amount="1" />
+      </inventory>
+      <blueprints>
+        <ware ware="paintmod_0006"/>
+        <ware ware="paintmod_0048"/>
+        <ware ware="paintmod_0049"/>
+        <ware ware="paintmod_0050"/>
+      </blueprints>
+      <research>
+        <ware ware="research_teleportation" />
+        <ware ware="research_teleportation_range_01" />
+        <ware ware="research_teleportation_range_02" />
+        <ware ware="research_teleportation_range_03" />
+        <ware ware="research_radioreceiver" />
+        <ware ware="research_sensorbooster" />
+        <ware ware="research_tradeinterface" />
+        <ware ware="research_module_defence" />
+        <ware ware="research_module_habitation" />
+        <ware ware="research_module_production" />
+        <ware ware="research_module_storage" />
+        <ware ware="research_module_dock" />
+        <ware ware="research_module_build" />
+      </research>
+      <timeline>
+        <entry ref="gate_stabilisation" />
+      </timeline>
+    </player>
+  </gamestart>
+
+  <gamestart id="test_smallship2" name="TS1b S-Ship 2 (Test)" description="Test flying around in an s-sized ship wit han alternative hud implementation" image="gamestart_2" group="3" debug="true">
+    <info>
+      <item name="{1021,1}" value="Nathan's Legacy, Argon Prime" />
+      <item name="{1021,2}" value="Discoverer" />
+      <item name="{1021,4}" value="Dumbfire Missile Launcher (20 missiles)" />
+    </info>
+    <location galaxy="xu_ep2_universe_macro" zone="zone003_cluster_14_sector001_macro">
+      <position x="1616.792" y="1465.168" z="19765.754"/>
+      <rotation yaw="154.56161" pitch="-8.86304" roll="0.0"/>
+    </location>
+    <player macro="character_player_tutorial_macro" money="10000">
+      <ship macro="ship_test_s_scout_01_macro">
+        <loadout>
+          <macros>
+            <engine macro="engine_arg_s_travel_01_mk2_macro" path="../con_engine_01" />
+            <engine macro="engine_arg_s_travel_01_mk2_macro" path="../con_engine_02" />
+            <weapon macro="weapon_gen_s_laser_01_mk1_macro" path="../con_primaryweapon_01" optional="1" />
+            <weapon macro="weapon_gen_s_dumbfire_01_mk1_macro" path="../con_primaryweapon_02" optional="1" />
+            <shield macro="shield_arg_s_standard_01_mk1_macro" path="../con_shield_01" optional="1" />
+          </macros>
+          <ammunition>
+            <ammunition macro="missile_dumbfire_light_mk1_macro" exact="20" optional="1" />
+            <ammunition macro="countermeasure_flares_01_macro" exact="1000" optional="true"/>
+            <ammunition macro="eq_arg_satellite_01_macro" exact="10" optional="true" />
+          </ammunition>
+          <software>
+            <software ware="software_trademk1" />
+            <software ware="software_scannerlongrangemk2" />
+          </software>
+          <virtualmacros>
+            <thruster macro="thruster_gen_s_allround_01_mk1_macro" />
+          </virtualmacros>
+        </loadout>
+      </ship>
+      <inventory>
+        <ware ware="inv_timewarp" amount="1" />
+        <ware ware="inv_interfaceunit" amount="6" />
+        <ware ware="weapon_gen_spacesuit_repairlaser_01_mk1" amount="1" />
+        <ware ware="software_scannerobjectmk3" amount="1" />
+      </inventory>
+      <blueprints>
+        <ware ware="paintmod_0006"/>
+        <ware ware="paintmod_0048"/>
+        <ware ware="paintmod_0049"/>
+        <ware ware="paintmod_0050"/>
+      </blueprints>
+      <research>
+        <ware ware="research_radioreceiver" />
+        <ware ware="research_sensorbooster" />
+        <ware ware="research_tradeinterface" />
+        <ware ware="research_module_defence" />
+        <ware ware="research_module_habitation" />
+        <ware ware="research_module_production" />
+        <ware ware="research_module_storage" />
+      </research>
+      <timeline>
+        <entry ref="gate_stabilisation" />
+      </timeline>
+    </player>
+  </gamestart>
+
+  <gamestart id="thevoid" name="The Void" description="It used to be a universe... and then came the void..." image="gamestart_2" group="4" debug="true">
+    <location galaxy="blackgalaxy_macro" zone="tzonecluster_black_sector01_zone_macro">
+      <position x="0" y="0" z="0" />
+      <rotation yaw="0" pitch="0" roll="0" />
+    </location>
+    <player macro="character_player_tutorial_macro" money="100000">
+      <ship macro="ship_arg_s_scout_01_a_macro">
+        <loadout>
+          <macros>
+            <engine macro="engine_arg_s_travel_01_mk2_macro" path="../con_engine_01" />
+            <engine macro="engine_arg_s_travel_01_mk2_macro" path="../con_engine_02" />
+            <weapon macro="weapon_gen_s_laser_01_mk1_macro" path="../con_primaryweapon_01" optional="1" />
+            <weapon macro="weapon_gen_s_laser_01_mk1_macro" path="../con_primaryweapon_02" optional="1" />
+            <shield macro="shield_arg_s_standard_01_mk1_macro" path="../con_shield_01" optional="1" />
+          </macros>
+          <virtualmacros>
+            <thruster macro="thruster_gen_s_allround_01_mk1_macro" />
+          </virtualmacros>
+        </loadout>
+      </ship>
+      <inventory>
+        <ware ware="weapon_gen_spacesuit_repairlaser_01_mk1" amount="1" />
+        <ware ware="software_scannerobjectmk3" amount="1" />
+      </inventory>
+      <blueprints>
+        <ware ware="paintmod_0006"/>
+        <ware ware="paintmod_0048"/>
+        <ware ware="paintmod_0049"/>
+        <ware ware="paintmod_0050"/>
+      </blueprints>
+      <timeline>
+        <entry ref="gate_stabilisation" />
+      </timeline>
+    </player>
+  </gamestart>
+
+  <gamestart id="testbed1" name="Testbed 1" description="" image="gamestart_4" group="4" debug="true">
+    <location galaxy="xu_ep2_universe_macro" zone="zone002_cluster_01_sector001_macro">
+      <position x="23830" y="-1300" z="-1400" />
+      <rotation yaw="0" pitch="0" roll="0" />
+    </location>
+    <player macro="character_player_tutorial_macro" money="100000000">
+      <ship macro="ship_arg_s_scout_01_a_macro">
+        <loadout>
+          <macros>
+            <engine macro="engine_arg_s_travel_01_mk2_macro" path="../con_engine_01" />
+            <engine macro="engine_arg_s_travel_01_mk2_macro" path="../con_engine_02" />
+            <weapon macro="weapon_gen_s_laser_01_mk1_macro" path="../con_primaryweapon_01" optional="1" />
+            <weapon macro="weapon_gen_s_laser_01_mk1_macro" path="../con_primaryweapon_02" optional="1" />
+            <shield macro="shield_arg_s_standard_01_mk1_macro" path="../con_shield_01" optional="1" />
+          </macros>
+          <virtualmacros>
+            <thruster macro="thruster_gen_s_allround_01_mk1_macro" />
+          </virtualmacros>
+        </loadout>
+      </ship>
+      <inventory>
+        <ware ware="weapon_gen_spacesuit_repairlaser_01_mk1" amount="1" />
+        <ware ware="software_scannerobjectmk3" amount="1" />
+      </inventory>
+      <blueprints>
+        <ware ware="paintmod_0006"/>
+        <ware ware="paintmod_0048"/>
+        <ware ware="paintmod_0049"/>
+        <ware ware="paintmod_0050"/>
+      </blueprints>
+      <timeline>
+        <entry ref="gate_stabilisation" />
+      </timeline>
+    </player>
+  </gamestart>
+
+  <gamestart id="default" name="Test module defaults" description="" image="gamestart_2" debug="true">
+    <!--<location galaxy="xu_ep2_universe_macro" zone="zone002_cluster_18_sector001_macro">
+      <position x="10951" y="467" z="35603" />
+      <rotation yaw="-168" pitch="-11" roll="0" />
+    </location>-->
+    <player macro="character_player_tutorial_macro" money="100000">
+      <ship macro="ship_arg_s_scout_01_a_macro">
+        <loadout>
+          <macros>
+            <engine macro="engine_arg_s_travel_01_mk2_macro" path="../con_engine_01" />
+            <engine macro="engine_arg_s_travel_01_mk2_macro" path="../con_engine_02" />
+            <weapon macro="weapon_gen_s_laser_01_mk1_macro" path="../con_primaryweapon_01" optional="1" />
+            <weapon macro="weapon_gen_s_laser_01_mk1_macro" path="../con_primaryweapon_02" optional="1" />
+            <shield macro="shield_arg_s_standard_01_mk1_macro" path="../con_shield_01" optional="1" />
+          </macros>
+          <ammunition>
+            <ammunition macro="countermeasure_flares_01_macro" exact="20" optional="1" />
+          </ammunition>
+          <virtualmacros>
+            <thruster macro="thruster_gen_s_allround_01_mk1_macro" />
+          </virtualmacros>
+        </loadout>
+      </ship>
+      <inventory>
+        <ware ware="weapon_gen_spacesuit_repairlaser_01_mk1" amount="1" />
+        <ware ware="software_scannerobjectmk3" amount="1" />
+      </inventory>
+      <blueprints>
+        <ware ware="paintmod_0006"/>
+        <ware ware="paintmod_0048"/>
+        <ware ware="paintmod_0049"/>
+        <ware ware="paintmod_0050"/>
+      </blueprints>
+      <timeline>
+        <entry ref="gate_stabilisation" />
+      </timeline>
+    </player>
+  </gamestart>
+</gamestarts>
